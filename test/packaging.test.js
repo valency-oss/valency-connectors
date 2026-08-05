@@ -18,6 +18,8 @@ test("root marketplaces route to independent provider packages", () => {
   const claudeEntry = claudeMarketplace.plugins.find(({ name }) => name === "valency");
   const openaiEntry = openaiMarketplace.plugins.find(({ name }) => name === "valency");
 
+  assert.ok(claudeEntry, "Claude marketplace must list the valency plugin");
+  assert.ok(openaiEntry, "OpenAI marketplace must list the valency plugin");
   assert.equal(claudeMarketplace.name, "valency-claude-plugin");
   assert.equal(claudeEntry.source, "./plugins/claude/valency");
   assert.equal(openaiMarketplace.name, "valency");

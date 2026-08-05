@@ -7,6 +7,6 @@
   "scripts": {
     "test": "node --test",
     "validate:claude": "claude plugin validate . --strict && claude plugin validate plugins/claude/valency --strict",
-    "validate:openai": "uv run --no-project --with PyYAML==6.0.3 python \"${CODEX_HOME:-$HOME/.codex}/skills/.system/plugin-creator/scripts/validate_plugin.py\" plugins/openai/valency"
+    "validate:openai": "node scripts/validate-openai.mjs"
   }
 }
