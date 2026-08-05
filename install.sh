@@ -20,6 +20,8 @@ DRY_RUN=0
 TERMINAL_AVAILABLE=0
 
 PREINSTALL_FAILURES=0
+CLAUDE_EXECUTABLE_FOUND=0
+CODEX_EXECUTABLE_FOUND=0
 CLAUDE_AVAILABLE=0
 CODEX_AVAILABLE=0
 CLAUDE_SELECTED=0
@@ -193,12 +195,14 @@ codex_has_auth_commands() {
 
 detect_provider_executables() {
   if command -v claude >/dev/null 2>&1; then
+    CLAUDE_EXECUTABLE_FOUND=1
     if claude_has_required_commands; then
       CLAUDE_AVAILABLE=1
       if claude_has_auth_commands; then CLAUDE_AUTH_AVAILABLE=1; fi
     fi
   fi
   if command -v codex >/dev/null 2>&1; then
+    CODEX_EXECUTABLE_FOUND=1
     if codex_has_required_commands; then
       CODEX_AVAILABLE=1
       if codex_has_auth_commands; then CODEX_AUTH_AVAILABLE=1; fi
@@ -230,6 +234,19 @@ select_requested_targets() {
   if [ "$TARGET_ALL" -eq 1 ]; then
     CLAUDE_SELECTED=$CLAUDE_AVAILABLE
     CODEX_SELECTED=$CODEX_AVAILABLE
+    # An installed provider whose CLI lacks the required commands is a
+    # provider-specific failure, not a silent omission: --target all promised
+    # every installed provider, so the run must end nonzero and say why.
+    if [ "$CLAUDE_EXECUTABLE_FOUND" -eq 1 ] && [ "$CLAUDE_AVAILABLE" -eq 0 ]; then
+      printf 'Error: Claude Code is installed but lacks required plugin commands; upgrade it or drop it from --target.\n' >&2
+      CLAUDE_INSTALL_RESULT="failed (unsupported CLI)"
+      PREINSTALL_FAILURES=$((PREINSTALL_FAILURES + 1))
+    fi
+    if [ "$CODEX_EXECUTABLE_FOUND" -eq 1 ] && [ "$CODEX_AVAILABLE" -eq 0 ]; then
+      printf 'Error: Codex is installed but lacks required plugin commands; upgrade it or drop it from --target.\n' >&2
+      CODEX_INSTALL_RESULT="failed (unsupported CLI)"
+      PREINSTALL_FAILURES=$((PREINSTALL_FAILURES + 1))
+    fi
   fi
   if [ "$TARGET_CLAUDE" -eq 1 ]; then
     if [ "$CLAUDE_AVAILABLE" -eq 0 ]; then
