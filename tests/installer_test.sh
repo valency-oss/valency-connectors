@@ -198,6 +198,28 @@ test_rerun_updates_both_providers() {
   pass "$TEST_NAME"
 }
 
+test_installed_plugin_with_missing_marketplace_is_repaired() {
+  # A plugin can outlive its marketplace registration. The update path must
+  # re-add the trusted marketplace rather than update or upgrade a missing
+  # one, for both providers.
+  new_case plugin-present-marketplace-missing
+  enable_claude
+  enable_codex
+  : > "$MOCK_STATE/claude-plugin"
+  : > "$MOCK_STATE/codex-plugin"
+  run_without_terminal --target all --yes --no-auth
+  assert_status 0 || return
+  assert_log_contains "claude plugin marketplace add valency-oss/valency-bond --scope user" || return
+  assert_log_not_contains "claude plugin marketplace update valency-claude-plugin" || return
+  assert_log_contains "claude plugin update valency@valency-claude-plugin --scope user" || return
+  assert_log_contains "codex plugin marketplace add valency-oss/valency-bond" || return
+  assert_log_not_contains "codex plugin marketplace upgrade valency" || return
+  assert_log_contains "codex plugin add valency@valency" || return
+  assert_output_contains "Claude Code installation: updated" || return
+  assert_output_contains "Codex installation: updated" || return
+  pass "$TEST_NAME"
+}
+
 test_lookalike_claude_marketplace_is_not_trusted() {
   # A pre-existing marketplace with the expected name but a different
   # repository must not be updated or used to install: the plugin it serves
@@ -848,6 +870,7 @@ test_no_harnesses
 test_claude_fresh_install
 test_codex_fresh_install
 test_rerun_updates_both_providers
+test_installed_plugin_with_missing_marketplace_is_repaired
 test_lookalike_claude_marketplace_is_not_trusted
 test_unattended_claude_migration_requires_flag
 test_claude_migration_verifies_before_cleanup

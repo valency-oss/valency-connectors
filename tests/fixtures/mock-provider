@@ -69,6 +69,8 @@ if [ "$provider" = claude ]; then
       ;;
     "plugin marketplace update valency-claude-plugin")
       [ ! -f "$MOCK_STATE/fail-claude-marketplace-update" ] || exit 1
+      # Updating a marketplace that is not registered fails, as it would live.
+      [ -f "$MOCK_STATE/claude-marketplace" ] || exit 1
       ;;
     "plugin update valency@valency-claude-plugin --scope user")
       [ ! -f "$MOCK_STATE/fail-claude-plugin-update" ] || exit 1
@@ -141,6 +143,10 @@ if [ "$provider" = codex ]; then
       ;;
     "plugin marketplace upgrade valency")
       [ ! -f "$MOCK_STATE/fail-codex-marketplace-upgrade" ] || exit 1
+      # Upgrading a marketplace that is not registered fails, as it would live.
+      if [ ! -f "$MOCK_STATE/codex-marketplace" ] && [ ! -f "$MOCK_STATE/codex-foreign-marketplace" ]; then
+        exit 1
+      fi
       ;;
     "plugin marketplace remove valency")
       [ ! -f "$MOCK_STATE/fail-codex-marketplace-remove" ] || exit 1

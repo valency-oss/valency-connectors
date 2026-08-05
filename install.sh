@@ -674,9 +674,18 @@ install_claude() {
   if [ "$CLAUDE_PLUGIN_PRESENT" -eq 1 ]; then
     # Claude's manifest version is authoritative. The native updater decides
     # whether content changed; this installer never force-reinstalls around it.
-    if ! run_quietly claude plugin marketplace update "$CLAUDE_MARKETPLACE"; then
-      CLAUDE_INSTALL_RESULT="failed"
-      return 1
+    if [ "$CLAUDE_MARKETPLACE_PRESENT" -eq 1 ]; then
+      if ! run_quietly claude plugin marketplace update "$CLAUDE_MARKETPLACE"; then
+        CLAUDE_INSTALL_RESULT="failed"
+        return 1
+      fi
+    else
+      # The plugin can outlive its marketplace registration; repair the state
+      # by re-adding the trusted marketplace instead of updating a missing one.
+      if ! run_quietly claude plugin marketplace add "$MARKETPLACE_SOURCE" --scope user; then
+        CLAUDE_INSTALL_RESULT="failed"
+        return 1
+      fi
     fi
     if ! run_quietly claude plugin update "$CLAUDE_PLUGIN" --scope user; then
       CLAUDE_INSTALL_RESULT="failed"
@@ -759,9 +768,18 @@ install_codex() {
     fi
     success_result="installed (marketplace replaced)"
   elif [ "$CODEX_PLUGIN_PRESENT" -eq 1 ]; then
-    if ! run_quietly codex plugin marketplace upgrade "$CODEX_MARKETPLACE"; then
-      CODEX_INSTALL_RESULT="failed"
-      return 1
+    if [ "$CODEX_MARKETPLACE_PRESENT" -eq 1 ]; then
+      if ! run_quietly codex plugin marketplace upgrade "$CODEX_MARKETPLACE"; then
+        CODEX_INSTALL_RESULT="failed"
+        return 1
+      fi
+    else
+      # The plugin can outlive its marketplace registration; repair the state
+      # by re-adding the trusted marketplace instead of upgrading a missing one.
+      if ! run_quietly codex plugin marketplace add "$MARKETPLACE_SOURCE"; then
+        CODEX_INSTALL_RESULT="failed"
+        return 1
+      fi
     fi
     success_result="updated"
   else
