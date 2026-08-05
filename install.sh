@@ -928,9 +928,11 @@ installation_succeeded() {
 }
 
 # A failed legacy cleanup still leaves the new plugin installed, verified, and
-# enabled, so the manual login command must still be shown for it.
+# enabled, so the manual login command must still be shown for it. A dry run
+# installs nothing, so login hints would point at a plugin that is not there.
 plugin_ready_for_login() {
   case $1 in
+    planned) return 1 ;;
     "failed legacy cleanup"*) return 0 ;;
   esac
   installation_succeeded "$1"

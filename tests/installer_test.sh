@@ -654,6 +654,8 @@ test_dry_run_never_mutates_provider_state() {
   assert_no_mutations || return
   assert_output_contains "Claude Code installation: planned" || return
   assert_output_contains "Codex installation: planned" || return
+  assert_output_not_contains "Manual Claude login:" || return
+  assert_output_not_contains "Manual Codex login:" || return
   pass "$TEST_NAME"
 }
 
