@@ -31,10 +31,12 @@ This returns summary stats including top categories, publication timeline, co-au
 
 If no results are found, tell the user the author was not found and suggest checking the spelling or trying a partial name. Stop here.
 
+Store the returned `resolved_name` and use it for every subsequent author-based call.
+
 ### Step 2: Get full publication list
 
 Call `search_by_author` with:
-- `author` (string): the author name
+- `author` (string): the `resolved_name` from Step 1
 - `limit` (integer): 10
 - `sort_by` (string): "citations"
 - `strict_mode` (string): "fuzzy"
@@ -44,7 +46,7 @@ This returns the author's top papers sorted by citation count.
 ### Step 3: Get research domain distribution
 
 Call `batch_author_categories` with:
-- `authors` (array of strings): a JSON array containing the author name, e.g. `["David W. Hogg"]`
+- `authors` (array of strings): a JSON array containing the `resolved_name` from Step 1, e.g. `["David W. Hogg"]`
 - `max_categories` (integer): 10
 
 This returns the category distribution for the author's publications.
@@ -52,7 +54,7 @@ This returns the category distribution for the author's publications.
 ### Step 4: Get top collaborators
 
 Call `find_coauthors` with:
-- `author` (string): the author name
+- `author` (string): the `resolved_name` from Step 1
 - `limit` (integer): 10
 
 This returns the author's most frequent collaborators with co-publication counts.

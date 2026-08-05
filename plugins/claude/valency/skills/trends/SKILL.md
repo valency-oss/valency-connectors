@@ -10,7 +10,7 @@ Show how a topic or category has evolved over time.
 ## Input
 
 The user provides one of:
-- An arXiv category code (e.g., `cs.LG`) — recognized by the short-prefix-dot-suffix pattern
+- An arXiv category code (e.g., `cs.LG`, `astro-ph.CO`, `hep-th`, `math-ph`, `quant-ph`) — validate against the arXiv taxonomy rather than requiring a dot
 - A keyword or phrase (e.g., "transformer", "CRISPR")
 - Multiple categories or keywords separated by commas or "vs" (e.g., "cs.LG, cs.CL" or "transformers vs RNNs") — for comparison
 
@@ -18,42 +18,41 @@ The user provides one of:
 
 ### Step 1: Get trend data
 
-**If the input is a single category code:**
+Recognize both dotted subject classes such as `cs.LG` and `astro-ph.CO` and archive-level hyphenated categories such as `hep-th`, `math-ph`, and `quant-ph`. If a category-looking value is uncertain, try it as a category first and fall back to keyword handling only when the tool reports that the category is invalid.
+
+Split comma-separated or `vs` comparisons into individual terms and classify each term independently as a category or keyword. Mixed comparisons are valid.
+
+**For each category term:**
 
 Call `get_publication_trends` with:
 - `category` (string): the category code
 - `granularity` (string): "year"
 - `format` (string): "compact"
 
-**If the input is a single keyword/phrase:**
+**For each keyword/phrase term:**
 
 Call `get_keyword_trends` with:
 - `query` (string): the keyword
 - `granularity` (string): "year"
 - `format` (string): "compact"
 
-**If the input contains multiple categories** (comma-separated or "vs"):
-
-Call `get_publication_trends` individually for each category with:
-- `category` (string): each category code
-- `granularity` (string): "year"
-- `format` (string): "compact"
-
 Note: `get_publication_trends_batch` exists but is unreliable and frequently times out. Use individual calls instead and combine the results into a comparison table.
 
-**If the input contains multiple keywords** (comma-separated or "vs"):
+**Partial-year discipline:** Treat the current calendar year's count as year-to-date. Label it `YTD` in tables and exclude it from full-year growth, decline, inflection-point, and trajectory comparisons unless the data supports a same-period comparison with prior years.
 
-Call `get_keyword_trends` once per keyword with:
-- `query` (string): each keyword
-- `granularity` (string): "year"
-- `format` (string): "compact"
+### Step 2: Get representative papers
 
-### Step 2: Get recent representative papers
-
-Call `search_by_abstract` with:
-- `query` (string): the keyword or category name (use the human-readable name for categories, e.g., "machine learning" for cs.LG)
+For each category input, call `search_by_category` with:
+- `category` (string): the category code
 - `limit` (integer): 5
 - `sort_by` (string): "relevance"
+
+For each keyword input, call `search_by_abstract` with:
+- `query` (string): the keyword or phrase
+- `limit` (integer): 5
+- `sort_by` (string): "relevance"
+
+For a comparison, classify and search each input independently with the corresponding category or keyword tool. Keep each result set labeled with its comparison topic.
 
 ## Output Format
 
@@ -77,13 +76,13 @@ Call `search_by_abstract` with:
 
 A 3-5 sentence narrative covering:
 - When the field or topic first appeared in the corpus
-- Key inflection points (years where volume jumped or dropped significantly)
-- Current trajectory (accelerating, plateauing, declining)
+- Key inflection points among completed years (years where volume jumped or dropped significantly)
+- Current trajectory (accelerating, plateauing, declining), based on completed years unless a same-period YTD comparison is available
 - For comparisons: which topic is growing faster and when they diverged
 
-### Representative Recent Papers
+### Representative Papers
 
-A numbered list of 3-5 papers from Step 2. For each:
+A numbered list of 3-5 papers per Step 2 topic. For comparisons, group and label the papers by topic. For each paper:
 - Title (with paper ID)
 - Authors (first 3, then "et al.")
 - Year

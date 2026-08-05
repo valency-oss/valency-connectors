@@ -25,7 +25,7 @@ Note the author's top categories from this result — you'll use them later to i
 ### Step 2: Get top-cited papers (career anchors)
 
 Call `search_by_author` with:
-- `author` (string): the author name
+- `author` (string): the `resolved_name` from Step 1
 - `limit` (integer): 5
 - `sort_by` (string): "citations"
 - `strict_mode` (string): "fuzzy"
@@ -35,19 +35,19 @@ These are the author's most influential works — they anchor the "what defined 
 ### Step 3: Get recent papers (current direction)
 
 Call `search_by_author` with:
-- `author` (string): the author name
+- `author` (string): the `resolved_name` from Step 1
 - `limit` (integer): 5
 - `sort_by` (string): "relevance"
 - `strict_mode` (string): "fuzzy"
 
 The default `relevance` sort orders by recency. These represent the author's *current* intellectual direction, which may differ from their most-cited work.
 
-### Step 4: Select 3–5 representative seed papers
+### Step 4: Select 1–5 representative seed papers
 
-From the combined Step 2 + Step 3 results, select 3 to 5 **seed papers** that best represent the author's distinct intellectual threads:
+Deduplicate the combined Step 2 + Step 3 results. If no papers remain, explain that the corpus has no usable paper records for this author and stop. Group the papers into distinct, evidence-supported intellectual threads, then select at most one representative **seed paper** per thread, up to 5 seeds. When at least 3 distinct threads are available, select 3 to 5 seeds. When only 1 or 2 distinct threads are supported, select 1 or 2 seeds and disclose that fewer than 3 were chosen to avoid redundant threads.
 
-- Always include the single most-cited paper (career anchor).
-- Always include the most recent paper that has a substantive abstract (current direction).
+- Prefer the single most-cited paper as the representative of its thread when available (career anchor).
+- Prefer the most recent paper with a substantive abstract as the representative of its thread when available (current direction). If no recent paper has an abstract, the most recent available paper may represent that thread; state that abstract-based theme interpretation is limited.
 - Fill the remaining slots by picking papers whose category lists differ — i.e. cover different threads of the author's work, not five papers in the same subfield.
 
 If two papers have nearly identical category lists and similar topics, pick only one.
@@ -61,13 +61,15 @@ For each seed paper from Step 4, call `find_similar_papers` with:
 
 If a seed paper has no embedding and the call returns an error, skip that seed and continue with the others. Note the skip in the output.
 
+If every seed is skipped or no similar papers are returned, report the seed papers and the retrieval limitation, then stop without inventing recommendations.
+
 ### Step 6: Aggregate and clean
 
 After all `find_similar_papers` calls complete:
 
 1. **Tag each result** with the seed paper that surfaced it.
-2. **Deduplicate** — if a paper appears in multiple seeds' similar lists, keep the entry with the highest similarity score and merge the seed tags.
-3. **Filter out self-citations** — drop any paper whose author list contains the focal author (use the `resolved_name` from Step 1 to match, since name normalization may matter).
+2. **Deduplicate** — if a paper appears in multiple seeds' similar lists, merge it into one record while retaining a separate similarity score for each seed. When ordering a thread, use that thread's seed-specific score rather than a score from another seed.
+3. **Filter out self-authored papers** — compare the focal author's stable identifier with paper-author identifiers whenever available, then use server-resolved canonical identities or returned aliases. Lowercase/trim/collapse-whitespace name matching is only a fallback and does not reliably reconcile initials, punctuation, ordering, or diacritics. If a name-only match is plausibly the focal author but remains ambiguous, conservatively exclude the paper.
 4. **Group by seed** — partition the cleaned results by which seed paper(s) surfaced them. This grouping defines the reading-list "threads."
 
 ## Output Format
@@ -88,7 +90,7 @@ For each seed paper from Step 4, produce a thread section:
 Anchored by the seed paper:
 - **Seed**: Title (paper ID), year, categories
 
-Recommended reading (5–8 papers per thread, ordered by similarity score):
+Recommended reading (up to 5–8 papers per thread, ordered by that thread's seed-specific similarity score). If fewer than 5 survive retrieval, deduplication, and self-author filtering, show every available result and disclose the limited count:
 
 1. **Title** (paper ID) — first 3 authors, year, category — one-sentence reason it matters here
 2. ...
