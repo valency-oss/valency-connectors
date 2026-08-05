@@ -17,14 +17,16 @@ Generate a landscape overview of a research field or topic using the Valency res
 ## Input
 
 The user provides either:
-- An arXiv category code (e.g., `cs.LG`, `q-bio.BM`, `astro-ph.CO`) — recognized by the pattern of a short prefix, a dot, and a short suffix
+- An arXiv category code (e.g., `cs.LG`, `q-bio.BM`, `astro-ph.CO`, `hep-th`, `math-ph`, `quant-ph`) — validate against the arXiv taxonomy rather than requiring a dot
 - Free text describing a research area (e.g., "protein folding", "large language models")
 
 ## Tool chain
 
 ### Step 1: Find papers in the field
 
-**If the input matches an arXiv category pattern** (e.g., `cs.LG`):
+**If the input is a valid arXiv category:**
+
+Recognize both dotted subject classes such as `cs.LG` and `astro-ph.CO` and archive-level hyphenated categories such as `hep-th`, `math-ph`, and `quant-ph`. If a category-looking value is uncertain, try it as a category first and fall back to free-text handling only when the tool reports that the category is invalid.
 
 Call `search_by_category` with:
 - `category` (string): the category code
@@ -56,6 +58,8 @@ Call `get_keyword_trends` with:
 - `granularity` (string): "year"
 - `format` (string): "compact"
 
+Treat the current calendar year's count as year-to-date. Label it `YTD` and exclude it from full-year growth or decline claims unless the data supports a same-period comparison with prior years.
+
 ### Step 3: Identify top authors
 
 Call `identify_prolific_authors` with:
@@ -66,26 +70,30 @@ Note: if the input was free text and no category was identified, skip this step 
 
 This tool can time out for very large categories (e.g., cs.LG). If it times out, skip this section in the output and note that author ranking was unavailable due to the size of the category.
 
-### Step 4: Identify subdomains
+### Step 4: Add corpus-wide domain context (category input only)
 
-Call `identify_research_domains` with:
+If the input is a category code, call `identify_research_domains` with:
 - `limit` (integer): 10
 
-Note: this returns corpus-wide domain rankings. If the input was a category, the results contextualize where this category sits within the broader landscape.
+These are corpus-wide domain rankings, not subdomains of the requested category. Use them only as clearly labeled broader-corpus context.
 
-### Step 5: Get corpus metrics
+If the input is free text, skip this step. The tool cannot filter its domain rankings to the requested topic.
 
-Call `analyze_corpus_metrics` with:
-- `category` (string): the category code (if input was a category), otherwise omit
+### Step 5: Get category metrics (category input only)
+
+If the input is a category code, call `analyze_corpus_metrics` with:
+- `category` (string): the category code
+
+If the input is free text, skip this step. Step 1 is a limited semantic-search sample, not a topic-wide paper count or date range.
 
 ## Output format
 
 ### Field summary
 
 A brief paragraph covering:
-- Total papers found (from Step 5 or Step 1 result count)
-- Date range of publications
-- Growth trajectory (from Step 2 — is volume increasing, stable, or declining?)
+- For a category, the total paper count and date range from Step 5
+- For free text, the size and date range of the Step 1 search sample, explicitly labeled as sample metadata rather than field-wide metrics
+- Growth trajectory from completed years in Step 2; use the current year's YTD value only for a supported same-period comparison
 
 ### Publication trends
 
@@ -100,11 +108,11 @@ A year-by-year table from Step 2:
 
 A numbered list of the top 10 authors from Step 3 with their paper counts.
 
-### Subdomain breakdown
+### Corpus-wide domain context
 
-A table of the top research domains from Step 4, giving context for how this field relates to the broader corpus.
+For category input only, show a table of the corpus-wide research domains from Step 4. Label it as broader-corpus context, not a subdomain breakdown for the requested field. Omit this section for free-text input.
 
-### Notable recent papers
+### Notable papers
 
 List 5 papers from Step 1 (the most-cited papers found). For each:
 - Title (with paper ID)
@@ -116,7 +124,7 @@ List 5 papers from Step 1 (the most-cited papers found). For each:
 
 2-3 brief observations drawn from the data. Examples:
 - "Publication volume has doubled since 2021"
-- "The field is concentrated in 2-3 subdomain categories"
+- "The ten-paper sample spans 3 categories"
 - "Author X dominates with 3x more papers than the next most prolific"
 
 ### Suggested follow-ups

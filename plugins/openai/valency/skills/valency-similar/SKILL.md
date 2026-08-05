@@ -18,15 +18,16 @@ Find papers semantically similar to a given paper using the Valency research cor
 
 The user provides either:
 - A paper identifier — one of:
-  - arXiv ID (e.g., `2301.07041` or `2301.07041v3`)
-  - DOI (e.g., `10.1101/2024.01.15.575423` or any `10.xxxx/...` pattern)
+  - arXiv ID (e.g., `0704.0001`, `2301.07041v3`, `arXiv:2301.07041`, or `hep-th/9901001`)
+  - DOI (e.g., `10.1101/2024.01.15.575423` or any `10.<4-9 digits>/...` pattern)
   - PubMed ID / PMID (digits only, e.g., `26360422`)
-- A paper title (contains spaces, reads as natural language)
+- A paper title (including a one-word title)
 
 **Identifier detection rules:**
 - If the input is digits only → treat as PMID
-- If the input matches `10.xxxx/...` → treat as DOI (covers bioRxiv, medRxiv, and other DOI-minted sources)
-- If the input matches a numeric pattern with dots like `NNNN.NNNNN` (optionally with `vN` suffix) → treat as arXiv ID
+- If the input matches `10\.\d{4,9}/\S+` → treat as DOI (covers bioRxiv, medRxiv, and other DOI-minted sources)
+- If the input, optionally prefixed by `arXiv:`, matches a modern arXiv ID (`YYMM.NNNN` or `YYMM.NNNNN`, optionally with a `vN` suffix) → treat as arXiv ID
+- If the input, optionally prefixed by `arXiv:`, matches a legacy archive-style ID such as `hep-th/9901001` (optionally with a `vN` suffix) → treat as arXiv ID
 - Otherwise → treat as a title and resolve via search
 
 Do not assume all bioRxiv records use the `10.1101/...` prefix. Newer records may use other DOI prefixes.
@@ -40,9 +41,9 @@ Do not assume all bioRxiv records use the `10.1101/...` prefix. Newer records ma
 Call `get_paper_by_id` with:
 - `paper_id` (string): the provided ID
 
-If no paper is found, tell the user the ID was not recognized and suggest searching by title instead. Stop here.
+If no paper is found for a digits-only input, it may be a numeric title rather than a PMID. Fall back to `search_by_title` using the original input and follow the title-resolution path below. For any other identifier type, tell the user the ID was not recognized and suggest searching by title instead. Stop here.
 
-**If the input looks like a title** (contains spaces):
+**If the input does not match any supported paper-identifier pattern:**
 
 Call `search_by_title` with:
 - `query` (string): the provided title
