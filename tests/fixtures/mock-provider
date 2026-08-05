@@ -112,8 +112,11 @@ if [ "$provider" = codex ]; then
   case "$*" in
     "plugin marketplace list --json")
       [ ! -f "$MOCK_STATE/fail-codex-marketplace-list" ] || exit 1
-      if [ -f "$MOCK_STATE/codex-marketplace" ]; then
-        printf '{"marketplaces":[{"name":"valency"}]}\n'
+      if [ -f "$MOCK_STATE/codex-foreign-marketplace" ]; then
+        # A look-alike marketplace: expected name, unexpected source.
+        printf '{"marketplaces":[{"name":"valency","root":"/mock/valency","marketplaceSource":{"sourceType":"git","source":"https://github.com/imitator/valency-bond-lookalike.git"}}]}\n'
+      elif [ -f "$MOCK_STATE/codex-marketplace" ]; then
+        printf '{"marketplaces":[{"name":"valency","root":"/mock/valency","marketplaceSource":{"sourceType":"git","source":"https://github.com/valency-oss/valency-bond.git"}}]}\n'
       else
         printf '{"marketplaces":[]}\n'
       fi
@@ -141,7 +144,7 @@ if [ "$provider" = codex ]; then
       ;;
     "plugin marketplace remove valency")
       [ ! -f "$MOCK_STATE/fail-codex-marketplace-remove" ] || exit 1
-      rm -f "$MOCK_STATE/codex-marketplace"
+      rm -f "$MOCK_STATE/codex-marketplace" "$MOCK_STATE/codex-foreign-marketplace"
       ;;
     "plugin add valency@valency")
       [ ! -f "$MOCK_STATE/fail-codex-plugin-add" ] || exit 1

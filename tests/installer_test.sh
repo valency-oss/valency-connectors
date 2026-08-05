@@ -305,7 +305,7 @@ test_unattended_codex_replacement_requires_flag() {
   new_case codex-replacement-requires-flag
   enable_codex
   enable_repository_check
-  : > "$MOCK_STATE/codex-marketplace"
+  : > "$MOCK_STATE/codex-foreign-marketplace"
   run_without_terminal --target codex --yes --no-auth
   assert_status 2 || return
   assert_output_contains "--migrate" || return
@@ -317,7 +317,7 @@ test_codex_replacement_preflight_failure_is_non_destructive() {
   new_case codex-replacement-preflight-fails
   enable_codex
   enable_repository_check
-  : > "$MOCK_STATE/codex-marketplace"
+  : > "$MOCK_STATE/codex-foreign-marketplace"
   : > "$MOCK_STATE/repository-unreachable"
   run_without_terminal --target codex --yes --migrate --no-auth
   assert_status 1 || return
@@ -332,7 +332,7 @@ test_codex_preflight_failure_does_not_block_claude() {
   enable_claude
   enable_codex
   enable_repository_check
-  : > "$MOCK_STATE/codex-marketplace"
+  : > "$MOCK_STATE/codex-foreign-marketplace"
   : > "$MOCK_STATE/repository-unreachable"
   run_without_terminal --target all --yes --migrate --no-auth
   assert_status 1 || return
@@ -361,7 +361,7 @@ test_codex_replacement_failure_prints_recovery() {
   new_case codex-replacement-add-fails
   enable_codex
   enable_repository_check
-  : > "$MOCK_STATE/codex-marketplace"
+  : > "$MOCK_STATE/codex-foreign-marketplace"
   : > "$MOCK_STATE/fail-codex-marketplace-add"
   run_without_terminal --target codex --yes --migrate --no-auth
   assert_status 1 || return
@@ -376,7 +376,7 @@ test_codex_replacement_succeeds() {
   new_case codex-replacement-succeeds
   enable_codex
   enable_repository_check
-  : > "$MOCK_STATE/codex-marketplace"
+  : > "$MOCK_STATE/codex-foreign-marketplace"
   run_without_terminal --target codex --yes --migrate --no-auth
   assert_status 0 || return
   assert_log_order "codex plugin marketplace remove valency" "codex plugin marketplace add valency-oss/valency-bond" || return
@@ -389,13 +389,58 @@ test_interactive_declined_codex_replacement_skips_provider() {
   new_case declined-codex-replacement
   enable_codex
   enable_repository_check
-  : > "$MOCK_STATE/codex-marketplace"
+  : > "$MOCK_STATE/codex-foreign-marketplace"
   printf 'n\n' > "$TTY_INPUT"
   run_with_terminal --target codex --no-auth
   assert_status 0 || return
   assert_output_contains "Codex skipped; the existing marketplace named valency was left unchanged." || return
   assert_output_contains "Codex installation: skipped (replacement declined)" || return
   assert_no_mutations || return
+  pass "$TEST_NAME"
+}
+
+test_trusted_codex_marketplace_reinstalls_without_migration() {
+  # Our own marketplace surviving a partial earlier run is not a conflict:
+  # the source matches, so reinstalling needs no replacement approval.
+  new_case codex-trusted-marketplace-reinstall
+  enable_codex
+  : > "$MOCK_STATE/codex-marketplace"
+  run_without_terminal --target codex --yes --no-auth
+  assert_status 0 || return
+  assert_log_contains "codex plugin marketplace upgrade valency" || return
+  assert_log_contains "codex plugin add valency@valency" || return
+  assert_log_not_contains "codex plugin marketplace remove valency" || return
+  assert_output_contains "Codex installation: installed" || return
+  pass "$TEST_NAME"
+}
+
+test_lookalike_codex_marketplace_with_installed_plugin_requires_migration() {
+  # A look-alike marketplace must not take the refresh path just because a
+  # plugin with the expected id is installed from it; replacement approval
+  # is required before anything changes.
+  new_case codex-lookalike-with-plugin
+  enable_codex
+  enable_repository_check
+  : > "$MOCK_STATE/codex-foreign-marketplace"
+  : > "$MOCK_STATE/codex-plugin"
+  run_without_terminal --target codex --yes --no-auth
+  assert_status 2 || return
+  assert_output_contains "--migrate" || return
+  assert_no_mutations || return
+  pass "$TEST_NAME"
+}
+
+test_lookalike_codex_marketplace_with_installed_plugin_is_replaced() {
+  new_case codex-lookalike-with-plugin-replaced
+  enable_codex
+  enable_repository_check
+  : > "$MOCK_STATE/codex-foreign-marketplace"
+  : > "$MOCK_STATE/codex-plugin"
+  run_without_terminal --target codex --yes --migrate --no-auth
+  assert_status 0 || return
+  assert_log_order "codex plugin marketplace remove valency" "codex plugin marketplace add valency-oss/valency-bond" || return
+  assert_log_not_contains "codex plugin marketplace upgrade valency" || return
+  assert_output_contains "Codex installation: installed (marketplace replaced)" || return
   pass "$TEST_NAME"
 }
 
@@ -559,7 +604,7 @@ test_dry_run_shows_migration_and_replacement_plan_without_mutation() {
   enable_repository_check
   : > "$MOCK_STATE/claude-legacy-marketplace"
   : > "$MOCK_STATE/claude-legacy-plugin"
-  : > "$MOCK_STATE/codex-marketplace"
+  : > "$MOCK_STATE/codex-foreign-marketplace"
   run_without_terminal --target all --yes --migrate --no-auth --dry-run
   assert_status 0 || return
   assert_output_contains "Conditional migration: after verification, remove valency@valency-plugin" || return
@@ -770,7 +815,7 @@ test_codex_plugin_failure_after_replacement_prints_recovery() {
   new_case codex-replacement-plugin-fails
   enable_codex
   enable_repository_check
-  : > "$MOCK_STATE/codex-marketplace"
+  : > "$MOCK_STATE/codex-foreign-marketplace"
   : > "$MOCK_STATE/fail-codex-plugin-add"
   run_without_terminal --target codex --yes --migrate --no-auth
   assert_status 1 || return
@@ -800,6 +845,9 @@ test_claude_inspection_failure_does_not_block_codex
 test_codex_replacement_failure_prints_recovery
 test_codex_replacement_succeeds
 test_interactive_declined_codex_replacement_skips_provider
+test_trusted_codex_marketplace_reinstalls_without_migration
+test_lookalike_codex_marketplace_with_installed_plugin_requires_migration
+test_lookalike_codex_marketplace_with_installed_plugin_is_replaced
 test_provider_failure_does_not_block_other_provider
 test_selected_provider_requires_plugin_capabilities
 test_invalid_unattended_invocations_are_non_destructive

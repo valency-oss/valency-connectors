@@ -502,14 +502,28 @@ inspect_codex_state() {
   esac
 
   case $compact_marketplaces in
-    *\"name\":\"$CODEX_MARKETPLACE\"*) CODEX_MARKETPLACE_PRESENT=1 ;;
+    *\"name\":\"$CODEX_MARKETPLACE\"*)
+      CODEX_MARKETPLACE_PRESENT=1
+      # Same trust rule as Claude: the marketplace name alone is never
+      # trusted. A marketplace named valency from another source requires the
+      # disclosed replacement even when a plugin with the expected id is
+      # already installed from it — otherwise a look-alike source would be
+      # refreshed and pass verification. Several source spellings are
+      # accepted; anything else fails closed into the replacement flow.
+      if ! codex_marketplace_source_trusted "$compact_marketplaces"; then
+        CODEX_REPLACEMENT_REQUIRED=1
+      fi
+      ;;
   esac
   if json_entry_contains "$compact_plugins" '"pluginId":' "\"pluginId\":\"$CODEX_PLUGIN\"" '"installed":true'; then
     CODEX_PLUGIN_PRESENT=1
   fi
-  if [ "$CODEX_MARKETPLACE_PRESENT" -eq 1 ] && [ "$CODEX_PLUGIN_PRESENT" -eq 0 ]; then
-    CODEX_REPLACEMENT_REQUIRED=1
-  fi
+}
+
+codex_marketplace_source_trusted() {
+  json_entry_contains "$1" '"name":' "\"name\":\"$CODEX_MARKETPLACE\"" "\"source\":\"https://github.com/$MARKETPLACE_SOURCE.git\"" ||
+    json_entry_contains "$1" '"name":' "\"name\":\"$CODEX_MARKETPLACE\"" "\"source\":\"https://github.com/$MARKETPLACE_SOURCE\"" ||
+    json_entry_contains "$1" '"name":' "\"name\":\"$CODEX_MARKETPLACE\"" "\"source\":\"$MARKETPLACE_SOURCE\""
 }
 
 print_plan() {
@@ -525,7 +539,7 @@ print_plan() {
     fi
   fi
   if [ "$CODEX_SELECTED" -eq 1 ]; then
-    if [ "$CODEX_PLUGIN_PRESENT" -eq 1 ]; then
+    if [ "$CODEX_PLUGIN_PRESENT" -eq 1 ] && [ "$CODEX_REPLACEMENT_REQUIRED" -eq 0 ]; then
       printf '  Codex: refresh the %s marketplace, reinstall %s, and verify it is enabled.\n' "$CODEX_MARKETPLACE" "$CODEX_PLUGIN"
     else
       printf '  Codex: add the %s marketplace, install %s, and verify it is enabled.\n' "$MARKETPLACE_SOURCE" "$CODEX_PLUGIN"
@@ -709,16 +723,12 @@ install_codex() {
   fi
 
   codex_replacement_started=0
-  if [ "$CODEX_PLUGIN_PRESENT" -eq 1 ]; then
-    if ! run_quietly codex plugin marketplace upgrade "$CODEX_MARKETPLACE"; then
-      CODEX_INSTALL_RESULT="failed"
-      return 1
-    fi
-    success_result="updated"
-  elif [ "$CODEX_REPLACEMENT_REQUIRED" -eq 1 ]; then
+  if [ "$CODEX_REPLACEMENT_REQUIRED" -eq 1 ]; then
     # Codex identifies marketplaces by name. We intentionally do not inspect or
     # retain the previous source, so replacement is disclosed and preflighted;
     # failure guidance can retry Valency but cannot promise automatic rollback.
+    # Replacement is checked before plugin presence: a plugin installed from an
+    # untrusted look-alike marketplace must not take the refresh path.
     if ! run_quietly codex plugin marketplace remove "$CODEX_MARKETPLACE"; then
       CODEX_INSTALL_RESULT="failed marketplace replacement"
       printf 'Codex could not remove the existing marketplace named valency; it was left in place.\n' >&2
@@ -731,9 +741,22 @@ install_codex() {
       return 1
     fi
     success_result="installed (marketplace replaced)"
+  elif [ "$CODEX_PLUGIN_PRESENT" -eq 1 ]; then
+    if ! run_quietly codex plugin marketplace upgrade "$CODEX_MARKETPLACE"; then
+      CODEX_INSTALL_RESULT="failed"
+      return 1
+    fi
+    success_result="updated"
   else
     if [ "$CODEX_MARKETPLACE_PRESENT" -eq 0 ]; then
       if ! run_quietly codex plugin marketplace add "$MARKETPLACE_SOURCE"; then
+        CODEX_INSTALL_RESULT="failed"
+        return 1
+      fi
+    else
+      # The trusted marketplace survived a partial earlier run; refresh it and
+      # reinstall the plugin without any replacement ceremony.
+      if ! run_quietly codex plugin marketplace upgrade "$CODEX_MARKETPLACE"; then
         CODEX_INSTALL_RESULT="failed"
         return 1
       fi
