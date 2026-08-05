@@ -772,6 +772,15 @@ installation_succeeded() {
   return 1
 }
 
+# A failed legacy cleanup still leaves the new plugin installed, verified, and
+# enabled, so the manual login command must still be shown for it.
+plugin_ready_for_login() {
+  case $1 in
+    "failed legacy cleanup"*) return 0 ;;
+  esac
+  installation_succeeded "$1"
+}
+
 prepare_authentication() {
   if [ "$CLAUDE_SELECTED" -eq 1 ] && installation_succeeded "$CLAUDE_INSTALL_RESULT"; then
     prepare_provider_auth claude "$CLAUDE_AUTH_STATE"
@@ -890,14 +899,14 @@ print_summary() {
   if [ "$CLAUDE_SELECTED" -eq 1 ] || [ "$CLAUDE_INSTALL_RESULT" != "not selected" ]; then
     printf '  Claude Code installation: %s\n' "$CLAUDE_INSTALL_RESULT"
     printf '  Claude Code authentication: %s\n' "$CLAUDE_AUTH_RESULT"
-    if installation_succeeded "$CLAUDE_INSTALL_RESULT" && [ "$CLAUDE_AUTH_RESULT" != "authenticated" ] && [ "$CLAUDE_AUTH_RESULT" != "already connected" ]; then
+    if plugin_ready_for_login "$CLAUDE_INSTALL_RESULT" && [ "$CLAUDE_AUTH_RESULT" != "authenticated" ] && [ "$CLAUDE_AUTH_RESULT" != "already connected" ]; then
       printf '  Manual Claude login: claude mcp login plugin:valency:valency\n'
     fi
   fi
   if [ "$CODEX_SELECTED" -eq 1 ] || [ "$CODEX_INSTALL_RESULT" != "not selected" ]; then
     printf '  Codex installation: %s\n' "$CODEX_INSTALL_RESULT"
     printf '  Codex authentication: %s\n' "$CODEX_AUTH_RESULT"
-    if installation_succeeded "$CODEX_INSTALL_RESULT" && [ "$CODEX_AUTH_RESULT" != "authenticated" ] && [ "$CODEX_AUTH_RESULT" != "already connected" ]; then
+    if plugin_ready_for_login "$CODEX_INSTALL_RESULT" && [ "$CODEX_AUTH_RESULT" != "authenticated" ] && [ "$CODEX_AUTH_RESULT" != "already connected" ]; then
       printf '  Manual Codex login: codex mcp login valency\n'
     fi
   fi

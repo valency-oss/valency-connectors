@@ -262,6 +262,21 @@ test_disabled_claude_plugin_migration_preserves_legacy() {
   pass "$TEST_NAME"
 }
 
+test_failed_legacy_cleanup_still_prints_manual_login() {
+  # Legacy cleanup failing after verification is an installation failure, but
+  # the new plugin is verified and enabled, so the login hint must survive.
+  new_case claude-legacy-cleanup-fails
+  enable_claude
+  : > "$MOCK_STATE/claude-legacy-marketplace"
+  : > "$MOCK_STATE/claude-legacy-plugin"
+  : > "$MOCK_STATE/fail-claude-legacy-uninstall"
+  run_without_terminal --target claude --yes --migrate --no-auth
+  assert_status 1 || return
+  assert_output_contains "Claude Code installation: failed legacy cleanup (new plugin verified)" || return
+  assert_output_contains "Manual Claude login: claude mcp login plugin:valency:valency" || return
+  pass "$TEST_NAME"
+}
+
 test_interactive_declined_migration_skips_provider() {
   new_case declined-claude-migration
   enable_claude
@@ -707,6 +722,7 @@ test_unattended_claude_migration_requires_flag
 test_claude_migration_verifies_before_cleanup
 test_claude_verification_failure_preserves_legacy_install
 test_disabled_claude_plugin_migration_preserves_legacy
+test_failed_legacy_cleanup_still_prints_manual_login
 test_interactive_declined_migration_skips_provider
 test_unattended_codex_replacement_requires_flag
 test_codex_replacement_preflight_failure_is_non_destructive
