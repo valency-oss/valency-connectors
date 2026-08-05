@@ -1,0 +1,12 @@
+{
+  "name": "valency-bond",
+  "private": true,
+  "type": "module",
+  "description": "Provider plugin distributions for the Valency Bond MCP server.",
+  "license": "MIT",
+  "scripts": {
+    "test": "node --test",
+    "validate:claude": "claude plugin validate . --strict && claude plugin validate plugins/claude/valency --strict",
+    "validate:openai": "node scripts/validate-openai.mjs"
+  }
+}

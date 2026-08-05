@@ -1,0 +1,26 @@
+{
+  "name": "valency",
+  "displayName": "Valency",
+  "description": "Search, profile, and analyze millions of research papers with semantic embeddings.",
+  "version": "0.3.0",
+  "author": {
+    "name": "Valency Systems Inc",
+    "email": "support@valency.io",
+    "url": "https://valency.io"
+  },
+  "homepage": "https://valency.io",
+  "repository": "https://github.com/valency-oss/valency-bond",
+  "skills": "./skills/",
+  "mcpServers": "./.mcp.json",
+  "license": "MIT",
+  "keywords": [
+    "research",
+    "papers",
+    "arxiv",
+    "pubmed",
+    "biorxiv",
+    "medrxiv",
+    "literature-review",
+    "semantic-search"
+  ]
+}

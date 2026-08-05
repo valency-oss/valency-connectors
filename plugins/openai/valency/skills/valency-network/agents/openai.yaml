@@ -1,0 +1,16 @@
+interface:
+  display_name: "Collaboration Network"
+  short_description: "Map an author's collaborators and research divergence"
+  icon_small: "./assets/favicon_solid_cyan_valency.svg"
+  icon_large: "./assets/favicon_solid_cyan_valency.svg"
+  brand_color: "#00E6FF"
+  default_prompt: "Map this researcher's collaboration network and compare how their work has diverged."
+policy:
+  allow_implicit_invocation: true
+dependencies:
+  tools:
+    - type: "mcp"
+      value: "valency"
+      description: "Use the complete Valency Bond MCP surface"
+      transport: "streamable_http"
+      url: "https://labs.valency.io/mcp/"

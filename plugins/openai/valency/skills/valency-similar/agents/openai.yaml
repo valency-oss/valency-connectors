@@ -1,0 +1,16 @@
+interface:
+  display_name: "Similar Papers"
+  short_description: "Find research related to a title or stable paper ID"
+  icon_small: "./assets/favicon_solid_cyan_valency.svg"
+  icon_large: "./assets/favicon_solid_cyan_valency.svg"
+  brand_color: "#00E6FF"
+  default_prompt: "Find papers related to this title, DOI, PMID, or arXiv ID."
+policy:
+  allow_implicit_invocation: true
+dependencies:
+  tools:
+    - type: "mcp"
+      value: "valency"
+      description: "Use the complete Valency Bond MCP surface"
+      transport: "streamable_http"
+      url: "https://labs.valency.io/mcp/"
