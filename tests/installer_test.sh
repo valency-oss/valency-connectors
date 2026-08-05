@@ -506,6 +506,20 @@ test_selected_provider_requires_plugin_capabilities() {
   pass "$TEST_NAME"
 }
 
+test_only_unsupported_provider_is_reported_precisely() {
+  # When the only installed provider lacks capabilities, the error must name
+  # that condition rather than claim no CLI was found on PATH.
+  new_case only-unsupported-provider
+  enable_claude
+  : > "$MOCK_STATE/claude-missing-capability"
+  run_without_terminal --target all --yes --no-auth
+  assert_status 1 || return
+  assert_output_contains "Claude Code is installed but lacks required plugin commands" || return
+  assert_output_not_contains "No supported provider CLIs were found" || return
+  assert_no_mutations || return
+  pass "$TEST_NAME"
+}
+
 test_target_all_reports_unsupported_provider() {
   # --target all promised every installed provider: a present CLI without the
   # required commands must be reported and fail the run, while the capable
@@ -918,6 +932,7 @@ test_lookalike_codex_marketplace_with_installed_plugin_requires_migration
 test_lookalike_codex_marketplace_with_installed_plugin_is_replaced
 test_provider_failure_does_not_block_other_provider
 test_selected_provider_requires_plugin_capabilities
+test_only_unsupported_provider_is_reported_precisely
 test_target_all_reports_unsupported_provider
 test_invalid_unattended_invocations_are_non_destructive
 test_help_is_non_destructive

@@ -1039,7 +1039,17 @@ main() {
   initialize_terminal
   detect_provider_executables
   if [ "$CLAUDE_AVAILABLE" -eq 0 ] && [ "$CODEX_AVAILABLE" -eq 0 ]; then
-    printf 'No supported provider CLIs were found on PATH (expected claude or codex).\n' >&2
+    # Present-but-unsupported CLIs get a precise message; claiming nothing
+    # was found on PATH would misdirect the user away from the real fix.
+    if [ "$CLAUDE_EXECUTABLE_FOUND" -eq 1 ]; then
+      printf 'Error: Claude Code is installed but lacks required plugin commands; upgrade it.\n' >&2
+    fi
+    if [ "$CODEX_EXECUTABLE_FOUND" -eq 1 ]; then
+      printf 'Error: Codex is installed but lacks required plugin commands; upgrade it.\n' >&2
+    fi
+    if [ "$CLAUDE_EXECUTABLE_FOUND" -eq 0 ] && [ "$CODEX_EXECUTABLE_FOUND" -eq 0 ]; then
+      printf 'No supported provider CLIs were found on PATH (expected claude or codex).\n' >&2
+    fi
     return 1
   fi
 
