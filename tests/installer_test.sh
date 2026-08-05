@@ -708,6 +708,8 @@ test_unavailable_authentication_does_not_fail_installation() {
   assert_log_not_contains "claude mcp login plugin:valency:valency" || return
   assert_output_contains "Claude Code installation: installed" || return
   assert_output_contains "Claude Code authentication: unavailable" || return
+  assert_output_not_contains "Manual Claude login:" || return
+  assert_output_contains "This Claude Code version lacks mcp login; upgrade it" || return
   pass "$TEST_NAME"
 }
 

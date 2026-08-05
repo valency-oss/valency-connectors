@@ -921,14 +921,22 @@ print_summary() {
     printf '  Claude Code installation: %s\n' "$CLAUDE_INSTALL_RESULT"
     printf '  Claude Code authentication: %s\n' "$CLAUDE_AUTH_RESULT"
     if plugin_ready_for_login "$CLAUDE_INSTALL_RESULT" && [ "$CLAUDE_AUTH_RESULT" != "authenticated" ] && [ "$CLAUDE_AUTH_RESULT" != "already connected" ]; then
-      printf '  Manual Claude login: claude mcp login plugin:valency:valency\n'
+      if [ "$CLAUDE_AUTH_AVAILABLE" -eq 1 ]; then
+        printf '  Manual Claude login: claude mcp login plugin:valency:valency\n'
+      else
+        printf '  This Claude Code version lacks mcp login; upgrade it, then run: claude mcp login plugin:valency:valency\n'
+      fi
     fi
   fi
   if [ "$CODEX_SELECTED" -eq 1 ] || [ "$CODEX_INSTALL_RESULT" != "not selected" ]; then
     printf '  Codex installation: %s\n' "$CODEX_INSTALL_RESULT"
     printf '  Codex authentication: %s\n' "$CODEX_AUTH_RESULT"
     if plugin_ready_for_login "$CODEX_INSTALL_RESULT" && [ "$CODEX_AUTH_RESULT" != "authenticated" ] && [ "$CODEX_AUTH_RESULT" != "already connected" ]; then
-      printf '  Manual Codex login: codex mcp login valency\n'
+      if [ "$CODEX_AUTH_AVAILABLE" -eq 1 ]; then
+        printf '  Manual Codex login: codex mcp login valency\n'
+      else
+        printf '  This Codex version lacks mcp login; upgrade it, then run: codex mcp login valency\n'
+      fi
     fi
   fi
 }
