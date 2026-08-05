@@ -549,7 +549,9 @@ inspect_claude_auth_state() {
       [A-Za-z0-9._-]*) continue ;;
     esac
     case $auth_line in
-      *[Dd]isconnected*) CLAUDE_AUTH_STATE="unknown" ;;
+      # Negative and diagnostic statuses contain the word "connected" and
+      # must be recognized before the positive match.
+      *[Dd]isconnected*|*[Nn]ot\ [Cc]onnected*|*[Ff]ail*|*[Ee]rror*) CLAUDE_AUTH_STATE="unknown" ;;
       *[Cc]onnected*) CLAUDE_AUTH_STATE="connected" ;;
       *) CLAUDE_AUTH_STATE="unknown" ;;
     esac
