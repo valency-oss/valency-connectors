@@ -91,6 +91,8 @@ if [ "$provider" = claude ]; then
       fi
       ;;
     "mcp login plugin:valency:valency")
+      # Login output must reach the user; the device-code URL proves it.
+      printf 'Open https://auth.example/claude-device to finish signing in.\n'
       [ ! -f "$MOCK_STATE/fail-claude-auth" ] || exit 1
       : > "$MOCK_STATE/claude-auth-connected"
       ;;
@@ -151,6 +153,8 @@ if [ "$provider" = codex ]; then
       fi
       ;;
     "mcp login valency")
+      # Login output must reach the user; the device-code URL proves it.
+      printf 'Open https://auth.example/codex-device to finish signing in.\n'
       [ ! -f "$MOCK_STATE/fail-codex-auth" ] || exit 1
       : > "$MOCK_STATE/codex-auth-connected"
       ;;

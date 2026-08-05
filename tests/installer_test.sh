@@ -565,6 +565,8 @@ test_authentication_succeeds_for_missing_connections() {
   assert_status 0 || return
   assert_log_contains "claude mcp login plugin:valency:valency" || return
   assert_log_contains "codex mcp login valency" || return
+  assert_output_contains "Open https://auth.example/claude-device to finish signing in." || return
+  assert_output_contains "Open https://auth.example/codex-device to finish signing in." || return
   assert_output_contains "Claude Code authentication: authenticated" || return
   assert_output_contains "Codex authentication: authenticated" || return
   pass "$TEST_NAME"

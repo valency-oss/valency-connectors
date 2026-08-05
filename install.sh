@@ -866,8 +866,11 @@ run_authentication() {
     return
   fi
 
+  # Login output passes straight through to the user: device-code flows print
+  # a URL the user must see, exactly as if they ran the login command by hand.
+  # The installer never captures or re-prints that output itself.
   if [ "$CLAUDE_AUTH_SELECTED" -eq 1 ]; then
-    if claude mcp login plugin:valency:valency <&3 >/dev/null 2>&1; then
+    if claude mcp login plugin:valency:valency <&3; then
       CLAUDE_AUTH_RESULT="authenticated"
     else
       CLAUDE_AUTH_RESULT="failed (plugin remains installed)"
@@ -875,7 +878,7 @@ run_authentication() {
     fi
   fi
   if [ "$CODEX_AUTH_SELECTED" -eq 1 ]; then
-    if codex mcp login valency <&3 >/dev/null 2>&1; then
+    if codex mcp login valency <&3; then
       CODEX_AUTH_RESULT="authenticated"
     else
       CODEX_AUTH_RESULT="failed (plugin remains installed)"
