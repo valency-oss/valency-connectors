@@ -1,0 +1,164 @@
+#!/usr/bin/env bash
+
+set -u
+
+provider=$(basename "$0")
+printf '%s %s\n' "$provider" "$*" >> "$MOCK_LOG"
+
+has_arg() {
+  wanted=$1
+  shift
+  for arg in "$@"; do
+    if [ "$arg" = "$wanted" ]; then
+      return 0
+    fi
+  done
+  return 1
+}
+
+if has_arg --help "$@"; then
+  if [ -f "$MOCK_STATE/$provider-missing-capability" ]; then
+    exit 1
+  fi
+  case "$*" in
+    mcp*) [ ! -f "$MOCK_STATE/$provider-auth-capability-missing" ] || exit 1 ;;
+  esac
+  exit 0
+fi
+
+if [ "$provider" = claude ]; then
+  case "$*" in
+    "plugin marketplace list --json")
+      [ ! -f "$MOCK_STATE/fail-claude-marketplace-list" ] || exit 1
+      printf '['
+      separator=""
+      if [ -f "$MOCK_STATE/claude-marketplace" ]; then
+        printf '%s{"name":"valency-claude-plugin","source":"valency-oss/valency-bond"}' "$separator"
+        separator=,
+      fi
+      if [ -f "$MOCK_STATE/claude-legacy-marketplace" ]; then
+        printf '%s{"name":"valency-plugin"}' "$separator"
+      fi
+      printf ']\n'
+      ;;
+    "plugin list --json")
+      [ ! -f "$MOCK_STATE/fail-claude-plugin-list" ] || exit 1
+      printf '['
+      separator=""
+      if [ -f "$MOCK_STATE/claude-plugin" ] && [ ! -f "$MOCK_STATE/fail-claude-verification" ]; then
+        if [ -f "$MOCK_STATE/claude-plugin-disabled" ]; then enabled=false; else enabled=true; fi
+        printf '%s{"id":"valency@valency-claude-plugin","enabled":%s}' "$separator" "$enabled"
+        separator=,
+      fi
+      if [ -f "$MOCK_STATE/claude-legacy-plugin" ]; then
+        printf '%s{"id":"valency@valency-plugin","enabled":true}' "$separator"
+      fi
+      printf ']\n'
+      ;;
+    "plugin marketplace add valency-oss/valency-bond --scope user")
+      [ ! -f "$MOCK_STATE/fail-claude-marketplace-add" ] || exit 1
+      : > "$MOCK_STATE/claude-marketplace"
+      ;;
+    "plugin install valency@valency-claude-plugin --scope user")
+      [ ! -f "$MOCK_STATE/fail-claude-plugin-install" ] || exit 1
+      : > "$MOCK_STATE/claude-plugin"
+      ;;
+    "plugin marketplace update valency-claude-plugin")
+      [ ! -f "$MOCK_STATE/fail-claude-marketplace-update" ] || exit 1
+      ;;
+    "plugin update valency@valency-claude-plugin --scope user")
+      [ ! -f "$MOCK_STATE/fail-claude-plugin-update" ] || exit 1
+      ;;
+    "plugin uninstall valency@valency-plugin --scope user")
+      [ ! -f "$MOCK_STATE/fail-claude-legacy-uninstall" ] || exit 1
+      rm -f "$MOCK_STATE/claude-legacy-plugin"
+      ;;
+    "plugin marketplace remove valency-plugin --scope user")
+      [ ! -f "$MOCK_STATE/fail-claude-legacy-remove" ] || exit 1
+      rm -f "$MOCK_STATE/claude-legacy-marketplace"
+      ;;
+    "mcp list")
+      if [ -f "$MOCK_STATE/claude-auth-connected" ]; then
+        printf 'plugin:valency:valency: Connected\n'
+      elif [ -f "$MOCK_STATE/claude-auth-unknown" ]; then
+        printf 'plugin:valency:valency: status unavailable\n'
+      else
+        printf 'No MCP servers configured.\n'
+      fi
+      ;;
+    "mcp login plugin:valency:valency")
+      [ ! -f "$MOCK_STATE/fail-claude-auth" ] || exit 1
+      : > "$MOCK_STATE/claude-auth-connected"
+      ;;
+    *)
+      printf 'Unexpected mock Claude command: %s\n' "$*" >&2
+      exit 64
+      ;;
+  esac
+  exit 0
+fi
+
+if [ "$provider" = codex ]; then
+  case "$*" in
+    "plugin marketplace list --json")
+      [ ! -f "$MOCK_STATE/fail-codex-marketplace-list" ] || exit 1
+      if [ -f "$MOCK_STATE/codex-marketplace" ]; then
+        printf '{"marketplaces":[{"name":"valency"}]}\n'
+      else
+        printf '{"marketplaces":[]}\n'
+      fi
+      ;;
+    "plugin list --json")
+      [ ! -f "$MOCK_STATE/fail-codex-plugin-list" ] || exit 1
+      if [ -f "$MOCK_STATE/codex-plugin" ] && [ ! -f "$MOCK_STATE/fail-codex-verification" ]; then
+        if [ -f "$MOCK_STATE/codex-plugin-disabled" ]; then enabled=false; else enabled=true; fi
+        printf '{"installed":[{"pluginId":"valency@valency","name":"valency","marketplaceName":"valency","installed":true,"enabled":%s}],"available":[]}\n' "$enabled"
+      else
+        printf '{"installed":[],"available":[]}\n'
+      fi
+      ;;
+    "plugin marketplace add valency-oss/valency-bond")
+      [ ! -f "$MOCK_STATE/fail-codex-marketplace-add" ] || exit 1
+      : > "$MOCK_STATE/codex-marketplace"
+      ;;
+    "plugin marketplace upgrade valency")
+      [ ! -f "$MOCK_STATE/fail-codex-marketplace-upgrade" ] || exit 1
+      ;;
+    "plugin marketplace remove valency")
+      [ ! -f "$MOCK_STATE/fail-codex-marketplace-remove" ] || exit 1
+      rm -f "$MOCK_STATE/codex-marketplace"
+      ;;
+    "plugin add valency@valency")
+      [ ! -f "$MOCK_STATE/fail-codex-plugin-add" ] || exit 1
+      : > "$MOCK_STATE/codex-plugin"
+      ;;
+    "mcp list --json")
+      if [ -f "$MOCK_STATE/codex-auth-connected" ]; then
+        printf '[{"name":"valency","auth_status":"oauth"}]\n'
+      elif [ -f "$MOCK_STATE/codex-auth-unknown" ]; then
+        printf '[{"name":"valency","auth_status":"unknown"}]\n'
+      else
+        printf '[]\n'
+      fi
+      ;;
+    "mcp login valency")
+      [ ! -f "$MOCK_STATE/fail-codex-auth" ] || exit 1
+      : > "$MOCK_STATE/codex-auth-connected"
+      ;;
+    *)
+      printf 'Unexpected mock Codex command: %s\n' "$*" >&2
+      exit 64
+      ;;
+  esac
+  exit 0
+fi
+
+if [ "$provider" = curl ]; then
+  if [ -f "$MOCK_STATE/repository-unreachable" ]; then
+    exit 22
+  fi
+  exit 0
+fi
+
+printf 'Unexpected mock provider: %s\n' "$provider" >&2
+exit 64
