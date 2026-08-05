@@ -97,7 +97,6 @@ new_case() {
 }
 
 run_without_terminal() {
-  set +e
   env \
     HOME="$CASE_DIR/home" \
     CODEX_HOME="$CASE_DIR/codex-home" \
@@ -108,11 +107,9 @@ run_without_terminal() {
     VALENCY_INSTALLER_TTY="$CASE_DIR/no-terminal" \
     "$TEST_BASH" "$INSTALLER" "$@" >"$RUN_OUTPUT" 2>&1
   RUN_STATUS=$?
-  set -e
 }
 
 run_with_terminal() {
-  set +e
   env \
     HOME="$CASE_DIR/home" \
     CODEX_HOME="$CASE_DIR/codex-home" \
@@ -124,11 +121,9 @@ run_with_terminal() {
     VALENCY_INSTALLER_TTY="$TTY_INPUT" \
     "$TEST_BASH" "$INSTALLER" "$@" >"$RUN_OUTPUT" 2>&1
   RUN_STATUS=$?
-  set -e
 }
 
 run_with_limited_terminal() {
-  set +e
   env \
     HOME="$CASE_DIR/home" \
     CODEX_HOME="$CASE_DIR/codex-home" \
@@ -140,7 +135,6 @@ run_with_limited_terminal() {
     VALENCY_INSTALLER_TTY="$TTY_INPUT" \
     "$TEST_BASH" "$INSTALLER" "$@" >"$RUN_OUTPUT" 2>&1
   RUN_STATUS=$?
-  set -e
 }
 
 enable_claude() {
@@ -490,7 +484,6 @@ test_truncated_download_is_inert() {
   enable_claude
   truncated="$CASE_DIR/install-truncated.sh"
   sed '$d' "$INSTALLER" > "$truncated"
-  set +e
   env \
     HOME="$CASE_DIR/home" \
     CODEX_HOME="$CASE_DIR/codex-home" \
@@ -501,7 +494,6 @@ test_truncated_download_is_inert() {
     VALENCY_INSTALLER_TTY="$CASE_DIR/no-terminal" \
     "$TEST_BASH" "$truncated" --target claude --yes --no-auth >"$RUN_OUTPUT" 2>&1
   RUN_STATUS=$?
-  set -e
   assert_status 0 || return
   assert_no_mutations || return
   pass "$TEST_NAME"
@@ -715,7 +707,8 @@ test_codex_plugin_failure_after_replacement_prints_recovery() {
   pass "$TEST_NAME"
 }
 
-set -e
+# Failing tests return nonzero without aborting the run, so every test
+# executes and the final pass/fail summary reflects the whole suite.
 test_no_harnesses
 test_claude_fresh_install
 test_codex_fresh_install
