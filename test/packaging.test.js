@@ -60,52 +60,13 @@ test("Copilot marketplace routes to its independent provider package", () => {
   });
 });
 
-test("Copilot package exposes the complete Valency Bond tool surface", () => {
+test("Copilot package enables the complete Valency Bond tool surface", () => {
   assert.deepEqual(readJson("plugins/copilot/valency/.mcp.json"), {
     mcpServers: {
       valency: {
         type: "http",
         url: "https://labs.valency.io/mcp/",
-        tools: [
-          "search_by_title",
-          "search_by_abstract",
-          "search_by_abstract_batch",
-          "search_by_author",
-          "search_by_category",
-          "search_by_comments",
-          "search_by_venue",
-          "search_cross_category",
-          "filter_by_date_range",
-          "filter_by_categories",
-          "filter_papers_with_doi",
-          "filter_by_license",
-          "get_citing_papers",
-          "analyze_corpus_metrics",
-          "identify_research_domains",
-          "identify_prolific_authors",
-          "count_papers",
-          "semantic_search_papers",
-          "find_similar_papers",
-          "export_papers_json",
-          "export_papers_csv",
-          "export_papers_bibtex",
-          "export_from_filter",
-          "list_sources",
-          "get_paper_versions",
-          "get_paper_by_id",
-          "get_publication_trends",
-          "get_publication_trends_batch",
-          "get_keyword_trends",
-          "find_coauthors",
-          "get_author_profile",
-          "get_author_identity",
-          "find_papers_by_researcher",
-          "resolve_orcid",
-          "compare_authors",
-          "batch_author_categories",
-          "get_field_coverage",
-          "submit_feedback",
-        ],
+        tools: ["*"],
       },
     },
   });
