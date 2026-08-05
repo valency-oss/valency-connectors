@@ -335,6 +335,9 @@ apply_numbered_selection() {
   selection=$1
   behavior=$2
   normalized=${selection//,/ }
+  # Word splitting here is intentional; globbing is not. Without set -f, a
+  # selection like "*" would expand to filenames in the current directory.
+  set -f
   for item in $normalized; do
     if [ "$item" = "$CLAUDE_OPTION" ] && [ "$CLAUDE_OPTION" -gt 0 ]; then
       if [ "$behavior" = "toggle" ] && [ "$CLAUDE_SELECTED" -eq 1 ]; then
@@ -350,9 +353,11 @@ apply_numbered_selection() {
       fi
     else
       printf 'Invalid provider selection: %s\n' "$item" >&2
+      set +f
       return 1
     fi
   done
+  set +f
 }
 
 # Collapses JSON formatting whitespace while leaving string values intact.
@@ -981,6 +986,8 @@ prompt_for_authentication_selection() {
       ;;
   esac
   normalized=${selection//,/ }
+  # Word splitting is intentional; set -f keeps globs in the input literal.
+  set -f
   for item in $normalized; do
     if [ "$item" = "$CLAUDE_AUTH_OPTION" ] && [ "$CLAUDE_AUTH_OPTION" -gt 0 ]; then
       if [ "$CLAUDE_AUTH_SELECTED" -eq 1 ]; then CLAUDE_AUTH_SELECTED=0; else CLAUDE_AUTH_SELECTED=1; fi
@@ -990,6 +997,7 @@ prompt_for_authentication_selection() {
       printf 'Ignoring invalid authentication selection: %s\n' "$item" >&2
     fi
   done
+  set +f
 }
 
 run_authentication() {
