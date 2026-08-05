@@ -243,6 +243,25 @@ test_claude_verification_failure_preserves_legacy_install() {
   pass "$TEST_NAME"
 }
 
+test_disabled_claude_plugin_migration_preserves_legacy() {
+  # A disabled new plugin next to an enabled legacy plugin is the exact shape
+  # where whole-document matching falsely verified and destroyed the legacy
+  # install; verification must fail and leave the legacy plugin alone.
+  new_case claude-disabled-plugin-migration
+  enable_claude
+  : > "$MOCK_STATE/claude-marketplace"
+  : > "$MOCK_STATE/claude-plugin"
+  : > "$MOCK_STATE/claude-plugin-disabled"
+  : > "$MOCK_STATE/claude-legacy-marketplace"
+  : > "$MOCK_STATE/claude-legacy-plugin"
+  run_without_terminal --target claude --yes --migrate --no-auth
+  assert_status 1 || return
+  assert_output_contains "Claude Code installation: failed verification" || return
+  assert_log_not_contains "claude plugin uninstall valency@valency-plugin --scope user" || return
+  assert_log_not_contains "claude plugin marketplace remove valency-plugin --scope user" || return
+  pass "$TEST_NAME"
+}
+
 test_interactive_declined_migration_skips_provider() {
   new_case declined-claude-migration
   enable_claude
@@ -533,6 +552,20 @@ test_reauthenticate_includes_connected_providers() {
   pass "$TEST_NAME"
 }
 
+test_other_connected_server_is_not_misread_as_claude_auth() {
+  # Another MCP server's "Connected" line must not mark the plugin connected;
+  # the plugin's own line is unrecognized, so the state stays unknown and the
+  # provider remains selected for authentication.
+  new_case claude-auth-other-connected
+  enable_claude
+  : > "$MOCK_STATE/claude-auth-other-connected"
+  run_with_terminal --target claude --yes --auth
+  assert_status 0 || return
+  assert_output_contains "Claude Code status: unknown." || return
+  assert_log_contains "claude mcp login plugin:valency:valency" || return
+  pass "$TEST_NAME"
+}
+
 test_unknown_auth_status_is_selected() {
   new_case unknown-auth-status
   enable_claude
@@ -642,6 +675,7 @@ test_rerun_updates_both_providers
 test_unattended_claude_migration_requires_flag
 test_claude_migration_verifies_before_cleanup
 test_claude_verification_failure_preserves_legacy_install
+test_disabled_claude_plugin_migration_preserves_legacy
 test_interactive_declined_migration_skips_provider
 test_unattended_codex_replacement_requires_flag
 test_codex_replacement_preflight_failure_is_non_destructive
@@ -663,6 +697,7 @@ test_interactive_selector_can_cancel
 test_authentication_succeeds_for_missing_connections
 test_connected_providers_are_not_reauthenticated_by_default
 test_reauthenticate_includes_connected_providers
+test_other_connected_server_is_not_misread_as_claude_auth
 test_unknown_auth_status_is_selected
 test_authentication_failure_is_only_a_warning
 test_unavailable_authentication_does_not_fail_installation

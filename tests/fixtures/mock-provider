@@ -80,6 +80,10 @@ if [ "$provider" = claude ]; then
     "mcp list")
       if [ -f "$MOCK_STATE/claude-auth-connected" ]; then
         printf 'plugin:valency:valency: Connected\n'
+      elif [ -f "$MOCK_STATE/claude-auth-other-connected" ]; then
+        # Another server's Connected line must not mark the plugin connected.
+        printf 'plugin:valency:valency: status unavailable\n'
+        printf 'other-helper: Connected\n'
       elif [ -f "$MOCK_STATE/claude-auth-unknown" ]; then
         printf 'plugin:valency:valency: status unavailable\n'
       else
@@ -111,8 +115,13 @@ if [ "$provider" = codex ]; then
     "plugin list --json")
       [ ! -f "$MOCK_STATE/fail-codex-plugin-list" ] || exit 1
       if [ -f "$MOCK_STATE/codex-plugin" ] && [ ! -f "$MOCK_STATE/fail-codex-verification" ]; then
-        if [ -f "$MOCK_STATE/codex-plugin-disabled" ]; then enabled=false; else enabled=true; fi
-        printf '{"installed":[{"pluginId":"valency@valency","name":"valency","marketplaceName":"valency","installed":true,"enabled":%s}],"available":[]}\n' "$enabled"
+        if [ -f "$MOCK_STATE/codex-plugin-disabled" ]; then
+          # The disabled entry is followed by an unrelated enabled plugin so a
+          # whole-document match would falsely see "enabled":true.
+          printf '{"installed":[{"pluginId":"valency@valency","name":"valency","marketplaceName":"valency","installed":true,"enabled":false},{"pluginId":"zulu@zulu-tools","name":"zulu","marketplaceName":"zulu-tools","installed":true,"enabled":true}],"available":[]}\n'
+        else
+          printf '{"installed":[{"pluginId":"valency@valency","name":"valency","marketplaceName":"valency","installed":true,"enabled":true}],"available":[]}\n'
+        fi
       else
         printf '{"installed":[],"available":[]}\n'
       fi

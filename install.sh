@@ -323,6 +323,29 @@ compact_json() {
   tr -d '[:space:]'
 }
 
+# Substring checks over a whole JSON document can match a key from a different
+# list entry (for example another plugin's "enabled":true), so conjunction
+# checks are scoped to one entry: the segment between this entry's identity
+# pair and the next occurrence of the identity key. If the provider ever moves
+# the required field before the identity key, the segment misses it and the
+# check fails closed instead of falsely verifying.
+json_entry_contains() {
+  document=$1
+  identity_key=$2
+  identity=$3
+  required=$4
+  case $document in
+    *"$identity"*) ;;
+    *) return 1 ;;
+  esac
+  segment=${document#*"$identity"}
+  segment=${segment%%"$identity_key"*}
+  case $segment in
+    *"$required"*) return 0 ;;
+  esac
+  return 1
+}
+
 inspect_claude_state() {
   if ! marketplace_json=$(claude plugin marketplace list --json 2>/dev/null); then
     printf 'Error: could not inspect Claude Code marketplace state; no changes were made.\n' >&2
@@ -387,11 +410,24 @@ inspect_claude_auth_state() {
     CLAUDE_AUTH_STATE="unknown"
     return
   fi
-  case $auth_output in
-    *plugin:valency:valency*Connected*|*plugin:valency:valency*connected*) CLAUDE_AUTH_STATE="connected" ;;
-    *plugin:valency:valency*) CLAUDE_AUTH_STATE="unknown" ;;
-    *) CLAUDE_AUTH_STATE="missing" ;;
-  esac
+  # Status is read from the single line naming this plugin so another server's
+  # "Connected" cannot bleed in. "Disconnected" contains "connected" and must
+  # not count; anything unrecognized on the line stays "unknown".
+  CLAUDE_AUTH_STATE="missing"
+  while IFS= read -r auth_line; do
+    case $auth_line in
+      *plugin:valency:valency*)
+        case $auth_line in
+          *[Dd]isconnected*) CLAUDE_AUTH_STATE="unknown" ;;
+          *[Cc]onnected*) CLAUDE_AUTH_STATE="connected" ;;
+          *) CLAUDE_AUTH_STATE="unknown" ;;
+        esac
+        break
+        ;;
+    esac
+  done <<EOF
+$auth_output
+EOF
 }
 
 inspect_codex_auth_state() {
@@ -408,8 +444,12 @@ inspect_codex_auth_state() {
     \[*\]) ;;
     *) CODEX_AUTH_STATE="unknown"; return ;;
   esac
+  if json_entry_contains "$compact_auth" '"name":' '"name":"valency"' '"auth_status":"oauth"' ||
+    json_entry_contains "$compact_auth" '"name":' '"name":"valency"' '"auth_status":"bearer_token"'; then
+    CODEX_AUTH_STATE="connected"
+    return
+  fi
   case $compact_auth in
-    *\"name\":\"valency\"*\"auth_status\":\"oauth\"*|*\"name\":\"valency\"*\"auth_status\":\"bearer_token\"*) CODEX_AUTH_STATE="connected" ;;
     *\"name\":\"valency\"*) CODEX_AUTH_STATE="unknown" ;;
     *) CODEX_AUTH_STATE="missing" ;;
   esac
@@ -438,9 +478,9 @@ inspect_codex_state() {
   case $compact_marketplaces in
     *\"name\":\"$CODEX_MARKETPLACE\"*) CODEX_MARKETPLACE_PRESENT=1 ;;
   esac
-  case $compact_plugins in
-    *\"pluginId\":\"$CODEX_PLUGIN\"*\"installed\":true*) CODEX_PLUGIN_PRESENT=1 ;;
-  esac
+  if json_entry_contains "$compact_plugins" '"pluginId":' "\"pluginId\":\"$CODEX_PLUGIN\"" '"installed":true'; then
+    CODEX_PLUGIN_PRESENT=1
+  fi
   if [ "$CODEX_MARKETPLACE_PRESENT" -eq 1 ] && [ "$CODEX_PLUGIN_PRESENT" -eq 0 ]; then
     CODEX_REPLACEMENT_REQUIRED=1
   fi
@@ -556,10 +596,7 @@ run_quietly() {
 verify_claude_plugin() {
   plugin_json=$(claude plugin list --json 2>/dev/null) || return 1
   compact_plugins=$(printf '%s' "$plugin_json" | compact_json)
-  case $compact_plugins in
-    *\"id\":\"$CLAUDE_PLUGIN\"*\"enabled\":true*) return 0 ;;
-  esac
-  return 1
+  json_entry_contains "$compact_plugins" '"id":' "\"id\":\"$CLAUDE_PLUGIN\"" '"enabled":true'
 }
 
 install_claude() {
@@ -626,10 +663,8 @@ install_claude() {
 verify_codex_plugin() {
   plugin_json=$(codex plugin list --json 2>/dev/null) || return 1
   compact_plugins=$(printf '%s' "$plugin_json" | compact_json)
-  case $compact_plugins in
-    *\"pluginId\":\"$CODEX_PLUGIN\"*\"installed\":true*\"enabled\":true*) return 0 ;;
-  esac
-  return 1
+  json_entry_contains "$compact_plugins" '"pluginId":' "\"pluginId\":\"$CODEX_PLUGIN\"" '"installed":true' &&
+    json_entry_contains "$compact_plugins" '"pluginId":' "\"pluginId\":\"$CODEX_PLUGIN\"" '"enabled":true'
 }
 
 install_codex() {
