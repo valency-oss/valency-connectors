@@ -120,6 +120,8 @@ test("repository metadata and installation docs point at the monorepo", () => {
   );
 
   const readme = readFileSync("README.md", "utf8");
+  const development = readFileSync("docs/development.md", "utf8");
+  assert.match(readme, /^# Valency Bond$/m);
   assert.match(
     readme,
     /claude plugin marketplace add valency-oss\/valency-bond --scope user/,
@@ -129,5 +131,12 @@ test("repository metadata and installation docs point at the monorepo", () => {
   assert.match(readme, /codex plugin add valency@valency/);
   assert.match(readme, /ChatGPT web/);
   assert.match(readme, /Valency Bond MCP server/);
+  assert.match(readme, /\.\/docs\/development\.md/);
+  assert.doesNotMatch(readme, /^## Permissions$/m);
+  assert.doesNotMatch(readme, /^## Development and validation$/m);
   assert.doesNotMatch(readme, /claude mcp add/);
+  assert.match(development, /^# Development and validation$/m);
+  assert.match(development, /npm test/);
+  assert.match(development, /npm run validate:claude/);
+  assert.match(development, /npm run validate:openai/);
 });
