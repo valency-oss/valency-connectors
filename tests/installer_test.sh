@@ -236,6 +236,20 @@ test_lookalike_claude_marketplace_is_not_trusted() {
   pass "$TEST_NAME"
 }
 
+test_whitespace_in_marketplace_repo_is_not_trusted() {
+  # " valency-oss/valency-bond" equals the trusted repo only if whitespace
+  # inside the JSON string were stripped before comparison; it must stay a
+  # conflict.
+  new_case claude-whitespace-marketplace
+  enable_claude
+  : > "$MOCK_STATE/claude-whitespace-marketplace"
+  run_without_terminal --target claude --yes --no-auth
+  assert_status 1 || return
+  assert_output_contains "Claude Code installation: failed (marketplace conflict)" || return
+  assert_no_mutations || return
+  pass "$TEST_NAME"
+}
+
 test_unattended_claude_migration_requires_flag() {
   new_case claude-migration-requires-flag
   enable_claude
@@ -885,6 +899,7 @@ test_codex_fresh_install
 test_rerun_updates_both_providers
 test_installed_plugin_with_missing_marketplace_is_repaired
 test_lookalike_claude_marketplace_is_not_trusted
+test_whitespace_in_marketplace_repo_is_not_trusted
 test_unattended_claude_migration_requires_flag
 test_claude_migration_verifies_before_cleanup
 test_claude_verification_failure_preserves_legacy_install

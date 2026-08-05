@@ -338,15 +338,35 @@ apply_numbered_selection() {
   done
 }
 
+# Collapses JSON formatting whitespace while leaving string values intact.
+# Stripping blanks inside quoted strings could make an attacker-controlled
+# value compact into a trusted one, so only structural whitespace is removed.
+# awk is a base utility on every supported platform; this is a character
+# scanner, not a JSON parser dependency.
 compact_json() {
-  tr -d '[:space:]'
+  awk '
+    BEGIN { in_string = 0; escaped = 0 }
+    {
+      line = $0
+      for (i = 1; i <= length(line); i++) {
+        ch = substr(line, i, 1)
+        if (escaped) { printf "%s", ch; escaped = 0; continue }
+        if (in_string && ch == "\\") { printf "%s", ch; escaped = 1; continue }
+        if (ch == "\"") { in_string = !in_string }
+        if (in_string || (ch != " " && ch != "\t" && ch != "\r")) printf "%s", ch
+      }
+    }
+  '
 }
 
 # Substring checks over a whole JSON document can match a key from a different
 # list entry (for example another plugin's "enabled":true), so conjunction
 # checks are scoped to one entry: the segment between this entry's identity
-# pair and the next occurrence of the identity key. If the provider ever moves
-# the required field before the identity key, the segment misses it and the
+# pair and the end of its object. The segment stops at the sibling-object
+# boundary "},{" or at the next identity key, whichever comes first, so a
+# following object that leads with a matching field before its own identity is
+# never attributed here. If the provider moves the required field before the
+# identity key or behind a nested boundary, the segment misses it and the
 # check fails closed instead of falsely verifying.
 json_entry_contains() {
   document=$1
@@ -358,6 +378,7 @@ json_entry_contains() {
     *) return 1 ;;
   esac
   segment=${document#*"$identity"}
+  segment=${segment%%"},{"*}
   segment=${segment%%"$identity_key"*}
   case $segment in
     *"$required"*) return 0 ;;

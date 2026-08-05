@@ -36,6 +36,11 @@ if [ "$provider" = claude ]; then
         # A look-alike marketplace: expected name, unexpected repository.
         printf '%s{"name":"valency-claude-plugin","source":"github","repo":"imitator/valency-bond-lookalike"}' "$separator"
         separator=,
+      elif [ -f "$MOCK_STATE/claude-whitespace-marketplace" ]; then
+        # A repo value that only equals the trusted repo if whitespace inside
+        # the string were stripped; it must stay untrusted.
+        printf '%s{"name":"valency-claude-plugin","source":"github","repo":" valency-oss/valency-bond"}' "$separator"
+        separator=,
       elif [ -f "$MOCK_STATE/claude-marketplace" ]; then
         printf '%s{"name":"valency-claude-plugin","source":"github","repo":"valency-oss/valency-bond"}' "$separator"
         separator=,
@@ -55,7 +60,9 @@ if [ "$provider" = claude ]; then
         separator=,
       fi
       if [ -f "$MOCK_STATE/claude-legacy-plugin" ]; then
-        printf '%s{"id":"valency@valency-plugin","enabled":true}' "$separator"
+        # This entry deliberately leads with "enabled" before its identity:
+        # entry-scoped matching must not attribute it to the previous entry.
+        printf '%s{"enabled":true,"id":"valency@valency-plugin"}' "$separator"
       fi
       printf ']\n'
       ;;
