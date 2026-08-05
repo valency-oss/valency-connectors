@@ -209,6 +209,8 @@ test_installed_plugin_with_missing_marketplace_is_repaired() {
   : > "$MOCK_STATE/codex-plugin"
   run_without_terminal --target all --yes --no-auth
   assert_status 0 || return
+  assert_output_contains "Claude Code: add the valency-oss/valency-bond marketplace, update valency@valency-claude-plugin" || return
+  assert_output_contains "Codex: add the valency-oss/valency-bond marketplace, reinstall valency@valency" || return
   assert_log_contains "claude plugin marketplace add valency-oss/valency-bond --scope user" || return
   assert_log_not_contains "claude plugin marketplace update valency-claude-plugin" || return
   assert_log_contains "claude plugin update valency@valency-claude-plugin --scope user" || return
@@ -217,6 +219,22 @@ test_installed_plugin_with_missing_marketplace_is_repaired() {
   assert_log_contains "codex plugin add valency@valency" || return
   assert_output_contains "Claude Code installation: updated" || return
   assert_output_contains "Codex installation: updated" || return
+  pass "$TEST_NAME"
+}
+
+test_plan_shows_refresh_for_existing_marketplace_with_fresh_plugin() {
+  # The opposite mismatch: marketplace present, plugin absent must plan a
+  # refresh, not an add, for both providers.
+  new_case plan-existing-marketplace-fresh-plugin
+  enable_claude
+  enable_codex
+  : > "$MOCK_STATE/claude-marketplace"
+  : > "$MOCK_STATE/codex-marketplace"
+  run_without_terminal --target all --yes --no-auth --dry-run
+  assert_status 0 || return
+  assert_output_contains "Claude Code: refresh the valency-claude-plugin marketplace, install valency@valency-claude-plugin at user scope" || return
+  assert_output_contains "Codex: refresh the valency marketplace, install valency@valency" || return
+  assert_no_mutations || return
   pass "$TEST_NAME"
 }
 
@@ -939,6 +957,7 @@ test_claude_fresh_install
 test_codex_fresh_install
 test_rerun_updates_both_providers
 test_installed_plugin_with_missing_marketplace_is_repaired
+test_plan_shows_refresh_for_existing_marketplace_with_fresh_plugin
 test_lookalike_claude_marketplace_is_not_trusted
 test_whitespace_in_marketplace_repo_is_not_trusted
 test_unattended_claude_migration_requires_flag

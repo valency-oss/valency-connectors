@@ -591,20 +591,33 @@ codex_marketplace_source_trusted() {
 print_plan() {
   printf '\nValency installation plan\n'
   if [ "$CLAUDE_SELECTED" -eq 1 ]; then
-    if [ "$CLAUDE_PLUGIN_PRESENT" -eq 1 ]; then
-      printf '  Claude Code: refresh marketplace, update %s, and verify it is enabled.\n' "$CLAUDE_PLUGIN"
+    # The marketplace verb comes from the marketplace state, not the plugin
+    # state: a plugin can outlive its marketplace and vice versa, and the
+    # displayed plan must match the commands that will actually run.
+    if [ "$CLAUDE_MARKETPLACE_PRESENT" -eq 1 ]; then
+      claude_marketplace_step="refresh the $CLAUDE_MARKETPLACE marketplace"
     else
-      printf '  Claude Code: add the %s marketplace, install %s at user scope, and verify it is enabled.\n' "$MARKETPLACE_SOURCE" "$CLAUDE_PLUGIN"
+      claude_marketplace_step="add the $MARKETPLACE_SOURCE marketplace"
+    fi
+    if [ "$CLAUDE_PLUGIN_PRESENT" -eq 1 ]; then
+      printf '  Claude Code: %s, update %s, and verify it is enabled.\n' "$claude_marketplace_step" "$CLAUDE_PLUGIN"
+    else
+      printf '  Claude Code: %s, install %s at user scope, and verify it is enabled.\n' "$claude_marketplace_step" "$CLAUDE_PLUGIN"
     fi
     if [ "$CLAUDE_LEGACY_PLUGIN_PRESENT" -eq 1 ] || [ "$CLAUDE_LEGACY_MARKETPLACE_PRESENT" -eq 1 ]; then
       printf '    Conditional migration: after verification, remove valency@valency-plugin and the valency-plugin marketplace.\n'
     fi
   fi
   if [ "$CODEX_SELECTED" -eq 1 ]; then
-    if [ "$CODEX_PLUGIN_PRESENT" -eq 1 ] && [ "$CODEX_REPLACEMENT_REQUIRED" -eq 0 ]; then
-      printf '  Codex: refresh the %s marketplace, reinstall %s, and verify it is enabled.\n' "$CODEX_MARKETPLACE" "$CODEX_PLUGIN"
+    if [ "$CODEX_MARKETPLACE_PRESENT" -eq 1 ] && [ "$CODEX_REPLACEMENT_REQUIRED" -eq 0 ]; then
+      codex_marketplace_step="refresh the $CODEX_MARKETPLACE marketplace"
     else
-      printf '  Codex: add the %s marketplace, install %s, and verify it is enabled.\n' "$MARKETPLACE_SOURCE" "$CODEX_PLUGIN"
+      codex_marketplace_step="add the $MARKETPLACE_SOURCE marketplace"
+    fi
+    if [ "$CODEX_PLUGIN_PRESENT" -eq 1 ] && [ "$CODEX_REPLACEMENT_REQUIRED" -eq 0 ]; then
+      printf '  Codex: %s, reinstall %s, and verify it is enabled.\n' "$codex_marketplace_step" "$CODEX_PLUGIN"
+    else
+      printf '  Codex: %s, install %s, and verify it is enabled.\n' "$codex_marketplace_step" "$CODEX_PLUGIN"
     fi
     if [ "$CODEX_REPLACEMENT_REQUIRED" -eq 1 ]; then
       printf '    Conditional replacement: remove the existing marketplace named valency, add %s, then install and verify %s.\n' "$MARKETPLACE_SOURCE" "$CODEX_PLUGIN"
