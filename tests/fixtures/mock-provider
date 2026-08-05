@@ -32,12 +32,16 @@ if [ "$provider" = claude ]; then
       [ ! -f "$MOCK_STATE/fail-claude-marketplace-list" ] || exit 1
       printf '['
       separator=""
-      if [ -f "$MOCK_STATE/claude-marketplace" ]; then
-        printf '%s{"name":"valency-claude-plugin","source":"valency-oss/valency-bond"}' "$separator"
+      if [ -f "$MOCK_STATE/claude-foreign-marketplace" ]; then
+        # A look-alike marketplace: expected name, unexpected repository.
+        printf '%s{"name":"valency-claude-plugin","source":"github","repo":"imitator/valency-bond-lookalike"}' "$separator"
+        separator=,
+      elif [ -f "$MOCK_STATE/claude-marketplace" ]; then
+        printf '%s{"name":"valency-claude-plugin","source":"github","repo":"valency-oss/valency-bond"}' "$separator"
         separator=,
       fi
       if [ -f "$MOCK_STATE/claude-legacy-marketplace" ]; then
-        printf '%s{"name":"valency-plugin"}' "$separator"
+        printf '%s{"name":"valency-plugin","source":"github","repo":"valency-oss/valency-plugin"}' "$separator"
       fi
       printf ']\n'
       ;;

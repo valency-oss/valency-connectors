@@ -25,6 +25,7 @@ CODEX_AVAILABLE=0
 CLAUDE_SELECTED=0
 CODEX_SELECTED=0
 CLAUDE_MARKETPLACE_PRESENT=0
+CLAUDE_MARKETPLACE_CONFLICT=0
 CLAUDE_PLUGIN_PRESENT=0
 CLAUDE_LEGACY_MARKETPLACE_PRESENT=0
 CLAUDE_LEGACY_PLUGIN_PRESENT=0
@@ -368,7 +369,16 @@ inspect_claude_state() {
   esac
 
   case $compact_marketplaces in
-    *\"name\":\"$CLAUDE_MARKETPLACE\"*) CLAUDE_MARKETPLACE_PRESENT=1 ;;
+    *\"name\":\"$CLAUDE_MARKETPLACE\"*)
+      # The name alone is never trusted: a look-alike marketplace with this
+      # name but a different repository could serve a plugin that passes
+      # identity verification. The entry must also name the expected repo.
+      if json_entry_contains "$compact_marketplaces" '"name":' "\"name\":\"$CLAUDE_MARKETPLACE\"" "\"repo\":\"$MARKETPLACE_SOURCE\""; then
+        CLAUDE_MARKETPLACE_PRESENT=1
+      else
+        CLAUDE_MARKETPLACE_CONFLICT=1
+      fi
+      ;;
   esac
   case $compact_marketplaces in
     *\"name\":\"valency-plugin\"*) CLAUDE_LEGACY_MARKETPLACE_PRESENT=1 ;;
@@ -385,10 +395,18 @@ inspect_provider_state() {
   # Inspection failures are provider-specific: one provider's unreadable state
   # must not block the other selected provider, so the failed provider is
   # reported, counted toward the exit status, and dropped before any mutation.
-  if [ "$CLAUDE_SELECTED" -eq 1 ] && ! inspect_claude_state; then
-    CLAUDE_SELECTED=0
-    CLAUDE_INSTALL_RESULT="failed (state inspection)"
-    PREINSTALL_FAILURES=$((PREINSTALL_FAILURES + 1))
+  if [ "$CLAUDE_SELECTED" -eq 1 ]; then
+    if ! inspect_claude_state; then
+      CLAUDE_SELECTED=0
+      CLAUDE_INSTALL_RESULT="failed (state inspection)"
+      PREINSTALL_FAILURES=$((PREINSTALL_FAILURES + 1))
+    elif [ "$CLAUDE_MARKETPLACE_CONFLICT" -eq 1 ]; then
+      printf 'Error: an existing Claude Code marketplace named %s does not come from %s; Claude Code was not changed.\n' "$CLAUDE_MARKETPLACE" "$MARKETPLACE_SOURCE" >&2
+      printf 'Review where it came from, then remove it and rerun this installer: claude plugin marketplace remove %s --scope user\n' "$CLAUDE_MARKETPLACE" >&2
+      CLAUDE_SELECTED=0
+      CLAUDE_INSTALL_RESULT="failed (marketplace conflict)"
+      PREINSTALL_FAILURES=$((PREINSTALL_FAILURES + 1))
+    fi
   fi
   if [ "$CODEX_SELECTED" -eq 1 ] && ! inspect_codex_state; then
     CODEX_SELECTED=0

@@ -198,6 +198,22 @@ test_rerun_updates_both_providers() {
   pass "$TEST_NAME"
 }
 
+test_lookalike_claude_marketplace_is_not_trusted() {
+  # A pre-existing marketplace with the expected name but a different
+  # repository must not be updated or used to install: the plugin it serves
+  # would carry the expected identity and pass verification.
+  new_case claude-lookalike-marketplace
+  enable_claude
+  : > "$MOCK_STATE/claude-foreign-marketplace"
+  run_without_terminal --target claude --yes --no-auth
+  assert_status 1 || return
+  assert_output_contains "does not come from valency-oss/valency-bond" || return
+  assert_output_contains "Claude Code installation: failed (marketplace conflict)" || return
+  assert_output_contains "claude plugin marketplace remove valency-claude-plugin --scope user" || return
+  assert_no_mutations || return
+  pass "$TEST_NAME"
+}
+
 test_unattended_claude_migration_requires_flag() {
   new_case claude-migration-requires-flag
   enable_claude
@@ -768,6 +784,7 @@ test_no_harnesses
 test_claude_fresh_install
 test_codex_fresh_install
 test_rerun_updates_both_providers
+test_lookalike_claude_marketplace_is_not_trusted
 test_unattended_claude_migration_requires_flag
 test_claude_migration_verifies_before_cleanup
 test_claude_verification_failure_preserves_legacy_install
