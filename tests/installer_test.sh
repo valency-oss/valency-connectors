@@ -297,7 +297,38 @@ test_codex_replacement_preflight_failure_is_non_destructive() {
   run_without_terminal --target codex --yes --migrate --no-auth
   assert_status 1 || return
   assert_output_contains "the existing Codex marketplace was not changed" || return
+  assert_output_contains "Codex installation: failed (replacement preflight)" || return
   assert_no_mutations || return
+  pass "$TEST_NAME"
+}
+
+test_codex_preflight_failure_does_not_block_claude() {
+  new_case codex-preflight-claude-continues
+  enable_claude
+  enable_codex
+  enable_repository_check
+  : > "$MOCK_STATE/codex-marketplace"
+  : > "$MOCK_STATE/repository-unreachable"
+  run_without_terminal --target all --yes --migrate --no-auth
+  assert_status 1 || return
+  assert_log_contains "claude plugin install valency@valency-claude-plugin --scope user" || return
+  assert_log_not_contains "codex plugin marketplace remove valency" || return
+  assert_output_contains "Claude Code installation: installed" || return
+  assert_output_contains "Codex installation: failed (replacement preflight)" || return
+  pass "$TEST_NAME"
+}
+
+test_claude_inspection_failure_does_not_block_codex() {
+  new_case claude-inspection-codex-continues
+  enable_claude
+  enable_codex
+  : > "$MOCK_STATE/fail-claude-plugin-list"
+  run_without_terminal --target all --yes --no-auth
+  assert_status 1 || return
+  assert_log_contains "codex plugin add valency@valency" || return
+  assert_log_not_contains "claude plugin install valency@valency-claude-plugin --scope user" || return
+  assert_output_contains "Claude Code installation: failed (state inspection)" || return
+  assert_output_contains "Codex installation: installed" || return
   pass "$TEST_NAME"
 }
 
@@ -679,6 +710,8 @@ test_disabled_claude_plugin_migration_preserves_legacy
 test_interactive_declined_migration_skips_provider
 test_unattended_codex_replacement_requires_flag
 test_codex_replacement_preflight_failure_is_non_destructive
+test_codex_preflight_failure_does_not_block_claude
+test_claude_inspection_failure_does_not_block_codex
 test_codex_replacement_failure_prints_recovery
 test_codex_replacement_succeeds
 test_interactive_declined_codex_replacement_skips_provider

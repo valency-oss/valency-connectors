@@ -19,6 +19,7 @@ REAUTHENTICATE=0
 DRY_RUN=0
 TERMINAL_AVAILABLE=0
 
+PREINSTALL_FAILURES=0
 CLAUDE_AVAILABLE=0
 CODEX_AVAILABLE=0
 CLAUDE_SELECTED=0
@@ -381,11 +382,18 @@ inspect_claude_state() {
 }
 
 inspect_provider_state() {
-  if [ "$CLAUDE_SELECTED" -eq 1 ]; then
-    inspect_claude_state || return 1
+  # Inspection failures are provider-specific: one provider's unreadable state
+  # must not block the other selected provider, so the failed provider is
+  # reported, counted toward the exit status, and dropped before any mutation.
+  if [ "$CLAUDE_SELECTED" -eq 1 ] && ! inspect_claude_state; then
+    CLAUDE_SELECTED=0
+    CLAUDE_INSTALL_RESULT="failed (state inspection)"
+    PREINSTALL_FAILURES=$((PREINSTALL_FAILURES + 1))
   fi
-  if [ "$CODEX_SELECTED" -eq 1 ]; then
-    inspect_codex_state || return 1
+  if [ "$CODEX_SELECTED" -eq 1 ] && ! inspect_codex_state; then
+    CODEX_SELECTED=0
+    CODEX_INSTALL_RESULT="failed (state inspection)"
+    PREINSTALL_FAILURES=$((PREINSTALL_FAILURES + 1))
   fi
 }
 
@@ -566,16 +574,25 @@ authorize_migrations() {
 }
 
 validate_migration_preflights() {
+  # Preflight failures are provider-specific like inspection failures: Codex is
+  # reported as failed and dropped while a selected Claude install proceeds.
   if [ "$CODEX_SELECTED" -eq 1 ] && [ "$CODEX_REPLACEMENT_REQUIRED" -eq 1 ]; then
     if ! command -v curl >/dev/null 2>&1; then
       printf 'Error: Codex replacement preflight requires curl to verify the public marketplace repository.\n' >&2
-      return 1
+      fail_codex_preflight
+      return
     fi
     if ! curl -fsSIL --max-time 10 "https://github.com/$MARKETPLACE_SOURCE" >/dev/null 2>&1; then
       printf 'Error: cannot publicly reach https://github.com/%s; the existing Codex marketplace was not changed.\n' "$MARKETPLACE_SOURCE" >&2
-      return 1
+      fail_codex_preflight
     fi
   fi
+}
+
+fail_codex_preflight() {
+  CODEX_SELECTED=0
+  CODEX_INSTALL_RESULT="failed (replacement preflight)"
+  PREINSTALL_FAILURES=$((PREINSTALL_FAILURES + 1))
 }
 
 confirm_plan() {
@@ -904,15 +921,23 @@ main() {
   fi
 
   select_requested_targets || return $?
-  inspect_provider_state || return 1
+  inspect_provider_state
+  if [ "$CLAUDE_SELECTED" -eq 0 ] && [ "$CODEX_SELECTED" -eq 0 ]; then
+    # Every selected provider failed inspection; nothing was changed.
+    print_summary
+    return 1
+  fi
   inspect_auth_states
   print_plan
   authorize_migrations || return $?
+  validate_migration_preflights
   if [ "$CLAUDE_SELECTED" -eq 0 ] && [ "$CODEX_SELECTED" -eq 0 ]; then
     print_summary
+    if [ "$PREINSTALL_FAILURES" -ne 0 ]; then
+      return 1
+    fi
     return 0
   fi
-  validate_migration_preflights || return 1
   confirm_plan || return 1
 
   if install_selected_providers; then
@@ -923,7 +948,7 @@ main() {
   prepare_authentication
   run_authentication
   print_summary
-  if [ "$install_status" -ne 0 ]; then
+  if [ "$install_status" -ne 0 ] || [ "$PREINSTALL_FAILURES" -ne 0 ]; then
     return 1
   fi
 }
