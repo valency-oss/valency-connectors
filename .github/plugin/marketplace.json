@@ -1,0 +1,18 @@
+{
+  "name": "valency-copilot-plugin",
+  "owner": {
+    "name": "Valency Systems Inc"
+  },
+  "metadata": {
+    "description": "The Valency research plugin marketplace for GitHub Copilot CLI, powered by Valency Bond.",
+    "version": "1.0.0"
+  },
+  "plugins": [
+    {
+      "name": "valency",
+      "source": "./plugins/copilot/valency",
+      "description": "Search, profile, and analyze research papers through Valency Bond.",
+      "version": "0.1.0"
+    }
+  ]
+}

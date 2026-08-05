@@ -5,13 +5,14 @@ providers. Each integration connects its host to the **Valency Bond MCP
 server** at `https://labs.valency.io/mcp/` and bundles seven guided research
 workflows.
 
-The Claude and OpenAI packages are self-contained and versioned independently.
-The Gemini CLI extension is installed from the repository root:
+The provider packages are self-contained and versioned independently. The
+Gemini CLI extension is installed from the repository root:
 
 | Provider package | Hosts | Manifest |
 | --- | --- | --- |
 | [Repository root](.) | Gemini CLI | `gemini-extension.json` |
 | [`plugins/claude/valency`](./plugins/claude/valency) | Claude Code | `.claude-plugin/plugin.json` |
+| [`plugins/copilot/valency`](./plugins/copilot/valency) | GitHub Copilot CLI | `plugin.json` |
 | [`plugins/openai/valency`](./plugins/openai/valency) | ChatGPT and Codex | `.codex-plugin/plugin.json` |
 
 ## Install in Gemini CLI
@@ -44,6 +45,45 @@ gemini extensions uninstall valency
 
 Restart Gemini CLI after updating so refreshed skills, commands, and context
 are loaded.
+
+## Install in GitHub Copilot CLI
+
+Add this repository as a marketplace, then install Valency:
+
+```bash
+copilot plugin marketplace add valency-oss/valency-bond
+copilot plugin install valency@valency-copilot-plugin
+```
+
+Start GitHub Copilot CLI and authenticate the plugin-provided Valency server:
+
+```text
+/mcp auth valency
+```
+
+Copilot manages the browser-based OAuth flow and dynamic client registration.
+The plugin does not require a static OAuth client ID, client secret, or bearer
+token.
+
+The complete plugin is supported in GitHub Copilot CLI. Copilot coding agent
+and Copilot code review do not currently support remote OAuth MCP servers, so
+the Valency Bond tools are not supported on those hosted surfaces.
+
+### Update or uninstall from GitHub Copilot CLI
+
+Refresh the marketplace and update Valency:
+
+```bash
+copilot plugin marketplace update valency-copilot-plugin
+copilot plugin update valency
+```
+
+To uninstall the plugin and remove its marketplace:
+
+```bash
+copilot plugin uninstall valency
+copilot plugin marketplace remove valency-copilot-plugin
+```
 
 ## Install in Claude Code
 
