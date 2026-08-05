@@ -36,7 +36,6 @@ test("root marketplaces route to independent provider packages", () => {
   assert.equal(claudePlugin.version, "0.3.0");
   assert.equal(claudeEntry.version, claudePlugin.version);
   assert.equal(openaiPlugin.version, "1.0.0");
-  assert.notEqual(claudePlugin.version, openaiPlugin.version);
 });
 
 test("both packages bundle the production Valency Bond MCP endpoint", () => {
