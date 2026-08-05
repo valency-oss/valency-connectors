@@ -1,24 +1,21 @@
 ---
-name: valency-reading-list
+name: reading-list
 description: "Use when the user asks what a researcher should be reading, wants a curated bibliography for a researcher's interests, asks 'what should X read', 'find me adjacent work to X's research', or wants to know what literature surrounds an author's body of work. Triggers on reading-list, bibliography, or 'what should I read next' style requests anchored on a specific researcher."
 ---
 
 # Researcher Reading List
 
-Build a curated reading list for a researcher, organized by intellectual thread, by triangulating off their most representative recent and most-cited work in the Valency research corpus.
-
-## Tool conventions
-
-- Use the Valency Bond MCP tools available in the current agent (e.g., `find_similar_papers`). Tool names may be qualified with an MCP server prefix; call the matching exposed tool.
-- Never fabricate paper titles, authors, abstracts, or metadata. All data must come from tool results.
-- If a tool returns no results, say so plainly and suggest a different spelling or query.
-- Produce clean, scannable output with consistent markdown formatting.
+Build a curated reading list for a researcher, organized by intellectual thread, by triangulating off their most representative recent and most-cited work.
 
 ## Input
 
 The user provides an author name (e.g., "David W. Hogg", "Yoshua Bengio", "Jennifer Doudna").
 
-## Tool chain
+## Tool Chain
+
+Use the Valency Bond MCP tools available in the current host. Tool names may be
+qualified by an MCP server prefix; call the matching exposed tool. If the
+required Valency Bond tools are unavailable, say so and stop.
 
 ### Step 1: Verify the author exists
 
@@ -77,16 +74,16 @@ After all `find_similar_papers` calls complete:
 3. **Filter out self-citations** — drop any paper whose author list contains the focal author (use the `resolved_name` from Step 1 to match, since name normalization may matter).
 4. **Group by seed** — partition the cleaned results by which seed paper(s) surfaced them. This grouping defines the reading-list "threads."
 
-## Output format
+## Output Format
 
-### Researcher summary
+### Researcher Summary
 
 A short block:
 - **Name**: full name as it appears in the corpus
 - **Total papers**: from Step 1
 - **Primary domains**: top 3 categories from Step 1
 
-### Reading list by thread
+### Reading List by Thread
 
 For each seed paper from Step 4, produce a thread section:
 
@@ -102,7 +99,7 @@ Recommended reading (5–8 papers per thread, ordered by similarity score):
 
 If a seed paper was skipped because it had no embedding, add a note under that thread: *"This seed had no embedding; no similar papers could be retrieved."*
 
-### Cross-thread highlights
+### Cross-Thread Highlights
 
 If any paper appeared as similar to **multiple** seeds, highlight it as a cross-thread find — these are often the most interesting recommendations because they sit at the intersection of the author's threads:
 
@@ -110,8 +107,8 @@ If any paper appeared as similar to **multiple** seeds, highlight it as a cross-
 
 If no cross-thread papers were found, omit this section.
 
-### Suggested follow-ups
+### Suggested Follow-ups
 
-- "Profile `<author>`" — for any author that appears across multiple recommendations
-- "Papers similar to `<paper_id>`" — to dig deeper into any specific recommendation
-- "Fresh collaborators for `<author>`" — if the user is interested in *who* (not what) to engage with next
+- Ask for a profile of `<author>` for any author that appears across multiple recommendations.
+- Ask for papers similar to `<paper_id>` to dig deeper into any specific recommendation.
+- Ask for fresh collaborators for `<author>` when the user is interested in *who* (not what) to engage with next.

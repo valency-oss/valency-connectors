@@ -1,18 +1,11 @@
 ---
-name: valency-similar
-description: "Use when the user wants to find papers similar to a specific paper, asks 'what's related to this paper', 'find me more like this', or wants to explore the neighborhood around a known paper. Triggers on paper IDs, arXiv IDs, DOIs, PubMed IDs, or paper titles followed by a similarity request."
+name: similar
+description: "Use when the user wants to find papers similar to a specific paper, asks 'what's related to this paper', 'find me more like this', or wants to explore the neighborhood around a known paper. Triggers on paper IDs, arXiv IDs, DOIs, or paper titles followed by a similarity request."
 ---
 
 # Similar Papers
 
-Find papers semantically similar to a given paper using the Valency research corpus.
-
-## Tool conventions
-
-- Use the Valency Bond MCP tools available in the current agent (e.g., `find_similar_papers`). Tool names may be qualified with an MCP server prefix; call the matching exposed tool.
-- Never fabricate paper titles, authors, abstracts, or metadata. All data must come from tool results.
-- If a tool returns no results, say so plainly and suggest a different spelling or query.
-- Produce clean, scannable output with consistent markdown formatting.
+Find papers semantically similar to a given paper.
 
 ## Input
 
@@ -31,7 +24,11 @@ The user provides either:
 
 Do not assume all bioRxiv records use the `10.1101/...` prefix. Newer records may use other DOI prefixes.
 
-## Tool chain
+## Tool Chain
+
+Use the Valency Bond MCP tools available in the current host. Tool names may be
+qualified by an MCP server prefix; call the matching exposed tool. If the
+required Valency Bond tools are unavailable, say so and stop.
 
 ### Step 1: Resolve paper ID (if needed)
 
@@ -64,9 +61,9 @@ If the paper has no embedding and returns an error, tell the user that semantic 
 
 The results from Step 2 already include metadata (title, authors, abstract, categories). If any result is missing abstract or author data, call `get_paper_by_id` for those papers.
 
-## Output format
+## Output Format
 
-### Source paper
+### Source Paper
 
 Display the seed paper's details:
 - **Title**: full title
@@ -75,7 +72,7 @@ Display the seed paper's details:
 - **Source**: which server (arXiv, bioRxiv, etc.)
 - **Abstract**: first 2-3 sentences
 
-### Similar papers
+### Similar Papers
 
 A numbered list ranked by similarity. For each paper:
 - **Title** (with paper ID)
@@ -84,7 +81,7 @@ A numbered list ranked by similarity. For each paper:
 - **Category**
 - **Abstract summary**: one sentence capturing the paper's contribution
 
-### Suggested follow-ups
+### Suggested Follow-ups
 
-- "Profile `<author>`" — for any author that appears in multiple similar papers
-- "Papers similar to `<paper_id>`" — to continue exploring from any listed paper
+- Ask for a profile of `<author>` for any author that appears in multiple similar papers.
+- Ask for papers similar to `<paper_id>` to continue exploring from any listed paper.

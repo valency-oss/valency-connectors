@@ -1,0 +1,6 @@
+description = "Generate a landscape overview of a research field or arXiv category."
+prompt = """
+Activate the `landscape` skill and generate a field landscape for: {{args}}
+
+Follow the skill's tool chain exactly. Use the Valency MCP tools loaded by this extension.
+"""

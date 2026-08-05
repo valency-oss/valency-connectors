@@ -1,24 +1,21 @@
 ---
-name: valency-profile
+name: profile
 description: "Use when the user asks about a researcher's work, publications, research areas, collaborators, or academic profile. Triggers on questions like 'who is X', 'what does X work on', 'show me X's papers', or 'tell me about X' in a research context."
 ---
 
 # Researcher Profile
 
-Build a comprehensive profile for the given researcher using the Valency research corpus.
-
-## Tool conventions
-
-- Use the Valency Bond MCP tools available in the current agent (e.g., `get_author_profile`). Tool names may be qualified with an MCP server prefix; call the matching exposed tool.
-- Never fabricate paper titles, authors, abstracts, or metadata. All data must come from tool results.
-- If a tool returns no results, say so plainly and suggest a different spelling or query.
-- Produce clean, scannable output with consistent markdown formatting.
+Build a comprehensive profile for the given researcher.
 
 ## Input
 
 The user provides an author name (e.g., "Yoshua Bengio", "Y. LeCun", "Sara Walker").
 
-## Tool chain
+## Tool Chain
+
+Use the Valency Bond MCP tools available in the current host. Tool names may be
+qualified by an MCP server prefix; call the matching exposed tool. If the
+required Valency Bond tools are unavailable, say so and stop.
 
 Execute these steps in order.
 
@@ -57,7 +54,7 @@ Call `find_coauthors` with:
 
 This returns the author's most frequent collaborators with co-publication counts.
 
-## Output format
+## Output Format
 
 Present the results in this structure:
 
@@ -69,7 +66,7 @@ A brief block with:
 - **Active years**: first paper year to last paper year
 - **Primary domains**: top 3 categories from Step 3
 
-### Research domains
+### Research Domains
 
 A table of the top 5 categories from Step 3:
 
@@ -78,14 +75,14 @@ A table of the top 5 categories from Step 3:
 | cs.LG    | 42     |
 | ...      | ...    |
 
-### Top papers
+### Top Papers
 
 A numbered list of up to 10 papers from Step 2. For each paper show:
 - Title (with paper ID)
 - Year
 - Categories
 
-### Top collaborators
+### Top Collaborators
 
 A table of up to 5 collaborators from Step 4:
 
@@ -94,7 +91,7 @@ A table of up to 5 collaborators from Step 4:
 | Name         | 15                |
 | ...          | ...               |
 
-### Suggested follow-ups
+### Suggested Follow-ups
 
-- "Show me the network for `<author_name>`" — map their collaboration network
-- "Find papers similar to `<paper_id>`" — find papers similar to their top work (use the ID of their most-cited paper)
+- Ask for `<author_name>`'s network to map their collaborators.
+- Ask for papers similar to `<paper_id>` to explore their top work (use the ID of their most-cited paper).

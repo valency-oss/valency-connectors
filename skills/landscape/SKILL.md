@@ -1,18 +1,11 @@
 ---
-name: valency-landscape
+name: landscape
 description: "Use when the user asks for an overview of a research field, wants to understand a domain's key players, or asks 'what's happening in X' or 'give me a landscape of X'. Triggers on requests for field summaries, top authors in an area, or subdomain breakdowns."
 ---
 
 # Field Landscape
 
-Generate a landscape overview of a research field or topic using the Valency research corpus.
-
-## Tool conventions
-
-- Use the Valency Bond MCP tools available in the current agent (e.g., `search_by_category`). Tool names may be qualified with an MCP server prefix; call the matching exposed tool.
-- Never fabricate paper titles, authors, abstracts, or metadata. All data must come from tool results.
-- If a tool returns no results, say so plainly and suggest a different spelling or query.
-- Produce clean, scannable output with consistent markdown formatting.
+Generate a landscape overview of a research field or topic.
 
 ## Input
 
@@ -20,7 +13,11 @@ The user provides either:
 - An arXiv category code (e.g., `cs.LG`, `q-bio.BM`, `astro-ph.CO`) — recognized by the pattern of a short prefix, a dot, and a short suffix
 - Free text describing a research area (e.g., "protein folding", "large language models")
 
-## Tool chain
+## Tool Chain
+
+Use the Valency Bond MCP tools available in the current host. Tool names may be
+qualified by an MCP server prefix; call the matching exposed tool. If the
+required Valency Bond tools are unavailable, say so and stop.
 
 ### Step 1: Find papers in the field
 
@@ -78,16 +75,16 @@ Note: this returns corpus-wide domain rankings. If the input was a category, the
 Call `analyze_corpus_metrics` with:
 - `category` (string): the category code (if input was a category), otherwise omit
 
-## Output format
+## Output Format
 
-### Field summary
+### Field Summary
 
 A brief paragraph covering:
 - Total papers found (from Step 5 or Step 1 result count)
 - Date range of publications
 - Growth trajectory (from Step 2 — is volume increasing, stable, or declining?)
 
-### Publication trends
+### Publication Trends
 
 A year-by-year table from Step 2:
 
@@ -96,15 +93,15 @@ A year-by-year table from Step 2:
 | 2020 | 1,234  |
 | ...  | ...    |
 
-### Top authors
+### Top Authors
 
 A numbered list of the top 10 authors from Step 3 with their paper counts.
 
-### Subdomain breakdown
+### Subdomain Breakdown
 
 A table of the top research domains from Step 4, giving context for how this field relates to the broader corpus.
 
-### Notable recent papers
+### Notable Recent Papers
 
 List 5 papers from Step 1 (the most-cited papers found). For each:
 - Title (with paper ID)
@@ -119,8 +116,8 @@ List 5 papers from Step 1 (the most-cited papers found). For each:
 - "The field is concentrated in 2-3 subdomain categories"
 - "Author X dominates with 3x more papers than the next most prolific"
 
-### Suggested follow-ups
+### Suggested Follow-ups
 
-- "Profile `<author>`" — for any top author listed
-- "Trends for `<category>`" — for deeper trend analysis
-- "Papers similar to `<paper_id>`" — for any notable paper listed
+- Ask for a profile of `<author>` for any top author listed.
+- Ask for trends in `<category>` for deeper trend analysis.
+- Ask for papers similar to `<paper_id>` for any notable paper listed.

@@ -1,18 +1,11 @@
 ---
-name: valency-trends
+name: trends
 description: "Use when the user asks how a research topic has changed over time, wants publication volume trends, asks 'is X growing', 'when did X take off', or wants to compare the trajectories of two fields. Triggers on trend, growth, or timeline questions about research areas."
 ---
 
 # Publication Trends
 
-Show how a topic or category has evolved over time using the Valency research corpus.
-
-## Tool conventions
-
-- Use the Valency Bond MCP tools available in the current agent (e.g., `get_publication_trends`). Tool names may be qualified with an MCP server prefix; call the matching exposed tool.
-- Never fabricate paper titles, authors, abstracts, or metadata. All data must come from tool results.
-- If a tool returns no results, say so plainly and suggest a different spelling or query.
-- Produce clean, scannable output with consistent markdown formatting.
+Show how a topic or category has evolved over time.
 
 ## Input
 
@@ -21,7 +14,11 @@ The user provides one of:
 - A keyword or phrase (e.g., "transformer", "CRISPR")
 - Multiple categories or keywords separated by commas or "vs" (e.g., "cs.LG, cs.CL" or "transformers vs RNNs") — for comparison
 
-## Tool chain
+## Tool Chain
+
+Use the Valency Bond MCP tools available in the current host. Tool names may be
+qualified by an MCP server prefix; call the matching exposed tool. If the
+required Valency Bond tools are unavailable, say so and stop.
 
 ### Step 1: Get trend data
 
@@ -62,9 +59,9 @@ Call `search_by_abstract` with:
 - `limit` (integer): 5
 - `sort_by` (string): "relevance"
 
-## Output format
+## Output Format
 
-### Trend data
+### Trend Data
 
 **For single input:** a year-by-year table:
 
@@ -80,7 +77,7 @@ Call `search_by_abstract` with:
 | 2018 | 500    | 300    |
 | ...  | ...    | ...    |
 
-### Narrative summary
+### Narrative Summary
 
 A 3-5 sentence narrative covering:
 - When the field or topic first appeared in the corpus
@@ -88,15 +85,15 @@ A 3-5 sentence narrative covering:
 - Current trajectory (accelerating, plateauing, declining)
 - For comparisons: which topic is growing faster and when they diverged
 
-### Representative recent papers
+### Representative Recent Papers
 
 A numbered list of 3-5 papers from Step 2. For each:
 - Title (with paper ID)
 - Authors (first 3, then "et al.")
 - Year
 
-### Suggested follow-ups
+### Suggested Follow-ups
 
-- "Landscape of `<category>`" — for a broader overview of the field
-- "Profile `<author>`" — for authors driving the trend
-- "Trends for `<other_keyword>`" — to compare with related topics
+- Ask for a landscape of `<category>` for a broader overview of the field.
+- Ask for a profile of `<author>` for authors driving the trend.
+- Ask for trends in `<other_keyword>` to compare with related topics.

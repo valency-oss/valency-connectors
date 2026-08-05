@@ -14,6 +14,133 @@ const claudePlugin = readJson("plugins/claude/valency/.claude-plugin/plugin.json
 const openaiMarketplace = readJson(".agents/plugins/marketplace.json");
 const openaiPlugin = readJson("plugins/openai/valency/.codex-plugin/plugin.json");
 
+test("repository root is an installable Gemini extension", () => {
+  assert.deepEqual(readJson("gemini-extension.json"), {
+    name: "valency",
+    version: "1.1.0",
+    description:
+      "Search, profile, and analyze research papers through the Valency Bond MCP server.",
+    mcpServers: {
+      valency: {
+        httpUrl: "https://labs.valency.io/mcp/",
+        authProviderType: "dynamic_discovery",
+        oauth: {
+          enabled: true,
+          redirectUri: "http://localhost:33418/oauth/callback",
+        },
+      },
+    },
+    contextFileName: "GEMINI.md",
+  });
+
+  assert.doesNotMatch(
+    readFileSync("gemini-extension.json", "utf8"),
+    /clientId|clientSecret/,
+  );
+});
+
+test("Gemini extension bundles seven skills, seven commands, and context", () => {
+  assert.deepEqual(skillDirectories("skills"), [
+    "fresh-collaborators",
+    "landscape",
+    "network",
+    "profile",
+    "reading-list",
+    "similar",
+    "trends",
+  ]);
+  assert.deepEqual(
+    readdirSync("commands/valency")
+      .filter((name) => name.endsWith(".toml"))
+      .sort(),
+    [
+      "fresh-collaborators.toml",
+      "landscape.toml",
+      "network.toml",
+      "profile.toml",
+      "reading-list.toml",
+      "similar.toml",
+      "trends.toml",
+    ],
+  );
+  assert.equal(existsSync("GEMINI.md"), true);
+});
+
+test("Gemini commands route arguments to the matching shared skill", () => {
+  for (const skill of [
+    "fresh-collaborators",
+    "landscape",
+    "network",
+    "profile",
+    "reading-list",
+    "similar",
+    "trends",
+  ]) {
+    const command = readFileSync(`commands/valency/${skill}.toml`, "utf8");
+    assert.match(command, new RegExp("Activate the `" + skill + "` skill"));
+    assert.match(command, /\{\{args\}\}/);
+    assert.match(command, /Valency MCP tools loaded by this extension/);
+    assert.doesNotMatch(command, /companion extension|install .*connector/i);
+  }
+});
+
+test("all providers ship byte-identical unprefixed skills", () => {
+  for (const skill of [
+    "fresh-collaborators",
+    "landscape",
+    "network",
+    "profile",
+    "reading-list",
+    "similar",
+    "trends",
+  ]) {
+    const canonical = readFileSync(`skills/${skill}/SKILL.md`, "utf8");
+    assert.equal(
+      readFileSync(
+        `plugins/claude/valency/skills/${skill}/SKILL.md`,
+        "utf8",
+      ),
+      canonical,
+      `Claude ${skill} must match the shared skill`,
+    );
+    assert.equal(
+      readFileSync(
+        `plugins/openai/valency/skills/${skill}/SKILL.md`,
+        "utf8",
+      ),
+      canonical,
+      `OpenAI ${skill} must match the shared skill`,
+    );
+  }
+});
+
+test("shared skills contain only provider-neutral invocation guidance", () => {
+  for (const skill of [
+    "fresh-collaborators",
+    "landscape",
+    "network",
+    "profile",
+    "reading-list",
+    "similar",
+    "trends",
+  ]) {
+    const contents = readFileSync(`skills/${skill}/SKILL.md`, "utf8");
+    assert.match(contents, new RegExp(`^name: ${skill}$`, "m"));
+    assert.match(
+      contents,
+      /Use the Valency Bond MCP tools available in the current host\./,
+    );
+    assert.match(
+      contents,
+      /If the\s+required Valency Bond tools are unavailable, say so and stop\./,
+    );
+    assert.doesNotMatch(
+      contents,
+      /mcp__|companion Valency connector|install the connector|\/valency:/,
+    );
+  }
+});
+
 test("root marketplaces route to independent provider packages", () => {
   const claudeEntry = claudeMarketplace.plugins.find(({ name }) => name === "valency");
   const openaiEntry = openaiMarketplace.plugins.find(({ name }) => name === "valency");
@@ -86,13 +213,13 @@ test("each provider package contains its complete runtime payload", () => {
     "trends",
   ]);
   assert.deepEqual(skillDirectories("plugins/openai/valency/skills"), [
-    "valency-fresh-collaborators",
-    "valency-landscape",
-    "valency-network",
-    "valency-profile",
-    "valency-reading-list",
-    "valency-similar",
-    "valency-trends",
+    "fresh-collaborators",
+    "landscape",
+    "network",
+    "profile",
+    "reading-list",
+    "similar",
+    "trends",
   ]);
 
   for (const path of [
@@ -107,6 +234,29 @@ test("each provider package contains its complete runtime payload", () => {
 
   assert.equal(existsSync("plugins/claude/valency/hooks"), false);
   assert.equal(existsSync("plugins/claude/valency/CLAUDE.md"), false);
+});
+
+test("renamed OpenAI skills preserve their provider-specific metadata", () => {
+  for (const skill of [
+    "fresh-collaborators",
+    "landscape",
+    "network",
+    "profile",
+    "reading-list",
+    "similar",
+    "trends",
+  ]) {
+    assert.equal(
+      existsSync(`plugins/openai/valency/skills/${skill}/agents/openai.yaml`),
+      true,
+    );
+    assert.equal(
+      existsSync(
+        `plugins/openai/valency/skills/${skill}/assets/favicon_solid_cyan_valency.svg`,
+      ),
+      true,
+    );
+  }
 });
 
 test("repository metadata and installation docs point at the monorepo", () => {
@@ -129,9 +279,17 @@ test("repository metadata and installation docs point at the monorepo", () => {
   assert.match(readme, /claude plugin install valency@valency-claude-plugin --scope user/);
   assert.match(readme, /codex plugin marketplace add valency-oss\/valency-bond/);
   assert.match(readme, /codex plugin add valency@valency/);
+  assert.match(
+    readme,
+    /gemini extensions install https:\/\/github\.com\/valency-oss\/valency-bond --auto-update/,
+  );
+  assert.match(readme, /\/mcp auth valency/);
+  assert.match(readme, /gemini extensions update valency/);
+  assert.match(readme, /gemini extensions uninstall valency/);
   assert.match(readme, /ChatGPT web/);
   assert.match(readme, /Valency Bond MCP server/);
   assert.match(readme, /\.\/docs\/development\.md/);
+  assert.doesNotMatch(readme, /valency-gemini/);
   assert.doesNotMatch(readme, /^## Permissions$/m);
   assert.doesNotMatch(readme, /^## Development and validation$/m);
   assert.doesNotMatch(readme, /claude mcp add/);
@@ -139,4 +297,6 @@ test("repository metadata and installation docs point at the monorepo", () => {
   assert.match(development, /npm test/);
   assert.match(development, /npm run validate:claude/);
   assert.match(development, /npm run validate:openai/);
+  assert.match(development, /gemini-extension\.json/);
+  assert.match(development, /static Gemini packaging checks/);
 });
