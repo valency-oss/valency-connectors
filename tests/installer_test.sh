@@ -653,6 +653,8 @@ test_final_confirmation_can_cancel() {
 }
 
 test_truncated_download_is_inert() {
+  # Removing the closing brace leaves the guarded invocation open: nothing
+  # may execute and the parse failure must surface as a nonzero status.
   new_case truncated-download
   enable_claude
   truncated="$CASE_DIR/install-truncated.sh"
@@ -667,8 +669,46 @@ test_truncated_download_is_inert() {
     VALENCY_INSTALLER_TTY="$CASE_DIR/no-terminal" \
     "$TEST_BASH" "$truncated" --target claude --yes --no-auth >"$RUN_OUTPUT" 2>&1
   RUN_STATUS=$?
-  assert_status 0 || return
-  assert_no_mutations || return
+  if [ "$RUN_STATUS" -eq 0 ]; then
+    fail "$TEST_NAME (a truncated download must not succeed)"
+    return
+  fi
+  if [ -s "$MOCK_LOG" ]; then
+    fail "$TEST_NAME (a truncated download ran provider commands)"
+    return
+  fi
+  pass "$TEST_NAME"
+}
+
+test_truncation_after_the_word_main_is_inert() {
+  # A stream that ends directly after the word "main" would be a valid
+  # argument-free invocation without the brace guard, silently dropping the
+  # caller's flags. With the guard it must be a parse error that runs nothing.
+  new_case truncated-after-main
+  enable_claude
+  truncated="$CASE_DIR/install-truncated.sh"
+  # Drop the closing brace and the invocation line, then end the stream
+  # directly after the word "main" with no newline.
+  sed '$d' "$INSTALLER" | sed '$d' > "$truncated"
+  printf '  main' >> "$truncated"
+  env \
+    HOME="$CASE_DIR/home" \
+    CODEX_HOME="$CASE_DIR/codex-home" \
+    PATH="$MOCK_BIN:$TEST_BASH_DIR:/usr/bin:/bin" \
+    MOCK_STATE="$MOCK_STATE" \
+    MOCK_LOG="$MOCK_LOG" \
+    NO_COLOR=1 \
+    VALENCY_INSTALLER_TTY="$CASE_DIR/no-terminal" \
+    "$TEST_BASH" "$truncated" --target claude --yes --no-auth >"$RUN_OUTPUT" 2>&1
+  RUN_STATUS=$?
+  if [ "$RUN_STATUS" -eq 0 ]; then
+    fail "$TEST_NAME (a cut after the word main must not succeed)"
+    return
+  fi
+  if [ -s "$MOCK_LOG" ]; then
+    fail "$TEST_NAME (a cut after the word main ran provider commands)"
+    return
+  fi
   pass "$TEST_NAME"
 }
 
@@ -988,6 +1028,7 @@ test_repeated_targets_are_combined
 test_dry_run_never_mutates_provider_state
 test_final_confirmation_can_cancel
 test_truncated_download_is_inert
+test_truncation_after_the_word_main_is_inert
 test_midfile_truncated_download_is_inert
 test_codex_bearer_token_auth_counts_as_connected
 test_dry_run_shows_migration_and_replacement_plan_without_mutation

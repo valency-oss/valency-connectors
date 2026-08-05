@@ -1119,5 +1119,11 @@ main() {
 }
 
 # Keeping executable work behind the final main call makes a partial download
-# inert: a truncated script can define helpers, but cannot mutate provider state.
-main "$@"
+# inert: a truncated script can define helpers, but cannot mutate provider
+# state. The braces make the invocation atomic: Bash only executes the block
+# once the closing brace arrives, so a stream cut anywhere inside it — even
+# directly after the word "main" — is a parse error rather than an
+# argument-dropping invocation.
+{
+  main "$@"
+}
