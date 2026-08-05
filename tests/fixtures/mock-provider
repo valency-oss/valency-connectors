@@ -46,7 +46,10 @@ if [ "$provider" = claude ]; then
         printf '%s{"source":"github","repo":"valency-oss/valency-bond","name":"valency-claude-plugin"}' "$separator"
         separator=,
       fi
-      if [ -f "$MOCK_STATE/claude-legacy-marketplace" ]; then
+      if [ -f "$MOCK_STATE/claude-foreign-legacy-marketplace" ]; then
+        # An unrelated marketplace that happens to use the legacy name.
+        printf '%s{"name":"valency-plugin","source":"github","repo":"someone-else/unrelated-plugins"}' "$separator"
+      elif [ -f "$MOCK_STATE/claude-legacy-marketplace" ]; then
         printf '%s{"name":"valency-plugin","source":"github","repo":"valency-oss/valency-plugin"}' "$separator"
       fi
       printf ']\n'

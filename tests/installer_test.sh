@@ -357,6 +357,23 @@ test_failed_legacy_cleanup_still_prints_manual_login() {
   pass "$TEST_NAME"
 }
 
+test_foreign_legacy_marketplace_is_left_alone() {
+  # An unrelated marketplace using the legacy name — and the legacy-id plugin
+  # it serves — must survive a migration-approved install untouched.
+  new_case claude-foreign-legacy-marketplace
+  enable_claude
+  : > "$MOCK_STATE/claude-foreign-legacy-marketplace"
+  : > "$MOCK_STATE/claude-legacy-plugin"
+  run_without_terminal --target claude --yes --migrate --no-auth
+  assert_status 0 || return
+  assert_output_contains "does not come from a Valency legacy repository" || return
+  assert_log_not_contains "claude plugin marketplace remove valency-plugin --scope user" || return
+  assert_log_not_contains "claude plugin uninstall valency@valency-plugin --scope user" || return
+  assert_log_contains "claude plugin install valency@valency-claude-plugin --scope user" || return
+  assert_output_contains "Claude Code installation: installed" || return
+  pass "$TEST_NAME"
+}
+
 test_interactive_declined_migration_skips_provider() {
   new_case declined-claude-migration
   enable_claude
@@ -1024,6 +1041,7 @@ test_claude_migration_verifies_before_cleanup
 test_claude_verification_failure_preserves_legacy_install
 test_disabled_claude_plugin_migration_preserves_legacy
 test_failed_legacy_cleanup_still_prints_manual_login
+test_foreign_legacy_marketplace_is_left_alone
 test_interactive_declined_migration_skips_provider
 test_unattended_codex_replacement_requires_flag
 test_codex_replacement_preflight_failure_is_non_destructive

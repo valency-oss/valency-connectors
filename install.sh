@@ -30,6 +30,7 @@ CLAUDE_MARKETPLACE_PRESENT=0
 CLAUDE_MARKETPLACE_CONFLICT=0
 CLAUDE_PLUGIN_PRESENT=0
 CLAUDE_LEGACY_MARKETPLACE_PRESENT=0
+CLAUDE_LEGACY_MARKETPLACE_FOREIGN=0
 CLAUDE_LEGACY_PLUGIN_PRESENT=0
 CLAUDE_INSTALL_RESULT="not selected"
 CLAUDE_AUTH_RESULT="not offered"
@@ -456,7 +457,19 @@ inspect_claude_state() {
       ;;
   esac
   case $compact_marketplaces in
-    *\"name\":\"valency-plugin\"*) CLAUDE_LEGACY_MARKETPLACE_PRESENT=1 ;;
+    *\"name\":\"valency-plugin\"*)
+      # The legacy cleanup follows the same trust rule as everything else:
+      # only Valency's own legacy marketplace is removed. A different
+      # marketplace that happens to use the name is disclosed and left alone,
+      # together with any plugin it serves under the legacy id.
+      if json_entry_contains "$compact_marketplaces" '"name":"valency-plugin"' '"repo":"valency-oss/valency-plugin"' ||
+        json_entry_contains "$compact_marketplaces" '"name":"valency-plugin"' '"repo":"valencyio/valency-plugin"'; then
+        CLAUDE_LEGACY_MARKETPLACE_PRESENT=1
+      else
+        CLAUDE_LEGACY_MARKETPLACE_FOREIGN=1
+        printf 'Note: a marketplace named valency-plugin does not come from a Valency legacy repository; it and its plugins were left unchanged.\n' >&2
+      fi
+      ;;
   esac
   # Detection is scope-aware: the installer manages the user scope only, so a
   # project- or local-scoped copy of the same plugin id must not be mistaken
@@ -465,7 +478,13 @@ inspect_claude_state() {
     CLAUDE_PLUGIN_PRESENT=1
   fi
   if json_entry_contains "$compact_plugins" '"id":"valency@valency-plugin"' '"scope":"user"'; then
-    CLAUDE_LEGACY_PLUGIN_PRESENT=1
+    if [ "$CLAUDE_LEGACY_MARKETPLACE_FOREIGN" -eq 1 ]; then
+      # The legacy plugin id is bound to the marketplace name; when that name
+      # belongs to a foreign marketplace, the plugin is theirs, not ours.
+      CLAUDE_LEGACY_PLUGIN_PRESENT=0
+    else
+      CLAUDE_LEGACY_PLUGIN_PRESENT=1
+    fi
   fi
 }
 
@@ -647,7 +666,11 @@ print_plan() {
     fi
   fi
   if [ "$AUTH_MODE" = "no" ]; then
-    printf '  Authentication: skipped; manual login commands will be shown.\n'
+    if [ "$DRY_RUN" -eq 1 ]; then
+      printf '  Authentication: skipped; a real run prints the manual login commands.\n'
+    else
+      printf '  Authentication: skipped; manual login commands will be shown.\n'
+    fi
   else
     printf '  Authentication: offered after verified installation.\n'
     if [ "$CLAUDE_SELECTED" -eq 1 ]; then printf '    Claude Code status: %s.\n' "$CLAUDE_AUTH_STATE"; fi
