@@ -42,7 +42,8 @@ if [ "$provider" = claude ]; then
         printf '%s{"name":"valency-claude-plugin","source":"github","repo":" valency-oss/valency-bond"}' "$separator"
         separator=,
       elif [ -f "$MOCK_STATE/claude-marketplace" ]; then
-        printf '%s{"name":"valency-claude-plugin","source":"github","repo":"valency-oss/valency-bond"}' "$separator"
+        # "repo" precedes the identity to exercise key-order independence.
+        printf '%s{"source":"github","repo":"valency-oss/valency-bond","name":"valency-claude-plugin"}' "$separator"
         separator=,
       fi
       if [ -f "$MOCK_STATE/claude-legacy-marketplace" ]; then
@@ -56,7 +57,9 @@ if [ "$provider" = claude ]; then
       separator=""
       if [ -f "$MOCK_STATE/claude-plugin" ] && [ ! -f "$MOCK_STATE/fail-claude-verification" ]; then
         if [ -f "$MOCK_STATE/claude-plugin-disabled" ]; then enabled=false; else enabled=true; fi
-        printf '%s{"id":"valency@valency-claude-plugin","enabled":%s}' "$separator" "$enabled"
+        # "enabled" precedes the identity: JSON keys are unordered and the
+        # matcher must accept fields on either side of the identity pair.
+        printf '%s{"enabled":%s,"id":"valency@valency-claude-plugin"}' "$separator" "$enabled"
         separator=,
       fi
       if [ -f "$MOCK_STATE/claude-legacy-plugin" ]; then
@@ -128,7 +131,8 @@ if [ "$provider" = codex ]; then
         # A look-alike marketplace: expected name, unexpected source.
         printf '{"marketplaces":[{"name":"valency","root":"/mock/valency","marketplaceSource":{"sourceType":"git","source":"https://github.com/imitator/valency-bond-lookalike.git"}}]}\n'
       elif [ -f "$MOCK_STATE/codex-marketplace" ]; then
-        printf '{"marketplaces":[{"name":"valency","root":"/mock/valency","marketplaceSource":{"sourceType":"git","source":"https://github.com/valency-oss/valency-bond.git"}}]}\n'
+        # The source precedes the identity to exercise key-order independence.
+        printf '{"marketplaces":[{"marketplaceSource":{"sourceType":"git","source":"https://github.com/valency-oss/valency-bond.git"},"root":"/mock/valency","name":"valency"}]}\n'
       else
         printf '{"marketplaces":[]}\n'
       fi
@@ -141,7 +145,9 @@ if [ "$provider" = codex ]; then
           # whole-document match would falsely see "enabled":true.
           printf '{"installed":[{"pluginId":"valency@valency","name":"valency","marketplaceName":"valency","installed":true,"enabled":false},{"pluginId":"zulu@zulu-tools","name":"zulu","marketplaceName":"zulu-tools","installed":true,"enabled":true}],"available":[]}\n'
         else
-          printf '{"installed":[{"pluginId":"valency@valency","name":"valency","marketplaceName":"valency","installed":true,"enabled":true}],"available":[]}\n'
+          # "installed" and "enabled" precede the identity to exercise
+          # key-order independence in verification.
+          printf '{"installed":[{"name":"valency","installed":true,"enabled":true,"pluginId":"valency@valency","marketplaceName":"valency"}],"available":[]}\n'
         fi
       else
         printf '{"installed":[],"available":[]}\n'

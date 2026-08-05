@@ -500,8 +500,35 @@ test_selected_provider_requires_plugin_capabilities() {
   enable_codex
   : > "$MOCK_STATE/claude-missing-capability"
   run_without_terminal --target claude --yes --no-auth
-  assert_status 2 || return
-  assert_output_contains "Claude Code is unavailable or lacks required plugin commands" || return
+  assert_status 1 || return
+  assert_output_contains "Claude Code is installed but lacks required plugin commands" || return
+  assert_output_contains "Claude Code installation: failed (unsupported CLI)" || return
+  assert_no_mutations || return
+  pass "$TEST_NAME"
+}
+
+test_one_unavailable_explicit_target_does_not_block_the_other() {
+  # Repeated explicit targets are failure-isolated like --target all: the
+  # unavailable provider is reported, the available one still installs.
+  new_case explicit-target-partial-availability
+  enable_claude
+  enable_codex
+  : > "$MOCK_STATE/claude-missing-capability"
+  run_without_terminal --target claude --target codex --yes --no-auth
+  assert_status 1 || return
+  assert_output_contains "Claude Code installation: failed (unsupported CLI)" || return
+  assert_output_contains "Codex installation: installed" || return
+  assert_log_contains "codex plugin add valency@valency" || return
+  pass "$TEST_NAME"
+}
+
+test_requested_provider_missing_from_path_is_reported() {
+  new_case explicit-target-not-installed
+  enable_codex
+  run_without_terminal --target claude --yes --no-auth
+  assert_status 1 || return
+  assert_output_contains "Claude Code was requested but its CLI is not on PATH" || return
+  assert_output_contains "Claude Code installation: failed (not installed)" || return
   assert_no_mutations || return
   pass "$TEST_NAME"
 }
@@ -932,6 +959,8 @@ test_lookalike_codex_marketplace_with_installed_plugin_requires_migration
 test_lookalike_codex_marketplace_with_installed_plugin_is_replaced
 test_provider_failure_does_not_block_other_provider
 test_selected_provider_requires_plugin_capabilities
+test_one_unavailable_explicit_target_does_not_block_the_other
+test_requested_provider_missing_from_path_is_reported
 test_only_unsupported_provider_is_reported_precisely
 test_target_all_reports_unsupported_provider
 test_invalid_unattended_invocations_are_non_destructive

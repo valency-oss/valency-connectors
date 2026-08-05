@@ -248,19 +248,36 @@ select_requested_targets() {
       PREINSTALL_FAILURES=$((PREINSTALL_FAILURES + 1))
     fi
   fi
+  # Explicitly requested providers are failure-isolated like --target all:
+  # one unavailable target must not prevent another requested, available
+  # target from installing. The run still ends nonzero.
   if [ "$TARGET_CLAUDE" -eq 1 ]; then
     if [ "$CLAUDE_AVAILABLE" -eq 0 ]; then
-      printf 'Error: Claude Code is unavailable or lacks required plugin commands.\n' >&2
-      return 2
+      if [ "$CLAUDE_EXECUTABLE_FOUND" -eq 1 ]; then
+        printf 'Error: Claude Code is installed but lacks required plugin commands; upgrade it.\n' >&2
+        CLAUDE_INSTALL_RESULT="failed (unsupported CLI)"
+      else
+        printf 'Error: Claude Code was requested but its CLI is not on PATH.\n' >&2
+        CLAUDE_INSTALL_RESULT="failed (not installed)"
+      fi
+      PREINSTALL_FAILURES=$((PREINSTALL_FAILURES + 1))
+    else
+      CLAUDE_SELECTED=1
     fi
-    CLAUDE_SELECTED=1
   fi
   if [ "$TARGET_CODEX" -eq 1 ]; then
     if [ "$CODEX_AVAILABLE" -eq 0 ]; then
-      printf 'Error: Codex is unavailable or lacks required plugin commands.\n' >&2
-      return 2
+      if [ "$CODEX_EXECUTABLE_FOUND" -eq 1 ]; then
+        printf 'Error: Codex is installed but lacks required plugin commands; upgrade it.\n' >&2
+        CODEX_INSTALL_RESULT="failed (unsupported CLI)"
+      else
+        printf 'Error: Codex was requested but its CLI is not on PATH.\n' >&2
+        CODEX_INSTALL_RESULT="failed (not installed)"
+      fi
+      PREINSTALL_FAILURES=$((PREINSTALL_FAILURES + 1))
+    else
+      CODEX_SELECTED=1
     fi
-    CODEX_SELECTED=1
   fi
 }
 
@@ -361,26 +378,27 @@ compact_json() {
 
 # Substring checks over a whole JSON document can match a key from a different
 # list entry (for example another plugin's "enabled":true), so conjunction
-# checks are scoped to one entry: the segment between this entry's identity
-# pair and the end of its object. The segment stops at the sibling-object
-# boundary "},{" or at the next identity key, whichever comes first, so a
-# following object that leads with a matching field before its own identity is
-# never attributed here. If the provider moves the required field before the
-# identity key or behind a nested boundary, the segment misses it and the
-# check fails closed instead of falsely verifying.
+# checks are scoped to one entry: the segment around the identity pair,
+# bounded on both sides by object boundaries ("},{" between siblings, "[{"
+# opening and "}]" closing an array of objects). JSON keys are unordered, so
+# the required field is accepted anywhere within the bounded segment. A
+# boundary sequence appearing inside a string value can only shrink the
+# segment, which fails closed instead of falsely verifying.
 json_entry_contains() {
   document=$1
-  identity_key=$2
-  identity=$3
-  required=$4
+  identity=$2
+  required=$3
   case $document in
     *"$identity"*) ;;
     *) return 1 ;;
   esac
-  segment=${document#*"$identity"}
-  segment=${segment%%"},{"*}
-  segment=${segment%%"$identity_key"*}
-  case $segment in
+  entry_before=${document%%"$identity"*}
+  entry_after=${document#*"$identity"}
+  entry_before=${entry_before##*"},{"}
+  entry_before=${entry_before##*"[{"}
+  entry_after=${entry_after%%"},{"*}
+  entry_after=${entry_after%%"}]"*}
+  case $entry_before$identity$entry_after in
     *"$required"*) return 0 ;;
   esac
   return 1
@@ -411,7 +429,7 @@ inspect_claude_state() {
       # The name alone is never trusted: a look-alike marketplace with this
       # name but a different repository could serve a plugin that passes
       # identity verification. The entry must also name the expected repo.
-      if json_entry_contains "$compact_marketplaces" '"name":' "\"name\":\"$CLAUDE_MARKETPLACE\"" "\"repo\":\"$MARKETPLACE_SOURCE\""; then
+      if json_entry_contains "$compact_marketplaces" "\"name\":\"$CLAUDE_MARKETPLACE\"" "\"repo\":\"$MARKETPLACE_SOURCE\""; then
         CLAUDE_MARKETPLACE_PRESENT=1
       else
         CLAUDE_MARKETPLACE_CONFLICT=1
@@ -514,8 +532,8 @@ inspect_codex_auth_state() {
     \[*\]) ;;
     *) CODEX_AUTH_STATE="unknown"; return ;;
   esac
-  if json_entry_contains "$compact_auth" '"name":' '"name":"valency"' '"auth_status":"oauth"' ||
-    json_entry_contains "$compact_auth" '"name":' '"name":"valency"' '"auth_status":"bearer_token"'; then
+  if json_entry_contains "$compact_auth" '"name":"valency"' '"auth_status":"oauth"' ||
+    json_entry_contains "$compact_auth" '"name":"valency"' '"auth_status":"bearer_token"'; then
     CODEX_AUTH_STATE="connected"
     return
   fi
@@ -559,15 +577,15 @@ inspect_codex_state() {
       fi
       ;;
   esac
-  if json_entry_contains "$compact_plugins" '"pluginId":' "\"pluginId\":\"$CODEX_PLUGIN\"" '"installed":true'; then
+  if json_entry_contains "$compact_plugins" "\"pluginId\":\"$CODEX_PLUGIN\"" '"installed":true'; then
     CODEX_PLUGIN_PRESENT=1
   fi
 }
 
 codex_marketplace_source_trusted() {
-  json_entry_contains "$1" '"name":' "\"name\":\"$CODEX_MARKETPLACE\"" "\"source\":\"https://github.com/$MARKETPLACE_SOURCE.git\"" ||
-    json_entry_contains "$1" '"name":' "\"name\":\"$CODEX_MARKETPLACE\"" "\"source\":\"https://github.com/$MARKETPLACE_SOURCE\"" ||
-    json_entry_contains "$1" '"name":' "\"name\":\"$CODEX_MARKETPLACE\"" "\"source\":\"$MARKETPLACE_SOURCE\""
+  json_entry_contains "$1" "\"name\":\"$CODEX_MARKETPLACE\"" "\"source\":\"https://github.com/$MARKETPLACE_SOURCE.git\"" ||
+    json_entry_contains "$1" "\"name\":\"$CODEX_MARKETPLACE\"" "\"source\":\"https://github.com/$MARKETPLACE_SOURCE\"" ||
+    json_entry_contains "$1" "\"name\":\"$CODEX_MARKETPLACE\"" "\"source\":\"$MARKETPLACE_SOURCE\""
 }
 
 print_plan() {
@@ -689,7 +707,7 @@ run_quietly() {
 verify_claude_plugin() {
   plugin_json=$(claude plugin list --json 2>/dev/null) || return 1
   compact_plugins=$(printf '%s' "$plugin_json" | compact_json)
-  json_entry_contains "$compact_plugins" '"id":' "\"id\":\"$CLAUDE_PLUGIN\"" '"enabled":true'
+  json_entry_contains "$compact_plugins" "\"id\":\"$CLAUDE_PLUGIN\"" '"enabled":true'
 }
 
 install_claude() {
@@ -765,8 +783,8 @@ install_claude() {
 verify_codex_plugin() {
   plugin_json=$(codex plugin list --json 2>/dev/null) || return 1
   compact_plugins=$(printf '%s' "$plugin_json" | compact_json)
-  json_entry_contains "$compact_plugins" '"pluginId":' "\"pluginId\":\"$CODEX_PLUGIN\"" '"installed":true' &&
-    json_entry_contains "$compact_plugins" '"pluginId":' "\"pluginId\":\"$CODEX_PLUGIN\"" '"enabled":true'
+  json_entry_contains "$compact_plugins" "\"pluginId\":\"$CODEX_PLUGIN\"" '"installed":true' &&
+    json_entry_contains "$compact_plugins" "\"pluginId\":\"$CODEX_PLUGIN\"" '"enabled":true'
 }
 
 install_codex() {
@@ -1056,7 +1074,8 @@ main() {
   select_requested_targets || return $?
   inspect_provider_state
   if [ "$CLAUDE_SELECTED" -eq 0 ] && [ "$CODEX_SELECTED" -eq 0 ]; then
-    # Every selected provider failed inspection; nothing was changed.
+    # Every requested provider was unavailable or failed inspection; nothing
+    # was changed.
     print_summary
     return 1
   fi
