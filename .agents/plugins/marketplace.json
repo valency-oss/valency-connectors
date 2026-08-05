@@ -1,0 +1,20 @@
+{
+  "name": "valency",
+  "interface": {
+    "displayName": "Valency"
+  },
+  "plugins": [
+    {
+      "name": "valency",
+      "source": {
+        "source": "local",
+        "path": "./plugins/openai/valency"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Education & Research"
+    }
+  ]
+}

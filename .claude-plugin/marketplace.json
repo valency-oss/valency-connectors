@@ -1,0 +1,34 @@
+{
+  "name": "valency-claude-plugin",
+  "owner": {
+    "name": "Valency Systems Inc",
+    "email": "support@valency.io",
+    "url": "https://valency.io"
+  },
+  "description": "The Valency research plugin for Claude Code, powered by Valency Bond",
+  "version": "0.3.0",
+  "plugins": [
+    {
+      "name": "valency",
+      "displayName": "Valency",
+      "description": "Search, profile, and analyze millions of research papers with semantic embeddings.",
+      "source": "./plugins/claude/valency",
+      "version": "0.3.0",
+      "author": {
+        "name": "Valency Systems Inc",
+        "email": "support@valency.io",
+        "url": "https://valency.io"
+      },
+      "homepage": "https://valency.io",
+      "repository": "https://github.com/valency-oss/valency-bond",
+      "license": "MIT",
+      "keywords": [
+        "research",
+        "papers",
+        "literature-review",
+        "semantic-search"
+      ],
+      "strict": true
+    }
+  ]
+}
