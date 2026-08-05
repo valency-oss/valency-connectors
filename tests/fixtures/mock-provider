@@ -55,17 +55,23 @@ if [ "$provider" = claude ]; then
       [ ! -f "$MOCK_STATE/fail-claude-plugin-list" ] || exit 1
       printf '['
       separator=""
+      if [ -f "$MOCK_STATE/claude-plugin-project-scoped" ]; then
+        # The same plugin id at project scope, listed before any user-scoped
+        # entry: scope-aware detection must not mistake it for the user one.
+        printf '%s{"scope":"project","enabled":true,"id":"valency@valency-claude-plugin"}' "$separator"
+        separator=,
+      fi
       if [ -f "$MOCK_STATE/claude-plugin" ] && [ ! -f "$MOCK_STATE/fail-claude-verification" ]; then
         if [ -f "$MOCK_STATE/claude-plugin-disabled" ]; then enabled=false; else enabled=true; fi
         # "enabled" precedes the identity: JSON keys are unordered and the
         # matcher must accept fields on either side of the identity pair.
-        printf '%s{"enabled":%s,"id":"valency@valency-claude-plugin"}' "$separator" "$enabled"
+        printf '%s{"enabled":%s,"scope":"user","id":"valency@valency-claude-plugin"}' "$separator" "$enabled"
         separator=,
       fi
       if [ -f "$MOCK_STATE/claude-legacy-plugin" ]; then
         # This entry deliberately leads with "enabled" before its identity:
         # entry-scoped matching must not attribute it to the previous entry.
-        printf '%s{"enabled":true,"id":"valency@valency-plugin"}' "$separator"
+        printf '%s{"enabled":true,"scope":"user","id":"valency@valency-plugin"}' "$separator"
       fi
       printf ']\n'
       ;;

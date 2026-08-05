@@ -386,27 +386,41 @@ compact_json() {
 # checks are scoped to one entry: the segment around the identity pair,
 # bounded on both sides by object boundaries ("},{" between siblings, "[{"
 # opening and "}]" closing an array of objects). JSON keys are unordered, so
-# the required field is accepted anywhere within the bounded segment. A
-# boundary sequence appearing inside a string value can only shrink the
-# segment, which fails closed instead of falsely verifying.
+# required fields are accepted anywhere within the bounded segment — but all
+# of them must sit in the same entry. The identity may appear in several
+# entries (for example one plugin id installed at multiple scopes); each
+# occurrence is examined in turn. A boundary sequence appearing inside a
+# string value can only shrink a segment, which fails closed instead of
+# falsely verifying.
 json_entry_contains() {
   document=$1
   identity=$2
-  required=$3
-  case $document in
-    *"$identity"*) ;;
-    *) return 1 ;;
-  esac
-  entry_before=${document%%"$identity"*}
-  entry_after=${document#*"$identity"}
-  entry_before=${entry_before##*"},{"}
-  entry_before=${entry_before##*"[{"}
-  entry_after=${entry_after%%"},{"*}
-  entry_after=${entry_after%%"}]"*}
-  case $entry_before$identity$entry_after in
-    *"$required"*) return 0 ;;
-  esac
-  return 1
+  shift 2
+  remainder=$document
+  while :; do
+    case $remainder in
+      *"$identity"*) ;;
+      *) return 1 ;;
+    esac
+    entry_before=${remainder%%"$identity"*}
+    entry_after=${remainder#*"$identity"}
+    remainder=$entry_after
+    entry_before=${entry_before##*"},{"}
+    entry_before=${entry_before##*"[{"}
+    entry_after=${entry_after%%"},{"*}
+    entry_after=${entry_after%%"}]"*}
+    segment=$entry_before$identity$entry_after
+    segment_matches=1
+    for required in "$@"; do
+      case $segment in
+        *"$required"*) ;;
+        *) segment_matches=0; break ;;
+      esac
+    done
+    if [ "$segment_matches" -eq 1 ]; then
+      return 0
+    fi
+  done
 }
 
 inspect_claude_state() {
@@ -444,12 +458,15 @@ inspect_claude_state() {
   case $compact_marketplaces in
     *\"name\":\"valency-plugin\"*) CLAUDE_LEGACY_MARKETPLACE_PRESENT=1 ;;
   esac
-  case $compact_plugins in
-    *\"id\":\"$CLAUDE_PLUGIN\"*) CLAUDE_PLUGIN_PRESENT=1 ;;
-  esac
-  case $compact_plugins in
-    *\"id\":\"valency@valency-plugin\"*) CLAUDE_LEGACY_PLUGIN_PRESENT=1 ;;
-  esac
+  # Detection is scope-aware: the installer manages the user scope only, so a
+  # project- or local-scoped copy of the same plugin id must not be mistaken
+  # for the user-scoped installation (or trigger user-scoped legacy cleanup).
+  if json_entry_contains "$compact_plugins" "\"id\":\"$CLAUDE_PLUGIN\"" '"scope":"user"'; then
+    CLAUDE_PLUGIN_PRESENT=1
+  fi
+  if json_entry_contains "$compact_plugins" '"id":"valency@valency-plugin"' '"scope":"user"'; then
+    CLAUDE_LEGACY_PLUGIN_PRESENT=1
+  fi
 }
 
 inspect_provider_state() {
@@ -725,7 +742,7 @@ run_quietly() {
 verify_claude_plugin() {
   plugin_json=$(claude plugin list --json 2>/dev/null) || return 1
   compact_plugins=$(printf '%s' "$plugin_json" | compact_json)
-  json_entry_contains "$compact_plugins" "\"id\":\"$CLAUDE_PLUGIN\"" '"enabled":true'
+  json_entry_contains "$compact_plugins" "\"id\":\"$CLAUDE_PLUGIN\"" '"enabled":true' '"scope":"user"'
 }
 
 install_claude() {
@@ -801,8 +818,7 @@ install_claude() {
 verify_codex_plugin() {
   plugin_json=$(codex plugin list --json 2>/dev/null) || return 1
   compact_plugins=$(printf '%s' "$plugin_json" | compact_json)
-  json_entry_contains "$compact_plugins" "\"pluginId\":\"$CODEX_PLUGIN\"" '"installed":true' &&
-    json_entry_contains "$compact_plugins" "\"pluginId\":\"$CODEX_PLUGIN\"" '"enabled":true'
+  json_entry_contains "$compact_plugins" "\"pluginId\":\"$CODEX_PLUGIN\"" '"installed":true' '"enabled":true'
 }
 
 install_codex() {

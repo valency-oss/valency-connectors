@@ -238,6 +238,22 @@ test_plan_shows_refresh_for_existing_marketplace_with_fresh_plugin() {
   pass "$TEST_NAME"
 }
 
+test_project_scoped_plugin_is_not_mistaken_for_user_install() {
+  # The same plugin id installed at project scope must not satisfy detection
+  # or verification: the installer manages user scope, installs there, and
+  # verifies the user-scoped entry even with the project entry listed first.
+  new_case claude-project-scope-duplicate
+  enable_claude
+  : > "$MOCK_STATE/claude-marketplace"
+  : > "$MOCK_STATE/claude-plugin-project-scoped"
+  run_without_terminal --target claude --yes --no-auth
+  assert_status 0 || return
+  assert_log_contains "claude plugin install valency@valency-claude-plugin --scope user" || return
+  assert_log_not_contains "claude plugin update valency@valency-claude-plugin --scope user" || return
+  assert_output_contains "Claude Code installation: installed" || return
+  pass "$TEST_NAME"
+}
+
 test_lookalike_claude_marketplace_is_not_trusted() {
   # A pre-existing marketplace with the expected name but a different
   # repository must not be updated or used to install: the plugin it serves
@@ -998,6 +1014,7 @@ test_codex_fresh_install
 test_rerun_updates_both_providers
 test_installed_plugin_with_missing_marketplace_is_repaired
 test_plan_shows_refresh_for_existing_marketplace_with_fresh_plugin
+test_project_scoped_plugin_is_not_mistaken_for_user_install
 test_lookalike_claude_marketplace_is_not_trusted
 test_whitespace_in_marketplace_repo_is_not_trusted
 test_unattended_claude_migration_requires_flag
