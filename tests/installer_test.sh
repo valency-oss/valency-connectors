@@ -499,6 +499,61 @@ test_truncated_download_is_inert() {
   pass "$TEST_NAME"
 }
 
+test_midfile_truncated_download_is_inert() {
+  # A download can be cut anywhere, not only before the final line. Whatever
+  # the cut point, the truncated script must run no provider commands at all,
+  # because only the final main invocation executes work.
+  new_case midfile-truncated-download
+  enable_claude
+  truncated="$CASE_DIR/install-truncated.sh"
+  total_lines=$(wc -l < "$INSTALLER")
+  head -n "$((total_lines / 2))" "$INSTALLER" > "$truncated"
+  env \
+    HOME="$CASE_DIR/home" \
+    CODEX_HOME="$CASE_DIR/codex-home" \
+    PATH="$MOCK_BIN:$TEST_BASH_DIR:/usr/bin:/bin" \
+    MOCK_STATE="$MOCK_STATE" \
+    MOCK_LOG="$MOCK_LOG" \
+    NO_COLOR=1 \
+    VALENCY_INSTALLER_TTY="$CASE_DIR/no-terminal" \
+    "$TEST_BASH" "$truncated" --target claude --yes --no-auth >"$RUN_OUTPUT" 2>&1
+  RUN_STATUS=$?
+  if [ -s "$MOCK_LOG" ]; then
+    fail "$TEST_NAME (a mid-file truncation ran provider commands)"
+    return
+  fi
+  pass "$TEST_NAME"
+}
+
+test_codex_bearer_token_auth_counts_as_connected() {
+  new_case codex-bearer-token-auth
+  enable_codex
+  : > "$MOCK_STATE/codex-auth-bearer"
+  run_with_terminal --target codex --yes --auth
+  assert_status 0 || return
+  assert_log_not_contains "codex mcp login valency" || return
+  assert_output_contains "Codex authentication: already connected" || return
+  pass "$TEST_NAME"
+}
+
+test_dry_run_shows_migration_and_replacement_plan_without_mutation() {
+  new_case dry-run-migration-plan
+  enable_claude
+  enable_codex
+  enable_repository_check
+  : > "$MOCK_STATE/claude-legacy-marketplace"
+  : > "$MOCK_STATE/claude-legacy-plugin"
+  : > "$MOCK_STATE/codex-marketplace"
+  run_without_terminal --target all --yes --migrate --no-auth --dry-run
+  assert_status 0 || return
+  assert_output_contains "Conditional migration: after verification, remove valency@valency-plugin" || return
+  assert_output_contains "Conditional replacement: remove the existing marketplace named valency" || return
+  assert_output_contains "Claude Code installation: planned" || return
+  assert_output_contains "Codex installation: planned" || return
+  assert_no_mutations || return
+  pass "$TEST_NAME"
+}
+
 test_interactive_selector_preselects_detected_providers() {
   new_case interactive-default-selection
   enable_claude
@@ -734,6 +789,9 @@ test_repeated_targets_are_combined
 test_dry_run_never_mutates_provider_state
 test_final_confirmation_can_cancel
 test_truncated_download_is_inert
+test_midfile_truncated_download_is_inert
+test_codex_bearer_token_auth_counts_as_connected
+test_dry_run_shows_migration_and_replacement_plan_without_mutation
 test_interactive_selector_preselects_detected_providers
 test_interactive_selector_can_deselect_a_provider
 test_limited_terminal_uses_numbered_selection

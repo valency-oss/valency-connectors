@@ -146,6 +146,8 @@ if [ "$provider" = codex ]; then
     "mcp list --json")
       if [ -f "$MOCK_STATE/codex-auth-connected" ]; then
         printf '[{"name":"valency","auth_status":"oauth"}]\n'
+      elif [ -f "$MOCK_STATE/codex-auth-bearer" ]; then
+        printf '[{"name":"valency","auth_status":"bearer_token"}]\n'
       elif [ -f "$MOCK_STATE/codex-auth-unknown" ]; then
         printf '[{"name":"valency","auth_status":"unknown"}]\n'
       else
