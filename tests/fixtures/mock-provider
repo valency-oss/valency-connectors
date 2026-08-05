@@ -90,6 +90,9 @@ if [ "$provider" = claude ]; then
         # Another server's Connected line must not mark the plugin connected.
         printf 'plugin:valency:valency: status unavailable\n'
         printf 'other-helper: Connected\n'
+      elif [ -f "$MOCK_STATE/claude-auth-prefix-collision" ]; then
+        # A longer identifier sharing the prefix is a different server.
+        printf 'plugin:valency:valency-helper: Connected\n'
       elif [ -f "$MOCK_STATE/claude-auth-unknown" ]; then
         printf 'plugin:valency:valency: status unavailable\n'
       else

@@ -454,20 +454,26 @@ inspect_claude_auth_state() {
     return
   fi
   # Status is read from the single line naming this plugin so another server's
-  # "Connected" cannot bleed in. "Disconnected" contains "connected" and must
-  # not count; anything unrecognized on the line stays "unknown".
+  # "Connected" cannot bleed in. The identifier must end at a delimiter — a
+  # longer name such as plugin:valency:valency-helper is a different server.
+  # "Disconnected" contains "connected" and must not count; anything
+  # unrecognized on the line stays "unknown".
   CLAUDE_AUTH_STATE="missing"
   while IFS= read -r auth_line; do
     case $auth_line in
-      *plugin:valency:valency*)
-        case $auth_line in
-          *[Dd]isconnected*) CLAUDE_AUTH_STATE="unknown" ;;
-          *[Cc]onnected*) CLAUDE_AUTH_STATE="connected" ;;
-          *) CLAUDE_AUTH_STATE="unknown" ;;
-        esac
-        break
-        ;;
+      *plugin:valency:valency*) ;;
+      *) continue ;;
     esac
+    auth_line_rest=${auth_line#*plugin:valency:valency}
+    case $auth_line_rest in
+      [A-Za-z0-9._-]*) continue ;;
+    esac
+    case $auth_line in
+      *[Dd]isconnected*) CLAUDE_AUTH_STATE="unknown" ;;
+      *[Cc]onnected*) CLAUDE_AUTH_STATE="connected" ;;
+      *) CLAUDE_AUTH_STATE="unknown" ;;
+    esac
+    break
   done <<EOF
 $auth_output
 EOF

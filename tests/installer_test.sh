@@ -761,6 +761,19 @@ test_other_connected_server_is_not_misread_as_claude_auth() {
   pass "$TEST_NAME"
 }
 
+test_prefix_collision_server_is_not_misread_as_claude_auth() {
+  # plugin:valency:valency-helper shares the prefix but is a different
+  # server; its Connected status must not suppress the plugin's login.
+  new_case claude-auth-prefix-collision
+  enable_claude
+  : > "$MOCK_STATE/claude-auth-prefix-collision"
+  run_with_terminal --target claude --yes --auth
+  assert_status 0 || return
+  assert_output_contains "Claude Code status: missing." || return
+  assert_log_contains "claude mcp login plugin:valency:valency" || return
+  pass "$TEST_NAME"
+}
+
 test_unknown_auth_status_is_selected() {
   new_case unknown-auth-status
   enable_claude
@@ -908,6 +921,7 @@ test_authentication_succeeds_for_missing_connections
 test_connected_providers_are_not_reauthenticated_by_default
 test_reauthenticate_includes_connected_providers
 test_other_connected_server_is_not_misread_as_claude_auth
+test_prefix_collision_server_is_not_misread_as_claude_auth
 test_unknown_auth_status_is_selected
 test_authentication_failure_is_only_a_warning
 test_unavailable_authentication_does_not_fail_installation
