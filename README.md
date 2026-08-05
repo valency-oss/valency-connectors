@@ -12,14 +12,6 @@ The provider packages are self-contained and versioned independently:
 | [`plugins/claude/valency`](./plugins/claude/valency) | Claude Code | `.claude-plugin/plugin.json` |
 | [`plugins/openai/valency`](./plugins/openai/valency) | ChatGPT and Codex | `.codex-plugin/plugin.json` |
 
-## Trust and safety
-
-Before running either repository installation flow, inspect this repository
-and the packaged plugin you plan to install. Repository plugins are trusted
-code and configuration that can run with your user privileges. Reviewing a
-tool allow list is still important, but it is not a substitute for trusting
-the complete plugin package.
-
 ## Install in Claude Code
 
 Add this repository as a user-scoped marketplace, then install Valency:
@@ -128,11 +120,6 @@ The Valency Bond MCP server works with research discovery, metadata, abstracts,
 citations, relationships, semantic similarity, and corpus analytics.
 Availability varies by record and source. Valency never fabricates missing
 records and submits feedback only when you explicitly request it.
-
-## Development
-
-See [Development and validation](./docs/development.md) for maintainer setup,
-packaging checks, and provider validation commands.
 
 ## License
 
