@@ -29,14 +29,7 @@ agy plugin list
 
 Start Antigravity CLI and open the interactive `/mcp` manager. Select
 `valency`, complete the browser-based authorization flow, and confirm that the
-server connects. Valency supports dynamic client registration, so you do not
-need to configure an OAuth client ID, client secret, or bearer token.
-
-OAuth and remote tool use have not yet been verified end to end with
-Antigravity CLI. If its captured registration request uses a redirect host that
-Valency does not currently allow, the MCP redirect allowlist and Clerk OAuth
-application must be updated and deployed separately before authentication will
-succeed.
+server connects.
 
 The plugin packages the Valency MCP server, host-specific guidance, and seven
 research skills. Antigravity exposes installed skills as slash commands; use
@@ -67,10 +60,6 @@ that the Valency server and tools are available:
 /mcp list
 ```
 
-Gemini uses local TCP port `33418` while OAuth completes. The extension uses
-dynamic client registration, so you do not need to configure an OAuth client
-ID, client secret, or bearer token.
-
 ### Update or uninstall from Gemini CLI
 
 ```bash
@@ -95,10 +84,6 @@ Start GitHub Copilot CLI and authenticate the plugin-provided Valency server:
 ```text
 /mcp auth valency
 ```
-
-Copilot manages the browser-based OAuth flow and dynamic client registration.
-The plugin does not require a static OAuth client ID, client secret, or bearer
-token.
 
 The complete plugin is supported in GitHub Copilot CLI. Copilot coding agent
 and Copilot code review do not currently support remote OAuth MCP servers, so
@@ -129,10 +114,8 @@ claude plugin marketplace add valency-oss/valency-bond --scope user
 claude plugin install valency@valency-claude-plugin --scope user
 ```
 
-The plugin owns its Valency Bond connection, so installation does not require a
-separate MCP configuration command. Start or restart Claude Code, open `/mcp`,
-and authenticate `plugin:valency:valency` when prompted. You can start the same
-browser flow from a terminal:
+Start or restart Claude Code, open `/mcp`, and authenticate `plugin:valency:valency` 
+when prompted. You can start the same browser flow from a terminal:
 
 ```bash
 claude mcp login plugin:valency:valency
