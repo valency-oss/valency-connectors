@@ -14,6 +14,48 @@ const claudePlugin = readJson("plugins/claude/valency/.claude-plugin/plugin.json
 const openaiMarketplace = readJson(".agents/plugins/marketplace.json");
 const openaiPlugin = readJson("plugins/openai/valency/.codex-plugin/plugin.json");
 
+test("repository root is an installable Antigravity plugin", () => {
+  assert.deepEqual(readJson("plugin.json"), {
+    name: "valency",
+    description:
+      "Search, profile, and analyze research papers through the Valency Bond MCP server.",
+  });
+
+  assert.deepEqual(readJson("mcp_config.json"), {
+    mcpServers: {
+      valency: {
+        serverUrl: "https://labs.valency.io/mcp/",
+      },
+    },
+  });
+
+  assert.doesNotMatch(
+    readFileSync("mcp_config.json", "utf8"),
+    /authProviderType|oauth|redirectUri|33418|clientId|clientSecret|bearer|authorization/i,
+  );
+});
+
+test("Antigravity reuses the root skills and adds host-specific guidance", () => {
+  assert.deepEqual(skillDirectories("skills"), [
+    "fresh-collaborators",
+    "landscape",
+    "network",
+    "profile",
+    "reading-list",
+    "similar",
+    "trends",
+  ]);
+  assert.equal(existsSync("gemini-extension.json"), true);
+  assert.equal(existsSync("GEMINI.md"), true);
+  assert.equal(existsSync("rules/valency.md"), true);
+
+  const rule = readFileSync("rules/valency.md", "utf8");
+  assert.match(rule, /Valency Bond/);
+  assert.match(rule, /interactive `\/mcp` manager/);
+  assert.match(rule, /skill-derived slash commands/);
+  assert.doesNotMatch(rule, /Gemini|33418|\/mcp auth valency|\/valency:/i);
+});
+
 test("Copilot marketplace routes to its independent provider package", () => {
   assert.deepEqual(readJson(".github/plugin/marketplace.json"), {
     name: "valency-copilot-plugin",
@@ -379,7 +421,57 @@ test("repository metadata and installation docs point at the monorepo", () => {
   assert.match(development, /npm run validate:claude/);
   assert.match(development, /npm run validate:openai/);
   assert.match(development, /gemini-extension\.json/);
-  assert.match(development, /static checks for the Gemini extension/);
+  assert.match(
+    development,
+    /static checks for the native Antigravity plugin, the Gemini\s+extension/,
+  );
+});
+
+test("Antigravity and Gemini documentation keep separate lifecycle contracts", () => {
+  const readme = readFileSync("README.md", "utf8");
+  const development = readFileSync("docs/development.md", "utf8");
+  const antigravitySection = readme.match(
+    /^## Install in Antigravity CLI$([\s\S]*?)(?=^## )/m,
+  )?.[1];
+
+  assert.ok(antigravitySection, "README must contain an Antigravity install section");
+  assert.match(
+    readme,
+    /\| \[Repository root \(Antigravity\)\]\(\.\) \| Antigravity CLI \| `plugin\.json` \|/,
+  );
+  assert.match(
+    readme,
+    /\| \[Repository root \(Gemini\)\]\(\.\) \| Gemini CLI \| `gemini-extension\.json` \|/,
+  );
+  assert.match(
+    antigravitySection,
+    /agy plugin install https:\/\/github\.com\/valency-oss\/valency-bond/,
+  );
+  assert.match(antigravitySection, /agy plugin list/);
+  assert.match(antigravitySection, /interactive `\/mcp` manager/);
+  assert.match(
+    antigravitySection,
+    /OAuth and remote tool use have not yet been verified end to end/,
+  );
+  assert.match(
+    antigravitySection,
+    /MCP redirect allowlist and Clerk OAuth\s+application must be updated and deployed separately/,
+  );
+  assert.match(antigravitySection, /agy plugin disable valency/);
+  assert.match(antigravitySection, /agy plugin enable valency/);
+  assert.match(antigravitySection, /agy plugin uninstall valency/);
+  assert.doesNotMatch(
+    antigravitySection,
+    /--auto-update|gemini extensions|\/mcp auth valency|33418|agy plugin update/i,
+  );
+
+  assert.match(development, /native Antigravity plugin/);
+  assert.match(development, /`plugin\.json`\s+and\s+`mcp_config\.json`/);
+  assert.match(development, /agy --version/);
+  assert.match(
+    development,
+    /do not prove that Antigravity CLI can\s+install the plugin, complete OAuth, or invoke a remote tool/,
+  );
 });
 
 test("Copilot documentation uses marketplace-first CLI-only support", () => {
@@ -406,6 +498,6 @@ test("Copilot documentation uses marketplace-first CLI-only support", () => {
   assert.match(development, /Copilot\s+marketplace and provider package/);
   assert.match(
     development,
-    /do not prove that GitHub\s+Copilot CLI can install the plugin, complete OAuth, or invoke a remote tool/,
+    /do not prove that GitHub\s+Copilot CLI can install its\s+plugin, complete OAuth, or invoke a remote tool/,
   );
 });
