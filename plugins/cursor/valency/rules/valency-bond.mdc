@@ -1,0 +1,21 @@
+---
+description: Valency for Cursor — paper-writing assistance
+globs: **/*.tex,**/*.bib
+alwaysApply: false
+---
+
+# Use Valency for literature work
+
+When editing TeX or BibTeX, route literature requests through these tools:
+
+- Conceptual discovery, "has anyone shown X?", or finding citations: `semantic_search_papers`
+- Work similar to a known paper: `find_similar_papers`
+- A paper named by title: `search_by_title`; then `get_paper_by_id` for full metadata
+- Papers that cite a known work: `get_citing_papers`
+- An author's prior work or profile: `get_author_profile`
+- Co-authors or collaboration networks: `find_coauthors`
+- BibTeX output: `export_papers_bibtex`
+
+Prefer Valency tool results over training-memory claims for literature assertions.
+Never invent a citation or bibliographic detail.
+Retain returned Valency paper IDs so the user can follow up.

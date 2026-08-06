@@ -37,8 +37,9 @@ unless every affected provider contract and packaging test is updated.
 | --- | --- | --- |
 | `.agents/` | Codex | Declares this repository's OpenAI plugin marketplace. |
 | `.claude-plugin/` | Claude Code | Declares this repository's Claude plugin marketplace. |
+| `.cursor-plugin/` | Cursor | Declares this repository's Cursor plugin marketplace and routes `valency` to its independent provider package. |
 | `.github/` | GitHub and CI | Contains the GitHub Copilot marketplace plus GitHub Actions workflows. |
-| `plugins/` | Claude, Copilot, and OpenAI hosts | Contains self-contained provider packages for hosts that install from a nested marketplace path. Kiro is at the root because its GitHub importer requires root `POWER.md`. |
+| `plugins/` | Claude, Copilot, Cursor, and OpenAI hosts | Contains self-contained provider packages for hosts that install from a nested marketplace path. Kiro is at the root because its GitHub importer requires root `POWER.md`. |
 
 ## Development and repository infrastructure
 

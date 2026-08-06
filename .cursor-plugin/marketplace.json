@@ -1,0 +1,17 @@
+{
+  "name": "valency-cursor-plugin",
+  "owner": {
+    "name": "Valency Systems Inc",
+    "email": "support@valency.io"
+  },
+  "metadata": {
+    "description": "The Valency research plugin marketplace for Cursor, powered by Valency Bond."
+  },
+  "plugins": [
+    {
+      "name": "valency",
+      "source": "./plugins/cursor/valency",
+      "description": "Search, profile, and analyze research papers through Valency Bond."
+    }
+  ]
+}
