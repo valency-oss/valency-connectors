@@ -23,7 +23,7 @@ test("Copilot marketplace routes to its independent provider package", () => {
     metadata: {
       description:
         "The Valency research plugin marketplace for GitHub Copilot CLI, powered by Valency Bond.",
-      version: "1.0.0",
+      version: "0.1.0",
     },
     plugins: [
       {
