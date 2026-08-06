@@ -23,6 +23,21 @@ its own installation contract. See the
 [repository root layout](./docs/repository-layout.md) for the owner and purpose
 of every root entry.
 
+## Install the skills only
+
+To add the seven guided workflows to an existing agent without installing a
+provider plugin, run:
+
+```bash
+npx skills@latest add valency-oss/valency-bond
+```
+
+In the selector, toggle **Valency Skills** to select or clear all seven
+workflows at once, or choose individual workflows underneath it. This installs
+the skill instructions only; it does not configure the Valency Bond MCP server
+or authenticate it. Install the provider package for your host when you need
+the complete integration.
+
 ## Install in Antigravity CLI
 
 Install the repository as a native Antigravity plugin, then confirm that it is

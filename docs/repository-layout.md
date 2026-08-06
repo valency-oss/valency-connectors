@@ -36,9 +36,25 @@ unless every affected provider contract and packaging test is updated.
 | Entry | Consumer | Purpose |
 | --- | --- | --- |
 | `.agents/` | Codex | Declares this repository's OpenAI plugin marketplace. |
-| `.claude-plugin/` | Claude Code | Declares this repository's Claude plugin marketplace. |
+| `.claude-plugin/marketplace.json` | Claude Code | Declares this repository's Claude plugin marketplace. |
+| `.claude-plugin/plugin.json` | Agent Skills CLI | Groups every canonical workflow under the `Valency Skills` select-all row. It is not a second Claude marketplace entry. |
 | `.github/` | GitHub and CI | Contains the GitHub Copilot marketplace plus GitHub Actions workflows. |
 | `plugins/` | Claude, Copilot, and OpenAI hosts | Contains self-contained provider packages for hosts that install from a nested marketplace path. Kiro is at the root because its GitHub importer requires root `POWER.md`. |
+
+### Why Agent Skills metadata is under `.claude-plugin/`
+
+The Agent Skills CLI reuses Claude's plugin-manifest convention as an
+interoperable way to describe named groups of skills. It reads the root
+`.claude-plugin/plugin.json`, follows its explicit `skills/*` paths, and uses
+the manifest name to render one `Valency Skills` parent row in its selector.
+That group works when the selected destination is Codex or any other supported
+agent; it is not limited to Claude.
+
+Claude's marketplace flow follows a separate path. It reads
+`.claude-plugin/marketplace.json`, resolves the `valency` entry to
+`plugins/claude/valency`, and installs that self-contained package. Therefore,
+the root grouping manifest does not replace, rename, or enter the normal Claude
+marketplace package.
 
 ## Development and repository infrastructure
 

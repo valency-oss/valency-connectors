@@ -1,0 +1,20 @@
+{
+  "name": "valency-skills",
+  "version": "0.1.0",
+  "description": "Portable research-corpus workflows for agents using the Valency Bond MCP server.",
+  "author": {
+    "name": "Valency Systems Inc"
+  },
+  "homepage": "https://valency.io",
+  "repository": "https://github.com/valency-oss/valency-bond",
+  "license": "MIT",
+  "skills": [
+    "./skills/fresh-collaborators",
+    "./skills/landscape",
+    "./skills/network",
+    "./skills/profile",
+    "./skills/reading-list",
+    "./skills/similar",
+    "./skills/trends"
+  ]
+}
