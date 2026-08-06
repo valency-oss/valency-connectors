@@ -5,15 +5,50 @@ providers. Each integration connects its host to the **Valency Bond MCP
 server** at `https://labs.valency.io/mcp/` and bundles seven guided research
 workflows.
 
-The provider packages are self-contained and versioned independently. The
-Gemini CLI extension is installed from the repository root:
+The provider packages are self-contained. Where a host supports manifest
+versions, the packages are versioned independently. Antigravity CLI and Gemini
+CLI each install their own contract from the repository root:
 
 | Provider package | Hosts | Manifest |
 | --- | --- | --- |
-| [Repository root](.) | Gemini CLI | `gemini-extension.json` |
+| [Repository root (Antigravity)](.) | Antigravity CLI | `plugin.json` |
+| [Repository root (Gemini)](.) | Gemini CLI | `gemini-extension.json` |
 | [`plugins/claude/valency`](./plugins/claude/valency) | Claude Code | `.claude-plugin/plugin.json` |
 | [`plugins/copilot/valency`](./plugins/copilot/valency) | GitHub Copilot CLI | `plugin.json` |
 | [`plugins/openai/valency`](./plugins/openai/valency) | ChatGPT and Codex | `.codex-plugin/plugin.json` |
+
+## Install in Antigravity CLI
+
+Install the repository as a native Antigravity plugin, then confirm that it is
+listed:
+
+```bash
+agy plugin install https://github.com/valency-oss/valency-bond
+agy plugin list
+```
+
+Start Antigravity CLI and open the interactive `/mcp` manager. Select
+`valency`, complete the browser-based authorization flow, and confirm that the
+server connects. Valency supports dynamic client registration, so you do not
+need to configure an OAuth client ID, client secret, or bearer token.
+
+OAuth and remote tool use have not yet been verified end to end with
+Antigravity CLI. If its captured registration request uses a redirect host that
+Valency does not currently allow, the MCP redirect allowlist and Clerk OAuth
+application must be updated and deployed separately before authentication will
+succeed.
+
+The plugin packages the Valency MCP server, host-specific guidance, and seven
+research skills. Antigravity exposes installed skills as slash commands; use
+the skill-derived commands shown by the CLI.
+
+### Disable, enable, or uninstall from Antigravity CLI
+
+```bash
+agy plugin disable valency
+agy plugin enable valency
+agy plugin uninstall valency
+```
 
 ## Install in Gemini CLI
 
