@@ -36,10 +36,29 @@ unless every affected provider contract and packaging test is updated.
 | Entry | Consumer | Purpose |
 | --- | --- | --- |
 | `.agents/` | Codex | Declares this repository's OpenAI plugin marketplace. |
-| `.claude-plugin/` | Claude Code | Declares this repository's Claude plugin marketplace. |
+| `.claude-plugin/marketplace.json` | Claude Code | Declares this repository's Claude plugin marketplace. |
+| `.claude-plugin/plugin.json` | Agent Skills CLI | Groups every canonical workflow under the `Valency Skills` select-all row. It is not a second Claude marketplace entry. |
 | `.cursor-plugin/` | Cursor | Declares this repository's Cursor plugin marketplace and routes `valency` to its independent provider package. |
+| `.grok-plugin/` | Grok Build | Declares the root Grok marketplace and maps the user-visible `valency` plugin to its dedicated nested package. |
 | `.github/` | GitHub and CI | Contains the GitHub Copilot marketplace plus GitHub Actions workflows. |
-| `plugins/` | Claude, Copilot, Cursor, and OpenAI hosts | Contains self-contained provider packages for hosts that install from a nested marketplace path. Kiro is at the root because its GitHub importer requires root `POWER.md`. |
+| `plugins/` | Claude, Copilot, Cursor, Grok Build, and OpenAI hosts | Contains self-contained provider packages for hosts that install from a nested marketplace path. Kiro is at the root because its GitHub importer requires root `POWER.md`. |
+| `plugins/cursor/valency` | Cursor | Contains the dedicated Cursor manifest, full-surface remote MCP configuration, MIT license, literature rule, and seven canonical skill copies. |
+| `plugins/grok/valency` | Grok Build | Contains the dedicated Grok manifest, credential-free remote MCP configuration, MIT license, and seven canonical skill copies. The root marketplace hides this internal path from testers. |
+
+### Why Agent Skills metadata is under `.claude-plugin/`
+
+The Agent Skills CLI reuses Claude's plugin-manifest convention as an
+interoperable way to describe named groups of skills. It reads the root
+`.claude-plugin/plugin.json`, follows its explicit `skills/*` paths, and uses
+the manifest name to render one `Valency Skills` parent row in its selector.
+That group works when the selected destination is Codex or any other supported
+agent; it is not limited to Claude.
+
+Claude's marketplace flow follows a separate path. It reads
+`.claude-plugin/marketplace.json`, resolves the `valency` entry to
+`plugins/claude/valency`, and installs that self-contained package. Therefore,
+the root grouping manifest does not replace, rename, or enter the normal Claude
+marketplace package.
 
 ## Development and repository infrastructure
 
