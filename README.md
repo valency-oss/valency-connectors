@@ -15,6 +15,7 @@ CLI each install their own contract from the repository root:
 | [Repository root (Gemini)](.) | Gemini CLI | `gemini-extension.json` |
 | [`plugins/claude/valency`](./plugins/claude/valency) | Claude Code | `.claude-plugin/plugin.json` |
 | [`plugins/copilot/valency`](./plugins/copilot/valency) | GitHub Copilot CLI | `plugin.json` |
+| [`plugins/kiro/valency`](./plugins/kiro/valency) | Kiro IDE | `POWER.md` |
 | [`plugins/openai/valency`](./plugins/openai/valency) | ChatGPT and Codex | `.codex-plugin/plugin.json` |
 
 ## Install in Antigravity CLI
@@ -29,7 +30,14 @@ agy plugin list
 
 Start Antigravity CLI and open the interactive `/mcp` manager. Select
 `valency`, complete the browser-based authorization flow, and confirm that the
-server connects.
+server connects. Valency supports dynamic client registration, so you do not
+need to configure an OAuth client ID, client secret, or bearer token.
+
+OAuth and remote tool use have not yet been verified end to end with
+Antigravity CLI. If its captured registration request uses a redirect host that
+Valency does not currently allow, the MCP redirect allowlist and Clerk OAuth
+application must be updated and deployed separately before authentication will
+succeed.
 
 The plugin packages the Valency MCP server, host-specific guidance, and seven
 research skills. Antigravity exposes installed skills as slash commands; use
@@ -104,6 +112,39 @@ To uninstall the plugin and remove its marketplace:
 copilot plugin uninstall valency
 copilot plugin marketplace remove valency-copilot-plugin
 ```
+
+## Install in Kiro
+
+Kiro requires a valid `POWER.md` in the repository root when importing a
+custom Power from a repository URL. Valency's Kiro package is nested so the
+repository can preserve its existing root provider contracts. Until Valency is
+available from Kiro's curated Powers list, clone this repository and use the
+supported local-folder flow:
+
+```bash
+git clone https://github.com/valency-oss/valency-bond
+```
+
+In the Kiro IDE:
+
+1. Open the **Powers panel** and choose **Add Custom Power**.
+2. Select **Import power from a folder**.
+3. Choose `valency-bond/plugins/kiro/valency`, then install the Power.
+4. Activate Valency and complete Kiro's browser-based authorization flow.
+
+Kiro registers the `valency` server from the bundled `mcp.json`. Kiro manages
+OAuth and dynamic client registration; the package contains no client ID,
+client secret, bearer token, or fixed callback URL.
+
+### Update or remove Valency from Kiro
+
+Pull the latest repository changes, then open **Powers panel** → **Installed
+Powers** → **Valency**. Choose **Check for updates**, followed by **Install
+updates** when Kiro offers one.
+
+To uninstall, use the Power detail controls to remove Valency from Installed
+Powers. Removing the Power should be done in Kiro rather than by editing its
+generated MCP configuration directly.
 
 ## Install in Claude Code
 
