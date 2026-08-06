@@ -104,6 +104,7 @@ run_without_terminal() {
     MOCK_STATE="$MOCK_STATE" \
     MOCK_LOG="$MOCK_LOG" \
     NO_COLOR=1 \
+    VALENCY_INSTALLER_TEST_MODE=1 \
     VALENCY_INSTALLER_TTY="$CASE_DIR/no-terminal" \
     "$TEST_BASH" "$INSTALLER" "$@" >"$RUN_OUTPUT" 2>&1
   RUN_STATUS=$?
@@ -118,6 +119,7 @@ run_with_terminal() {
     MOCK_LOG="$MOCK_LOG" \
     NO_COLOR=1 \
     TERM=xterm \
+    VALENCY_INSTALLER_TEST_MODE=1 \
     VALENCY_INSTALLER_TTY="$TTY_INPUT" \
     "$TEST_BASH" "$INSTALLER" "$@" >"$RUN_OUTPUT" 2>&1
   RUN_STATUS=$?
@@ -132,6 +134,7 @@ run_with_limited_terminal() {
     MOCK_LOG="$MOCK_LOG" \
     NO_COLOR=1 \
     TERM=dumb \
+    VALENCY_INSTALLER_TEST_MODE=1 \
     VALENCY_INSTALLER_TTY="$TTY_INPUT" \
     "$TEST_BASH" "$INSTALLER" "$@" >"$RUN_OUTPUT" 2>&1
   RUN_STATUS=$?
@@ -809,7 +812,8 @@ test_interactive_selector_preselects_detected_providers() {
   printf '\n\n' > "$TTY_INPUT"
   run_with_terminal --no-auth
   assert_status 0 || return
-  assert_output_contains "Choose where to install Valency" || return
+  assert_output_contains "Select harnesses for Valency" || return
+  assert_output_contains "[x] All detected harnesses" || return
   assert_log_contains "claude plugin install valency@valency-claude-plugin --scope user" || return
   assert_log_contains "codex plugin add valency@valency" || return
   pass "$TEST_NAME"
@@ -819,22 +823,61 @@ test_interactive_selector_can_deselect_a_provider() {
   new_case interactive-deselect-codex
   enable_claude
   enable_codex
-  printf '2\n\n' > "$TTY_INPUT"
+  # Start on "All detected harnesses", move to Codex, toggle it with Space,
+  # confirm the selection, then accept the installation plan.
+  printf '\033[B\033[B \n\n' > "$TTY_INPUT"
   run_with_terminal --no-auth
   assert_status 0 || return
+  assert_output_contains "up/down move  space toggle  enter continue  esc cancel" || return
+  assert_output_not_contains "Enter numbers to toggle" || return
+  assert_output_contains "[-] All detected harnesses" || return
+  assert_output_contains "Selected harnesses: Claude Code" || return
   assert_log_contains "claude plugin install valency@valency-claude-plugin --scope user" || return
   assert_log_not_contains "codex plugin add valency@valency" || return
   pass "$TEST_NAME"
 }
 
-test_limited_terminal_uses_numbered_selection() {
+test_interactive_select_all_can_clear_and_restore_defaults() {
+  new_case interactive-select-all
+  enable_claude
+  enable_codex
+  # Space clears the initial all-selected state; Space again restores it.
+  printf '  \n\n' > "$TTY_INPUT"
+  run_with_terminal --no-auth
+  assert_status 0 || return
+  assert_output_contains "[ ] All detected harnesses" || return
+  assert_output_contains "[x] All detected harnesses" || return
+  assert_log_contains "claude plugin install valency@valency-claude-plugin --scope user" || return
+  assert_log_contains "codex plugin add valency@valency" || return
+  pass "$TEST_NAME"
+}
+
+test_interactive_selector_rejects_an_empty_required_selection() {
+  new_case interactive-empty-selection
+  enable_claude
+  enable_codex
+  # Clear all, try to submit, restore all, submit, then accept the plan.
+  printf ' \n \n\n' > "$TTY_INPUT"
+  run_with_terminal --no-auth
+  assert_status 0 || return
+  assert_output_contains "Select at least one item to continue." || return
+  assert_log_contains "claude plugin install valency@valency-claude-plugin --scope user" || return
+  assert_log_contains "codex plugin add valency@valency" || return
+  pass "$TEST_NAME"
+}
+
+test_limited_terminal_uses_yes_no_selection() {
   new_case limited-terminal-selection
   enable_claude
   enable_codex
-  printf '1\n\n' > "$TTY_INPUT"
+  # Keep Claude selected, deselect Codex, then accept the plan.
+  printf '\nn\n\n' > "$TTY_INPUT"
   run_with_limited_terminal --no-auth
   assert_status 0 || return
-  assert_output_contains "Limited terminal selection" || return
+  assert_output_contains "Limited terminal: answer once for each detected harness." || return
+  assert_output_contains "Install Valency for Claude Code? [Y/n]" || return
+  assert_output_contains "Install Valency for Codex? [Y/n]" || return
+  assert_output_not_contains "provider numbers" || return
   assert_log_contains "claude plugin install valency@valency-claude-plugin --scope user" || return
   assert_log_not_contains "codex plugin add valency@valency" || return
   pass "$TEST_NAME"
@@ -847,7 +890,31 @@ test_interactive_selector_can_cancel() {
   printf 'q\n' > "$TTY_INPUT"
   run_with_terminal --no-auth
   assert_status 1 || return
-  assert_output_contains "Installation cancelled" || return
+  assert_output_contains "Selected harnesses cancelled" || return
+  assert_no_mutations || return
+  pass "$TEST_NAME"
+}
+
+test_interactive_selector_escape_cancels() {
+  new_case interactive-selection-escape
+  enable_claude
+  enable_codex
+  printf '\033' > "$TTY_INPUT"
+  run_with_terminal --no-auth
+  assert_status 1 || return
+  assert_output_contains "Selected harnesses cancelled" || return
+  assert_no_mutations || return
+  pass "$TEST_NAME"
+}
+
+test_interactive_selector_interrupt_returns_130() {
+  new_case interactive-selection-interrupt
+  enable_claude
+  enable_codex
+  printf '\003' > "$TTY_INPUT"
+  run_with_terminal --no-auth
+  assert_status 130 || return
+  assert_output_contains "Selected harnesses cancelled" || return
   assert_no_mutations || return
   pass "$TEST_NAME"
 }
@@ -975,13 +1042,49 @@ test_optional_authentication_selector_can_skip_one_provider() {
   new_case optional-auth-selection
   enable_claude
   enable_codex
-  printf '2\n' > "$TTY_INPUT"
+  # Start on All, move to Codex, toggle it, then confirm authentication.
+  printf '\033[B\033[B \n' > "$TTY_INPUT"
   run_with_terminal --target all --yes
   assert_status 0 || return
   assert_output_contains "Optional authentication" || return
+  assert_output_contains "[-] All available providers" || return
+  assert_output_not_contains "Enter numbers to toggle" || return
   assert_log_contains "claude mcp login plugin:valency:valency" || return
   assert_log_not_contains "codex mcp login valency" || return
   assert_output_contains "Codex authentication: skipped" || return
+  pass "$TEST_NAME"
+}
+
+test_optional_authentication_selector_can_skip_all_providers() {
+  new_case optional-auth-skip-all
+  enable_claude
+  enable_codex
+  # Space on All clears every default, and Enter confirms the empty optional
+  # selection without affecting the verified installations.
+  printf ' \n' > "$TTY_INPUT"
+  run_with_terminal --target all --yes
+  assert_status 0 || return
+  assert_output_contains "Authentication: skipped" || return
+  assert_log_not_contains "claude mcp login plugin:valency:valency" || return
+  assert_log_not_contains "codex mcp login valency" || return
+  assert_output_contains "Claude Code authentication: skipped" || return
+  assert_output_contains "Codex authentication: skipped" || return
+  pass "$TEST_NAME"
+}
+
+test_limited_terminal_authentication_uses_yes_no_selection() {
+  new_case limited-terminal-auth-selection
+  enable_claude
+  enable_codex
+  # Keep Claude selected and deselect Codex in the portable fallback.
+  printf '\nn\n' > "$TTY_INPUT"
+  run_with_limited_terminal --target all --yes
+  assert_status 0 || return
+  assert_output_contains "Limited terminal: answer once for each available provider." || return
+  assert_output_contains "Authenticate Claude Code (missing)? [Y/n]" || return
+  assert_output_contains "Authenticate Codex (missing)? [Y/n]" || return
+  assert_log_contains "claude mcp login plugin:valency:valency" || return
+  assert_log_not_contains "codex mcp login valency" || return
   pass "$TEST_NAME"
 }
 
@@ -1084,8 +1187,12 @@ test_codex_bearer_token_auth_counts_as_connected
 test_dry_run_shows_migration_and_replacement_plan_without_mutation
 test_interactive_selector_preselects_detected_providers
 test_interactive_selector_can_deselect_a_provider
-test_limited_terminal_uses_numbered_selection
+test_interactive_select_all_can_clear_and_restore_defaults
+test_interactive_selector_rejects_an_empty_required_selection
+test_limited_terminal_uses_yes_no_selection
 test_interactive_selector_can_cancel
+test_interactive_selector_escape_cancels
+test_interactive_selector_interrupt_returns_130
 test_authentication_succeeds_for_missing_connections
 test_connected_providers_are_not_reauthenticated_by_default
 test_reauthenticate_includes_connected_providers
@@ -1096,6 +1203,8 @@ test_unknown_auth_status_is_selected
 test_authentication_failure_is_only_a_warning
 test_unavailable_authentication_does_not_fail_installation
 test_optional_authentication_selector_can_skip_one_provider
+test_optional_authentication_selector_can_skip_all_providers
+test_limited_terminal_authentication_uses_yes_no_selection
 test_unattended_default_does_not_attempt_authentication
 test_disabled_codex_plugin_is_not_misclassified_as_a_conflict
 test_state_inspection_failure_prevents_mutation

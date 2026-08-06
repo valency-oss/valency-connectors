@@ -46,6 +46,24 @@ CODEX_AUTH_STATE="unknown"
 CLAUDE_AUTH_SELECTED=0
 CODEX_AUTH_SELECTED=0
 
+# The interactive checklist is deliberately generic so harness installation
+# and optional authentication share one keyboard model. Parallel indexed
+# arrays keep it compatible with the Bash 3.2 shipped by macOS.
+MENU_IDS=()
+MENU_LABELS=()
+MENU_SELECTED=()
+MENU_CURSOR=0
+MENU_TITLE=""
+MENU_ALL_LABEL=""
+MENU_RESULT_LABEL=""
+MENU_PLAIN_ACTION=""
+MENU_PLAIN_HELP=""
+MENU_ALLOW_EMPTY=0
+MENU_RENDERED_LINES=0
+MENU_MESSAGE=""
+MENU_KEY=""
+MENU_SIGNAL_STATUS=0
+
 print_help() {
   cat <<'EOF'
 Valency plugin installer
@@ -148,17 +166,18 @@ add_target() {
 
 initialize_terminal() {
   # The installer is normally piped on standard input, so prompts must use the
-  # controlling terminal instead. The override is only a test seam: production
-  # behavior remains /dev/tty and never falls back to the downloaded script.
-  if [ -n "${VALENCY_INSTALLER_TTY-}" ]; then
-    if [ -r "$VALENCY_INSTALLER_TTY" ] && exec 3<"$VALENCY_INSTALLER_TTY"; then
+  # controlling terminal instead. The override is restricted to the test
+  # harness so production confirmations cannot be redirected by environment.
+  if [ "${VALENCY_INSTALLER_TEST_MODE-}" = "1" ] &&
+    [ -n "${MOCK_STATE-}" ] && [ -n "${VALENCY_INSTALLER_TTY-}" ]; then
+    if [ -r "$VALENCY_INSTALLER_TTY" ] && exec 3<"$VALENCY_INSTALLER_TTY" && exec 4>&1; then
       TERMINAL_AVAILABLE=1
     fi
     return
   fi
 
   if [ -r /dev/tty ] && [ -w /dev/tty ]; then
-    if exec 3<>/dev/tty 2>/dev/null; then
+    if exec 3<>/dev/tty 2>/dev/null && exec 4>&3; then
       TERMINAL_AVAILABLE=1
     fi
   fi
@@ -217,7 +236,7 @@ select_requested_targets() {
       printf 'Error: without a terminal, --target is required.\n' >&2
       return 2
     fi
-    interactive_select_targets || return 1
+    interactive_select_targets || return $?
   fi
 
   if [ "$TERMINAL_AVAILABLE" -eq 0 ] && [ "$ASSUME_YES" -eq 0 ]; then
@@ -282,83 +301,348 @@ select_requested_targets() {
   fi
 }
 
-interactive_select_targets() {
-  CLAUDE_SELECTED=$CLAUDE_AVAILABLE
-  CODEX_SELECTED=$CODEX_AVAILABLE
-  option_number=0
-  CLAUDE_OPTION=0
-  CODEX_OPTION=0
+reset_menu() {
+  MENU_IDS=()
+  MENU_LABELS=()
+  MENU_SELECTED=()
+  MENU_CURSOR=0
+  MENU_TITLE=$1
+  MENU_ALL_LABEL=$2
+  MENU_RESULT_LABEL=$3
+  MENU_ALLOW_EMPTY=$4
+  MENU_PLAIN_ACTION=$5
+  MENU_PLAIN_HELP=$6
+  MENU_RENDERED_LINES=0
+  MENU_MESSAGE=""
+  MENU_KEY=""
+  MENU_SIGNAL_STATUS=0
+}
 
-  printf '\nChoose where to install Valency. Detected providers are selected by default.\n'
-  if [ "$CLAUDE_AVAILABLE" -eq 1 ]; then
-    option_number=$((option_number + 1))
-    CLAUDE_OPTION=$option_number
-  fi
-  if [ "$CODEX_AVAILABLE" -eq 1 ]; then
-    option_number=$((option_number + 1))
-    CODEX_OPTION=$option_number
-  fi
+add_menu_item() {
+  menu_index=${#MENU_IDS[@]}
+  MENU_IDS[menu_index]=$1
+  MENU_LABELS[menu_index]=$2
+  MENU_SELECTED[menu_index]=$3
+}
 
-  if [ "${TERM-}" = "dumb" ] || [ -z "${TERM-}" ]; then
-    printf 'Limited terminal selection (enter provider numbers separated by commas; Enter selects all):\n'
-    if [ "$CLAUDE_OPTION" -gt 0 ]; then printf '  %s) Claude Code\n' "$CLAUDE_OPTION"; fi
-    if [ "$CODEX_OPTION" -gt 0 ]; then printf '  %s) Codex\n' "$CODEX_OPTION"; fi
-    printf 'Selection [all]: '
-    selection=""
-    IFS= read -r selection <&3 || return 1
-    case $selection in
-      q|Q|quit|cancel) printf 'Installation cancelled.\n'; return 1 ;;
-      '') return 0 ;;
-    esac
-    CLAUDE_SELECTED=0
-    CODEX_SELECTED=0
-    apply_numbered_selection "$selection" select || return 1
+calculate_menu_state() {
+  MENU_ITEM_COUNT=${#MENU_IDS[@]}
+  MENU_SELECTED_COUNT=0
+  MENU_SELECTION_SUMMARY=""
+  menu_index=0
+  while [ "$menu_index" -lt "$MENU_ITEM_COUNT" ]; do
+    if [ "${MENU_SELECTED[$menu_index]}" -eq 1 ]; then
+      MENU_SELECTED_COUNT=$((MENU_SELECTED_COUNT + 1))
+      if [ -n "$MENU_SELECTION_SUMMARY" ]; then
+        MENU_SELECTION_SUMMARY="$MENU_SELECTION_SUMMARY, ${MENU_LABELS[$menu_index]}"
+      else
+        MENU_SELECTION_SUMMARY=${MENU_LABELS[$menu_index]}
+      fi
+    fi
+    menu_index=$((menu_index + 1))
+  done
+
+  if [ "$MENU_SELECTED_COUNT" -eq 0 ]; then
+    MENU_ALL_STATE="none"
+    MENU_SELECTION_SUMMARY="none"
+  elif [ "$MENU_SELECTED_COUNT" -eq "$MENU_ITEM_COUNT" ]; then
+    MENU_ALL_STATE="all"
   else
-    if [ "$CLAUDE_OPTION" -gt 0 ]; then printf '  [x] %s) Claude Code\n' "$CLAUDE_OPTION"; fi
-    if [ "$CODEX_OPTION" -gt 0 ]; then printf '  [x] %s) Codex\n' "$CODEX_OPTION"; fi
-    printf 'Enter numbers to toggle, Enter to keep defaults, or q to cancel: '
-    selection=""
-    IFS= read -r selection <&3 || return 1
-    case $selection in
-      q|Q|quit|cancel) printf 'Installation cancelled.\n'; return 1 ;;
-      '') return 0 ;;
-    esac
-    apply_numbered_selection "$selection" toggle || return 1
-  fi
-
-  if [ "$CLAUDE_SELECTED" -eq 0 ] && [ "$CODEX_SELECTED" -eq 0 ]; then
-    printf 'Installation cancelled: no providers selected.\n'
-    return 1
+    MENU_ALL_STATE="partial"
   fi
 }
 
-apply_numbered_selection() {
-  selection=$1
-  behavior=$2
-  normalized=${selection//,/ }
-  # Word splitting here is intentional; globbing is not. Without set -f, a
-  # selection like "*" would expand to filenames in the current directory.
-  set -f
-  for item in $normalized; do
-    if [ "$item" = "$CLAUDE_OPTION" ] && [ "$CLAUDE_OPTION" -gt 0 ]; then
-      if [ "$behavior" = "toggle" ] && [ "$CLAUDE_SELECTED" -eq 1 ]; then
-        CLAUDE_SELECTED=0
-      else
-        CLAUDE_SELECTED=1
-      fi
-    elif [ "$item" = "$CODEX_OPTION" ] && [ "$CODEX_OPTION" -gt 0 ]; then
-      if [ "$behavior" = "toggle" ] && [ "$CODEX_SELECTED" -eq 1 ]; then
-        CODEX_SELECTED=0
-      else
-        CODEX_SELECTED=1
-      fi
+menu_marker() {
+  case $1 in
+    all|selected) MENU_MARKER=x ;;
+    partial) MENU_MARKER=- ;;
+    *) MENU_MARKER=' ' ;;
+  esac
+}
+
+render_menu_row() {
+  menu_row=$1
+  menu_state=$2
+  menu_label=$3
+  if [ "$MENU_CURSOR" -eq "$menu_row" ]; then
+    menu_pointer='>'
+  else
+    menu_pointer=' '
+  fi
+  menu_marker "$menu_state"
+  printf '  %s [%s] %s\n' "$menu_pointer" "$MENU_MARKER" "$menu_label" >&4
+}
+
+clear_rendered_menu() {
+  if [ "$MENU_RENDERED_LINES" -gt 0 ]; then
+    # Redraw only the checklist region. Normal installer logs remain durable in
+    # the transcript instead of using a full-screen alternate terminal buffer.
+    printf '\033[%dA\r\033[J' "$MENU_RENDERED_LINES" >&4
+  fi
+}
+
+render_menu() {
+  calculate_menu_state
+  clear_rendered_menu
+  printf '%s\n' "$MENU_TITLE" >&4
+  printf '  up/down move  space toggle  enter continue  esc cancel\n' >&4
+  printf '\n' >&4
+  render_menu_row 0 "$MENU_ALL_STATE" "$MENU_ALL_LABEL"
+
+  menu_index=0
+  while [ "$menu_index" -lt "$MENU_ITEM_COUNT" ]; do
+    if [ "${MENU_SELECTED[$menu_index]}" -eq 1 ]; then
+      menu_item_state=selected
     else
-      printf 'Invalid provider selection: %s\n' "$item" >&2
-      set +f
+      menu_item_state=none
+    fi
+    render_menu_row $((menu_index + 1)) "$menu_item_state" "${MENU_LABELS[$menu_index]}"
+    menu_index=$((menu_index + 1))
+  done
+
+  printf '\n' >&4
+  if [ -n "$MENU_MESSAGE" ]; then
+    printf '  %s\n' "$MENU_MESSAGE" >&4
+  else
+    printf '  Selected: %s\n' "$MENU_SELECTION_SUMMARY" >&4
+  fi
+  MENU_RENDERED_LINES=$((MENU_ITEM_COUNT + 6))
+}
+
+read_menu_key() {
+  MENU_KEY=""
+  menu_character=""
+  if ! IFS= read -r -s -n 1 menu_character <&3; then
+    return 1
+  fi
+
+  case $menu_character in
+    '') MENU_KEY=enter ;;
+    ' ') MENU_KEY=toggle ;;
+    j|J) MENU_KEY=down ;;
+    k|K) MENU_KEY=up ;;
+    a|A) MENU_KEY=all ;;
+    q|Q) MENU_KEY=cancel ;;
+    $'\t') MENU_KEY=toggle ;;
+    $'\003') MENU_KEY=interrupt ;;
+    $'\033')
+      # Bash 3.2 accepts only whole seconds for read -t. Arrow-key bytes are
+      # already buffered and return immediately; only a standalone Escape
+      # waits for this compatibility timeout before being treated as cancel.
+      menu_escape_timeout=0.1
+      if [ "${BASH_VERSINFO[0]}" -lt 4 ]; then menu_escape_timeout=1; fi
+      menu_escape_part=""
+      if ! IFS= read -r -s -n 1 -t "$menu_escape_timeout" menu_escape_part <&3; then
+        MENU_KEY=cancel
+        return 0
+      fi
+      case $menu_escape_part in
+        '['|'O')
+          menu_escape_end=""
+          if ! IFS= read -r -s -n 1 -t "$menu_escape_timeout" menu_escape_end <&3; then
+            MENU_KEY=cancel
+            return 0
+          fi
+          case $menu_escape_end in
+            A) MENU_KEY=up ;;
+            B) MENU_KEY=down ;;
+          esac
+          ;;
+        *) MENU_KEY=cancel ;;
+      esac
+      ;;
+  esac
+}
+
+toggle_all_menu_items() {
+  calculate_menu_state
+  if [ "$MENU_ALL_STATE" = "all" ]; then
+    menu_new_state=0
+  else
+    menu_new_state=1
+  fi
+  menu_index=0
+  while [ "$menu_index" -lt "$MENU_ITEM_COUNT" ]; do
+    MENU_SELECTED[menu_index]=$menu_new_state
+    menu_index=$((menu_index + 1))
+  done
+}
+
+toggle_current_menu_item() {
+  if [ "$MENU_CURSOR" -eq 0 ]; then
+    toggle_all_menu_items
+    return
+  fi
+  menu_index=$((MENU_CURSOR - 1))
+  if [ "${MENU_SELECTED[$menu_index]}" -eq 1 ]; then
+    MENU_SELECTED[menu_index]=0
+  else
+    MENU_SELECTED[menu_index]=1
+  fi
+}
+
+restore_menu_signal_handlers() {
+  trap - INT TERM HUP
+}
+
+finish_menu() {
+  calculate_menu_state
+  clear_rendered_menu
+  if [ "$MENU_SELECTED_COUNT" -eq 0 ]; then
+    printf '%s: skipped\n' "$MENU_RESULT_LABEL" >&4
+  else
+    printf '%s: %s\n' "$MENU_RESULT_LABEL" "$MENU_SELECTION_SUMMARY" >&4
+  fi
+  MENU_RENDERED_LINES=0
+}
+
+cancel_menu() {
+  clear_rendered_menu
+  printf '%s cancelled.\n' "$MENU_RESULT_LABEL" >&4
+  MENU_RENDERED_LINES=0
+}
+
+run_dynamic_multiselect() {
+  if [ "${#MENU_IDS[@]}" -eq 0 ]; then
+    return 1
+  fi
+
+  # Bash's single-character read supplies the raw key behavior without a
+  # downloaded UI helper. Signal traps ensure an interrupted checklist leaves
+  # a clean line and returns a conventional shell status.
+  MENU_SIGNAL_STATUS=0
+  trap 'MENU_SIGNAL_STATUS=130' INT
+  trap 'MENU_SIGNAL_STATUS=143' TERM
+  trap 'MENU_SIGNAL_STATUS=129' HUP
+  printf '\n' >&4
+
+  while :; do
+    render_menu
+    if ! read_menu_key; then
+      if [ "$MENU_SIGNAL_STATUS" -eq 0 ]; then MENU_SIGNAL_STATUS=1; fi
+    fi
+    if [ "$MENU_SIGNAL_STATUS" -ne 0 ]; then
+      menu_status=$MENU_SIGNAL_STATUS
+      cancel_menu
+      restore_menu_signal_handlers
+      return "$menu_status"
+    fi
+
+    MENU_MESSAGE=""
+    case $MENU_KEY in
+      up)
+        if [ "$MENU_CURSOR" -gt 0 ]; then MENU_CURSOR=$((MENU_CURSOR - 1)); fi
+        ;;
+      down)
+        if [ "$MENU_CURSOR" -lt "${#MENU_IDS[@]}" ]; then MENU_CURSOR=$((MENU_CURSOR + 1)); fi
+        ;;
+      toggle) toggle_current_menu_item ;;
+      all) toggle_all_menu_items ;;
+      enter)
+        calculate_menu_state
+        if [ "$MENU_ALLOW_EMPTY" -eq 0 ] && [ "$MENU_SELECTED_COUNT" -eq 0 ]; then
+          MENU_MESSAGE="Select at least one item to continue."
+        else
+          finish_menu
+          restore_menu_signal_handlers
+          return 0
+        fi
+        ;;
+      interrupt)
+        cancel_menu
+        restore_menu_signal_handlers
+        return 130
+        ;;
+      cancel)
+        cancel_menu
+        restore_menu_signal_handlers
+        return 1
+        ;;
+    esac
+  done
+}
+
+read_plain_menu_choice() {
+  menu_plain_label=$1
+  menu_plain_default=$2
+  while :; do
+    if [ "$menu_plain_default" -eq 1 ]; then
+      menu_plain_suffix='[Y/n]'
+    else
+      menu_plain_suffix='[y/N]'
+    fi
+    printf '%s %s? %s ' "$MENU_PLAIN_ACTION" "$menu_plain_label" "$menu_plain_suffix" >&4
+    menu_plain_answer=""
+    IFS= read -r menu_plain_answer <&3 || return 1
+    case $menu_plain_answer in
+      y|Y|yes|YES|Yes) MENU_PLAIN_SELECTED=1; return 0 ;;
+      n|N|no|NO|No) MENU_PLAIN_SELECTED=0; return 0 ;;
+      '') MENU_PLAIN_SELECTED=$menu_plain_default; return 0 ;;
+      q|Q|quit|cancel) return 2 ;;
+      *) printf '  Please answer yes, no, or q to cancel.\n' >&4 ;;
+    esac
+  done
+}
+
+run_plain_multiselect() {
+  printf '\n%s\n' "$MENU_TITLE" >&4
+  printf 'Limited terminal: %s\n' "$MENU_PLAIN_HELP" >&4
+  menu_index=0
+  while [ "$menu_index" -lt "${#MENU_IDS[@]}" ]; do
+    read_plain_menu_choice "${MENU_LABELS[$menu_index]}" "${MENU_SELECTED[$menu_index]}"
+    menu_status=$?
+    if [ "$menu_status" -eq 2 ]; then
+      printf '%s cancelled.\n' "$MENU_RESULT_LABEL" >&4
       return 1
     fi
+    if [ "$menu_status" -ne 0 ]; then return "$menu_status"; fi
+    MENU_SELECTED[menu_index]=$MENU_PLAIN_SELECTED
+    menu_index=$((menu_index + 1))
   done
-  set +f
+
+  calculate_menu_state
+  if [ "$MENU_ALLOW_EMPTY" -eq 0 ] && [ "$MENU_SELECTED_COUNT" -eq 0 ]; then
+    printf 'Select at least one item to continue.\n' >&4
+    return 1
+  fi
+  finish_menu
+}
+
+run_multiselect() {
+  if [ "${TERM-}" = "dumb" ] || [ -z "${TERM-}" ]; then
+    run_plain_multiselect
+  else
+    run_dynamic_multiselect
+  fi
+}
+
+apply_target_menu_selection() {
+  CLAUDE_SELECTED=0
+  CODEX_SELECTED=0
+  menu_index=0
+  while [ "$menu_index" -lt "${#MENU_IDS[@]}" ]; do
+    if [ "${MENU_SELECTED[$menu_index]}" -eq 1 ]; then
+      case ${MENU_IDS[$menu_index]} in
+        claude) CLAUDE_SELECTED=1 ;;
+        codex) CODEX_SELECTED=1 ;;
+      esac
+    fi
+    menu_index=$((menu_index + 1))
+  done
+}
+
+interactive_select_targets() {
+  CLAUDE_SELECTED=$CLAUDE_AVAILABLE
+  CODEX_SELECTED=$CODEX_AVAILABLE
+
+  reset_menu "Select harnesses for Valency" "All detected harnesses" "Selected harnesses" 0 \
+    "Install Valency for" "answer once for each detected harness."
+  if [ "$CLAUDE_AVAILABLE" -eq 1 ]; then add_menu_item claude "Claude Code" 1; fi
+  if [ "$CODEX_AVAILABLE" -eq 1 ]; then add_menu_item codex "Codex" 1; fi
+  run_multiselect
+  menu_status=$?
+  if [ "$menu_status" -ne 0 ]; then return "$menu_status"; fi
+  apply_target_menu_selection
 }
 
 # Collapses JSON formatting whitespace while leaving string values intact.
@@ -1000,47 +1284,36 @@ set_auth_result() {
 }
 
 prompt_for_authentication_selection() {
-  printf '\nOptional authentication\n'
-  printf 'Providers with missing or unknown status are selected by default.\n'
-  auth_option=0
-  CLAUDE_AUTH_OPTION=0
-  CODEX_AUTH_OPTION=0
+  reset_menu "Optional authentication" "All available providers" "Authentication" 1 \
+    "Authenticate" "answer once for each available provider."
   if [ "$CLAUDE_SELECTED" -eq 1 ] && installation_succeeded "$CLAUDE_INSTALL_RESULT" && [ "$CLAUDE_AUTH_STATE" != "unavailable" ]; then
-    auth_option=$((auth_option + 1))
-    CLAUDE_AUTH_OPTION=$auth_option
-    if [ "$CLAUDE_AUTH_SELECTED" -eq 1 ]; then mark=x; else mark=' '; fi
-    printf '  [%s] %s) Claude Code (%s)\n' "$mark" "$CLAUDE_AUTH_OPTION" "$CLAUDE_AUTH_STATE"
+    add_menu_item claude "Claude Code ($CLAUDE_AUTH_STATE)" "$CLAUDE_AUTH_SELECTED"
   fi
   if [ "$CODEX_SELECTED" -eq 1 ] && installation_succeeded "$CODEX_INSTALL_RESULT" && [ "$CODEX_AUTH_STATE" != "unavailable" ]; then
-    auth_option=$((auth_option + 1))
-    CODEX_AUTH_OPTION=$auth_option
-    if [ "$CODEX_AUTH_SELECTED" -eq 1 ]; then mark=x; else mark=' '; fi
-    printf '  [%s] %s) Codex (%s)\n' "$mark" "$CODEX_AUTH_OPTION" "$CODEX_AUTH_STATE"
+    add_menu_item codex "Codex ($CODEX_AUTH_STATE)" "$CODEX_AUTH_SELECTED"
   fi
-  printf 'Enter numbers to toggle, Enter to keep defaults, or q to skip: '
-  selection=""
-  IFS= read -r selection <&3 || selection=q
-  case $selection in
-    '') return ;;
-    q|Q|quit|skip)
-      CLAUDE_AUTH_SELECTED=0
-      CODEX_AUTH_SELECTED=0
-      return
-      ;;
-  esac
-  normalized=${selection//,/ }
-  # Word splitting is intentional; set -f keeps globs in the input literal.
-  set -f
-  for item in $normalized; do
-    if [ "$item" = "$CLAUDE_AUTH_OPTION" ] && [ "$CLAUDE_AUTH_OPTION" -gt 0 ]; then
-      if [ "$CLAUDE_AUTH_SELECTED" -eq 1 ]; then CLAUDE_AUTH_SELECTED=0; else CLAUDE_AUTH_SELECTED=1; fi
-    elif [ "$item" = "$CODEX_AUTH_OPTION" ] && [ "$CODEX_AUTH_OPTION" -gt 0 ]; then
-      if [ "$CODEX_AUTH_SELECTED" -eq 1 ]; then CODEX_AUTH_SELECTED=0; else CODEX_AUTH_SELECTED=1; fi
-    else
-      printf 'Ignoring invalid authentication selection: %s\n' "$item" >&2
+
+  run_multiselect
+  menu_status=$?
+  if [ "$menu_status" -ne 0 ]; then
+    CLAUDE_AUTH_SELECTED=0
+    CODEX_AUTH_SELECTED=0
+    printf 'Authentication skipped.\n'
+    return 0
+  fi
+
+  CLAUDE_AUTH_SELECTED=0
+  CODEX_AUTH_SELECTED=0
+  menu_index=0
+  while [ "$menu_index" -lt "${#MENU_IDS[@]}" ]; do
+    if [ "${MENU_SELECTED[$menu_index]}" -eq 1 ]; then
+      case ${MENU_IDS[$menu_index]} in
+        claude) CLAUDE_AUTH_SELECTED=1 ;;
+        codex) CODEX_AUTH_SELECTED=1 ;;
+      esac
     fi
+    menu_index=$((menu_index + 1))
   done
-  set +f
 }
 
 run_authentication() {
