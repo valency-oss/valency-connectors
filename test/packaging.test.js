@@ -90,6 +90,88 @@ test("Antigravity reuses the root skills and adds host-specific guidance", () =>
   assert.doesNotMatch(rule, /Gemini|33418|\/mcp auth valency|\/valency:/i);
 });
 
+test("Grok marketplace routes to its dedicated provider package", () => {
+  assert.deepEqual(readJson(".grok-plugin/marketplace.json"), {
+    name: "valency",
+    owner: {
+      name: "Valency Systems Inc",
+      email: "support@valency.io",
+    },
+    plugins: [
+      {
+        name: "valency",
+        source: "./plugins/grok/valency",
+        description:
+          "Search, profile, and analyze research papers through Valency Bond.",
+        version: "0.1.0",
+        author: {
+          name: "Valency Systems Inc",
+        },
+      },
+    ],
+  });
+});
+
+test("native Grok package is credential-free and contains only expected components", () => {
+  const packageRoot = "plugins/grok/valency";
+  const manifestPath = `${packageRoot}/.grok-plugin/plugin.json`;
+  const mcpPath = `${packageRoot}/.mcp.json`;
+
+  assert.deepEqual(readJson(manifestPath), {
+    name: "valency",
+    description:
+      "Search, profile, and analyze research papers through the Valency Bond MCP server.",
+    version: "0.1.0",
+    author: {
+      name: "Valency Systems Inc",
+      email: "support@valency.io",
+      url: "https://valency.io",
+    },
+    homepage: "https://valency.io",
+    repository: "https://github.com/valency-oss/valency-bond",
+    license: "MIT",
+    keywords: [
+      "valency",
+      "research",
+      "papers",
+      "literature-review",
+      "semantic-search",
+      "grok",
+      "grok-build",
+    ],
+  });
+
+  assert.deepEqual(readJson(mcpPath), {
+    mcpServers: {
+      valency: {
+        type: "http",
+        url: "https://labs.valency.io/mcp/",
+      },
+    },
+  });
+  assert.doesNotMatch(
+    readFileSync(mcpPath, "utf8"),
+    /command|args|env|oauth|clientId|clientSecret|redirectUri|bearer|token|headers|authorization/i,
+  );
+
+  assert.deepEqual(readdirSync(packageRoot).sort(), [
+    ".grok-plugin",
+    ".mcp.json",
+    "LICENSE",
+    "skills",
+  ]);
+  assert.deepEqual(readdirSync(`${packageRoot}/.grok-plugin`).sort(), [
+    "plugin.json",
+  ]);
+  for (const component of ["agents", "commands", "hooks", ".lsp.json"]) {
+    assert.equal(
+      existsSync(`${packageRoot}/${component}`),
+      false,
+      `${component} must not be packaged for Grok`,
+    );
+  }
+});
+
 test("repository root is a native Valency Power with host-managed OAuth", () => {
   assert.equal(existsSync("plugins/kiro/valency"), false);
   const power = readFileSync(`${kiroPowerRoot}/POWER.md`, "utf8");
@@ -289,6 +371,21 @@ test("Gemini commands route arguments to the matching shared skill", () => {
 });
 
 test("all providers ship byte-identical unprefixed skills", () => {
+  assert.deepEqual(skillDirectories("plugins/grok/valency/skills"), [
+    "fresh-collaborators",
+    "landscape",
+    "network",
+    "profile",
+    "reading-list",
+    "similar",
+    "trends",
+  ]);
+  assert.equal(
+    readFileSync("plugins/grok/valency/LICENSE", "utf8"),
+    readFileSync("LICENSE", "utf8"),
+    "Grok package license must match the repository MIT license",
+  );
+
   for (const skill of [
     "fresh-collaborators",
     "landscape",
@@ -322,6 +419,14 @@ test("all providers ship byte-identical unprefixed skills", () => {
       ),
       canonical,
       `Copilot ${skill} must match the shared skill`,
+    );
+    assert.equal(
+      readFileSync(
+        `plugins/grok/valency/skills/${skill}/SKILL.md`,
+        "utf8",
+      ),
+      canonical,
+      `Grok ${skill} must match the shared skill`,
     );
   }
 });
@@ -687,4 +792,46 @@ test("Copilot documentation uses marketplace-first CLI-only support", () => {
     development,
     /do not prove that GitHub\s+Copilot CLI can install its\s+plugin, complete OAuth, or invoke a remote tool/,
   );
+});
+
+test("Grok documentation uses the private marketplace lifecycle", () => {
+  const readme = readFileSync("README.md", "utf8");
+  const development = readFileSync("docs/development.md", "utf8");
+  const layout = readFileSync("docs/repository-layout.md", "utf8");
+  const grokSection = readme.match(
+    /^## Install in Grok Build$([\s\S]*?)(?=^## |(?![\s\S]))/m,
+  )?.[1];
+
+  assert.ok(grokSection, "README must contain a Grok Build install section");
+  assert.match(
+    readme,
+    /\| \[`plugins\/grok\/valency`\]\(\.\/plugins\/grok\/valency\) \| Grok Build \| `\.grok-plugin\/plugin\.json` \|/,
+  );
+  assert.match(
+    grokSection,
+    /grok plugin marketplace add valency-oss\/valency-bond/,
+  );
+  assert.match(grokSection, /grok plugin install valency --trust/);
+  assert.match(grokSection, /private during development/i);
+  assert.match(grokSection, /authorized Git access/i);
+  assert.match(grokSection, /`\/mcps`/);
+  assert.match(grokSection, /grok plugin marketplace update valency/);
+  assert.match(grokSection, /grok plugin update valency/);
+  assert.match(grokSection, /grok plugin uninstall valency/);
+  assert.match(
+    grokSection,
+    /grok plugin marketplace remove https:\/\/github\.com\/valency-oss\/valency-bond\.git/,
+  );
+  assert.doesNotMatch(
+    grokSection,
+    /grok plugin install [^\n]*plugins\/grok\/valency/,
+  );
+
+  assert.match(development, /grok plugin validate plugins\/grok\/valency/);
+  assert.match(
+    development,
+    /does not\s+prove that Grok Build can install the plugin, complete OAuth, or invoke a\s+remote tool/,
+  );
+  assert.match(layout, /`\.grok-plugin\/` \| Grok Build/);
+  assert.match(layout, /`plugins\/grok\/valency`/);
 });

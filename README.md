@@ -16,6 +16,7 @@ CLI, and Kiro IDE each install their own contract from the repository root:
 | [Repository root (Kiro)](.) | Kiro IDE | `POWER.md` |
 | [`plugins/claude/valency`](./plugins/claude/valency) | Claude Code | `.claude-plugin/plugin.json` |
 | [`plugins/copilot/valency`](./plugins/copilot/valency) | GitHub Copilot CLI | `plugin.json` |
+| [`plugins/grok/valency`](./plugins/grok/valency) | Grok Build | `.grok-plugin/plugin.json` |
 | [`plugins/openai/valency`](./plugins/openai/valency) | ChatGPT and Codex | `.codex-plugin/plugin.json` |
 
 The root contains several provider-specific entry points because each host has
@@ -69,6 +70,52 @@ the skill-derived commands shown by the CLI.
 agy plugin disable valency
 agy plugin enable valency
 agy plugin uninstall valency
+```
+
+## Install in Grok Build
+
+The Valency Bond repository is private during development. Private testers
+need authorized Git access to `valency-oss/valency-bond`, with Git credentials
+that can clone the repository, before adding its Grok marketplace.
+
+Add the repository-level marketplace, then install and trust Valency:
+
+```bash
+grok plugin marketplace add valency-oss/valency-bond
+grok plugin install valency --trust
+```
+
+The marketplace maps the user-visible `valency` name to the dedicated Grok
+package inside this repository, so testers do not need to enter its nested
+path. The `--trust` flag permits Grok to activate the package's remote MCP
+server; the package contains no local executable, hook, credential, API key,
+or bearer token.
+
+Start a new Grok session after installation, or reload plugins from the
+Plugins tab. Open `/mcps`, select `valency`, and press `i` to begin the
+browser-based OAuth flow. Grok uses dynamic client registration, so do not add
+a static client ID, client secret, callback port, or bearer token to the
+package.
+
+Native Grok installation, OAuth, and a real Valency tool call have not yet
+been verified in this environment. If OAuth fails, capture the Grok version
+and the non-sensitive callback URI, then coordinate any Valency OAuth broker
+or upstream application change separately from this package.
+
+### Update or uninstall from Grok Build
+
+Refresh the Valency marketplace and update the installed plugin:
+
+```bash
+grok plugin marketplace update valency
+grok plugin update valency
+```
+
+To uninstall Valency and remove its private marketplace source:
+
+```bash
+grok plugin uninstall valency
+grok plugin marketplace remove https://github.com/valency-oss/valency-bond.git
 ```
 
 ## Install in Gemini CLI
