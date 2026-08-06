@@ -6,16 +6,22 @@ server** at `https://labs.valency.io/mcp/` and bundles seven guided research
 workflows.
 
 The provider packages are self-contained. Where a host supports manifest
-versions, the packages are versioned independently. Antigravity CLI and Gemini
-CLI each install their own contract from the repository root:
+versions, the packages are versioned independently. Antigravity CLI, Gemini
+CLI, and Kiro IDE each install their own contract from the repository root:
 
 | Provider package | Hosts | Manifest |
 | --- | --- | --- |
 | [Repository root (Antigravity)](.) | Antigravity CLI | `plugin.json` |
 | [Repository root (Gemini)](.) | Gemini CLI | `gemini-extension.json` |
+| [Repository root (Kiro)](.) | Kiro IDE | `POWER.md` |
 | [`plugins/claude/valency`](./plugins/claude/valency) | Claude Code | `.claude-plugin/plugin.json` |
 | [`plugins/copilot/valency`](./plugins/copilot/valency) | GitHub Copilot CLI | `plugin.json` |
 | [`plugins/openai/valency`](./plugins/openai/valency) | ChatGPT and Codex | `.codex-plugin/plugin.json` |
+
+The root contains several provider-specific entry points because each host has
+its own installation contract. See the
+[repository root layout](./docs/repository-layout.md) for the owner and purpose
+of every root entry.
 
 ## Install in Antigravity CLI
 
@@ -29,7 +35,14 @@ agy plugin list
 
 Start Antigravity CLI and open the interactive `/mcp` manager. Select
 `valency`, complete the browser-based authorization flow, and confirm that the
-server connects.
+server connects. Valency supports dynamic client registration, so you do not
+need to configure an OAuth client ID, client secret, or bearer token.
+
+OAuth and remote tool use have not yet been verified end to end with
+Antigravity CLI. If its captured registration request uses a redirect host that
+Valency does not currently allow, the MCP redirect allowlist and Clerk OAuth
+application must be updated and deployed separately before authentication will
+succeed.
 
 The plugin packages the Valency MCP server, host-specific guidance, and seven
 research skills. Antigravity exposes installed skills as slash commands; use
@@ -104,6 +117,32 @@ To uninstall the plugin and remove its marketplace:
 copilot plugin uninstall valency
 copilot plugin marketplace remove valency-copilot-plugin
 ```
+
+## Install in Kiro
+
+Kiro's repository importer requires a Power at the repository root. This
+repository provides the complete Kiro contract through the root `POWER.md`,
+`mcp.json`, and `steering/` directory.
+
+In the Kiro IDE:
+
+1. Open the **Powers panel** and choose **Add Custom Power**.
+2. Select **Import power from GitHub**.
+3. Enter `https://github.com/valency-oss/valency-bond`, then install the Power.
+4. Activate Valency and complete Kiro's browser-based authorization flow.
+
+Kiro registers the `valency` server from the bundled `mcp.json`. Kiro manages
+OAuth and dynamic client registration; the package contains no client ID,
+client secret, bearer token, or fixed callback URL.
+
+### Update or remove Valency from Kiro
+
+Open **Powers panel** → **Installed Powers** → **Valency**. Choose **Check for
+updates**, followed by **Install updates** when Kiro offers one.
+
+To uninstall, use the Power detail controls to remove Valency from Installed
+Powers. Removing the Power should be done in Kiro rather than by editing its
+generated MCP configuration directly.
 
 ## Install in Claude Code
 

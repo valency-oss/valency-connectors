@@ -8,16 +8,54 @@ npm test
 
 These tests include static checks for the native Antigravity plugin, the Gemini
 extension, the Copilot marketplace and provider package, command routing, and
-byte-for-byte skill synchronization across the shared root, Claude, Copilot,
-and OpenAI copies. The Antigravity checks pin the exact `plugin.json` and
-`mcp_config.json` contracts, the host-specific rule, and separation from the
-legacy Gemini payload.
+the Kiro Power. They also enforce byte-for-byte skill synchronization across
+the shared root, Claude, Copilot, OpenAI, and Kiro copies. The Antigravity
+checks pin the exact `plugin.json` and `mcp_config.json` contracts, the
+host-specific rule, and separation from the legacy Gemini payload.
+
+The Kiro checks pin the supported `POWER.md` frontmatter, the credential-free
+remote endpoint in `mcp.json`, and the one-to-one mapping from all seven
+workflows to `steering/*.md`. Each Kiro steering file must remain byte-identical
+to its canonical `skills/*/SKILL.md` source.
 
 Static checks catch repository drift, but do not prove that Antigravity CLI can
 install the plugin, complete OAuth, or invoke a remote tool. They likewise do
 not prove that a particular Gemini CLI release can complete OAuth or invoke the
 remote tools. They also do not prove that GitHub Copilot CLI can install its
-plugin, complete OAuth, or invoke a remote tool.
+plugin, complete OAuth, or invoke a remote tool. The Kiro static checks do not
+prove that Kiro can install the Power, complete OAuth, or invoke a remote tool.
+
+## Kiro Power
+
+Kiro requires `POWER.md` at a repository root for repository-URL imports. The
+root `POWER.md`, `mcp.json`, and `steering/` directory therefore form one
+self-contained Kiro Power alongside the independent Antigravity and Gemini
+contracts. Kiro does not currently document a standalone Power validator.
+
+For live validation, record the Kiro IDE version, then:
+
+1. Open the Powers panel and choose **Add Custom Power** → **Import power from
+   GitHub**.
+2. Enter `https://github.com/valency-oss/valency-bond` and confirm the Power
+   installs. To test unpublished local changes, instead choose **Import power
+   from a folder** and select the repository root.
+3. Verify that all seven workflows are reachable through their focused
+   steering files.
+4. Confirm that Kiro registers and starts the `valency` server from `mcp.json`.
+5. Complete browser OAuth through dynamic client registration.
+6. Run a representative read-only Valency Bond tool call.
+
+Record each result separately. A successful folder import does not prove that
+OAuth or remote tool use works. If OAuth fails, capture the registration
+request and exact redirect URI. Before sharing that evidence, redact
+authorization codes, access or refresh tokens, cookies, client secrets, and
+unrelated personal data; retain only the redirect URI and non-sensitive request
+fields needed for diagnosis. Coordinate any MCP allowlist or upstream OAuth
+application change separately from this provider package.
+
+See [Repository root layout](./repository-layout.md) before adding, moving, or
+consolidating root files. Several similarly named files implement different
+provider schemas and are intentionally kept separate.
 
 ## Universal installer
 
