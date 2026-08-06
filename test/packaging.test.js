@@ -576,6 +576,15 @@ test("repository layout guide explains every intentional root entry", () => {
   assert.match(layout, /^# Repository root layout$/m);
   assert.match(layout, /multiple providers require root-level\s+entry points/);
   assert.match(layout, /Do not consolidate similarly named files/);
+  assert.match(
+    layout,
+    /Agent Skills CLI reuses Claude's plugin-manifest convention/,
+  );
+  assert.match(layout, /That group works when the selected destination is Codex/);
+  assert.match(
+    layout,
+    /the root grouping manifest does not replace, rename, or enter the normal Claude\s+marketplace package/,
+  );
 
   for (const entry of [
     ".agents/",
