@@ -6,17 +6,22 @@ server** at `https://labs.valency.io/mcp/` and bundles seven guided research
 workflows.
 
 The provider packages are self-contained. Where a host supports manifest
-versions, the packages are versioned independently. Antigravity CLI and Gemini
-CLI each install their own contract from the repository root:
+versions, the packages are versioned independently. Antigravity CLI, Gemini
+CLI, and Kiro IDE each install their own contract from the repository root:
 
 | Provider package | Hosts | Manifest |
 | --- | --- | --- |
 | [Repository root (Antigravity)](.) | Antigravity CLI | `plugin.json` |
 | [Repository root (Gemini)](.) | Gemini CLI | `gemini-extension.json` |
+| [Repository root (Kiro)](.) | Kiro IDE | `POWER.md` |
 | [`plugins/claude/valency`](./plugins/claude/valency) | Claude Code | `.claude-plugin/plugin.json` |
 | [`plugins/copilot/valency`](./plugins/copilot/valency) | GitHub Copilot CLI | `plugin.json` |
-| [`plugins/kiro/valency`](./plugins/kiro/valency) | Kiro IDE | `POWER.md` |
 | [`plugins/openai/valency`](./plugins/openai/valency) | ChatGPT and Codex | `.codex-plugin/plugin.json` |
+
+The root contains several provider-specific entry points because each host has
+its own installation contract. See the
+[repository root layout](./docs/repository-layout.md) for the owner and purpose
+of every root entry.
 
 ## Install in Antigravity CLI
 
@@ -115,21 +120,15 @@ copilot plugin marketplace remove valency-copilot-plugin
 
 ## Install in Kiro
 
-Kiro requires a valid `POWER.md` in the repository root when importing a
-custom Power from a repository URL. Valency's Kiro package is nested so the
-repository can preserve its existing root provider contracts. Until Valency is
-available from Kiro's curated Powers list, clone this repository and use the
-supported local-folder flow:
-
-```bash
-git clone https://github.com/valency-oss/valency-bond
-```
+Kiro's repository importer requires a Power at the repository root. This
+repository provides the complete Kiro contract through the root `POWER.md`,
+`mcp.json`, and `steering/` directory.
 
 In the Kiro IDE:
 
 1. Open the **Powers panel** and choose **Add Custom Power**.
-2. Select **Import power from a folder**.
-3. Choose `valency-bond/plugins/kiro/valency`, then install the Power.
+2. Select **Import power from GitHub**.
+3. Enter `https://github.com/valency-oss/valency-bond`, then install the Power.
 4. Activate Valency and complete Kiro's browser-based authorization flow.
 
 Kiro registers the `valency` server from the bundled `mcp.json`. Kiro manages
@@ -138,9 +137,8 @@ client secret, bearer token, or fixed callback URL.
 
 ### Update or remove Valency from Kiro
 
-Pull the latest repository changes, then open **Powers panel** → **Installed
-Powers** → **Valency**. Choose **Check for updates**, followed by **Install
-updates** when Kiro offers one.
+Open **Powers panel** → **Installed Powers** → **Valency**. Choose **Check for
+updates**, followed by **Install updates** when Kiro offers one.
 
 To uninstall, use the Power detail controls to remove Valency from Installed
 Powers. Removing the Power should be done in Kiro rather than by editing its

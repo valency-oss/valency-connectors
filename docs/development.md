@@ -27,16 +27,18 @@ prove that Kiro can install the Power, complete OAuth, or invoke a remote tool.
 
 ## Kiro Power
 
-Kiro currently requires `POWER.md` at a repository root for repository-URL
-imports, so the nested package at `plugins/kiro/valency` uses Kiro's local
-folder flow until a curated listing supplies a native install target. Kiro does
-not currently document a standalone Power validator.
+Kiro requires `POWER.md` at a repository root for repository-URL imports. The
+root `POWER.md`, `mcp.json`, and `steering/` directory therefore form one
+self-contained Kiro Power alongside the independent Antigravity and Gemini
+contracts. Kiro does not currently document a standalone Power validator.
 
 For live validation, record the Kiro IDE version, then:
 
 1. Open the Powers panel and choose **Add Custom Power** → **Import power from
-   a folder**.
-2. Select `plugins/kiro/valency` and confirm the Power installs.
+   GitHub**.
+2. Enter `https://github.com/valency-oss/valency-bond` and confirm the Power
+   installs. To test unpublished local changes, instead choose **Import power
+   from a folder** and select the repository root.
 3. Verify that all seven workflows are reachable through their focused
    steering files.
 4. Confirm that Kiro registers and starts the `valency` server from `mcp.json`.
@@ -50,6 +52,10 @@ authorization codes, access or refresh tokens, cookies, client secrets, and
 unrelated personal data; retain only the redirect URI and non-sensitive request
 fields needed for diagnosis. Coordinate any MCP allowlist or upstream OAuth
 application change separately from this provider package.
+
+See [Repository root layout](./repository-layout.md) before adding, moving, or
+consolidating root files. Several similarly named files implement different
+provider schemas and are intentionally kept separate.
 
 ## Universal installer
 

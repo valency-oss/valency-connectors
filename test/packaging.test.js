@@ -13,7 +13,7 @@ const claudeMarketplace = readJson(".claude-plugin/marketplace.json");
 const claudePlugin = readJson("plugins/claude/valency/.claude-plugin/plugin.json");
 const openaiMarketplace = readJson(".agents/plugins/marketplace.json");
 const openaiPlugin = readJson("plugins/openai/valency/.codex-plugin/plugin.json");
-const kiroPowerRoot = "plugins/kiro/valency";
+const kiroPowerRoot = ".";
 const kiroWorkflows = [
   "profile",
   "landscape",
@@ -66,7 +66,8 @@ test("Antigravity reuses the root skills and adds host-specific guidance", () =>
   assert.doesNotMatch(rule, /Gemini|33418|\/mcp auth valency|\/valency:/i);
 });
 
-test("Kiro package is a native Valency Power with host-managed OAuth", () => {
+test("repository root is a native Valency Power with host-managed OAuth", () => {
+  assert.equal(existsSync("plugins/kiro/valency"), false);
   const power = readFileSync(`${kiroPowerRoot}/POWER.md`, "utf8");
   const frontmatter = power.match(/^---\n([\s\S]*?)\n---/);
 
@@ -501,7 +502,7 @@ test("repository metadata and installation docs point at the monorepo", () => {
   );
 });
 
-test("Kiro documentation uses the supported nested-package lifecycle", () => {
+test("Kiro documentation uses the supported root GitHub lifecycle", () => {
   const readme = readFileSync("README.md", "utf8");
   const development = readFileSync("docs/development.md", "utf8");
   const kiroSection = readme.match(
@@ -511,23 +512,17 @@ test("Kiro documentation uses the supported nested-package lifecycle", () => {
   assert.ok(kiroSection, "README must contain a Kiro install section");
   assert.match(
     readme,
-    /\| \[`plugins\/kiro\/valency`\]\(\.\/plugins\/kiro\/valency\) \| Kiro IDE \| `POWER\.md` \|/,
+    /\| \[Repository root \(Kiro\)\]\(\.\) \| Kiro IDE \| `POWER\.md` \|/,
   );
-  assert.match(kiroSection, /git clone https:\/\/github\.com\/valency-oss\/valency-bond/);
   assert.match(kiroSection, /Powers panel/);
   assert.match(kiroSection, /Add Custom Power/);
-  assert.match(kiroSection, /Import power from a folder/);
-  assert.match(kiroSection, /valency-bond\/plugins\/kiro\/valency/);
-  assert.match(kiroSection, /`POWER\.md` in the repository root/);
+  assert.match(kiroSection, /Import power from\s+GitHub/);
+  assert.match(kiroSection, /https:\/\/github\.com\/valency-oss\/valency-bond/);
+  assert.match(kiroSection, /root `POWER\.md`,\s+`mcp\.json`, and `steering\/`/);
   assert.match(kiroSection, /Check for\s+updates/);
   assert.match(kiroSection, /Install\s+updates/);
   assert.match(kiroSection, /remove Valency from Installed\s+Powers/i);
-  assert.doesNotMatch(kiroSection, /Import power from GitHub/);
-  assert.doesNotMatch(
-    kiroSection,
-    /https:\/\/github\.com\/valency-oss\/valency-bond(?:\/tree\/[^\s)]+)?\/plugins\/kiro\/valency/,
-  );
-  assert.doesNotMatch(kiroSection, /one-click install/i);
+  assert.doesNotMatch(kiroSection, /plugins\/kiro\/valency/);
 
   assert.match(development, /Kiro Power/);
   assert.match(development, /`POWER\.md` frontmatter/);
@@ -538,8 +533,45 @@ test("Kiro documentation uses the supported nested-package lifecycle", () => {
     development,
     /do not\s+prove that Kiro can\s+install the Power, complete OAuth, or invoke a remote tool/,
   );
-  assert.match(development, /Import power from\s+a folder/);
+  assert.match(development, /Import power from\s+GitHub/);
+  assert.match(development, /select the repository root/);
   assert.match(development, /dynamic client registration/);
+});
+
+test("repository layout guide explains every intentional root entry", () => {
+  const readme = readFileSync("README.md", "utf8");
+  const layout = readFileSync("docs/repository-layout.md", "utf8");
+
+  assert.match(readme, /\.\/docs\/repository-layout\.md/);
+  assert.match(layout, /^# Repository root layout$/m);
+  assert.match(layout, /multiple providers require root-level\s+entry points/);
+  assert.match(layout, /Do not consolidate similarly named files/);
+
+  for (const entry of [
+    ".agents/",
+    ".claude-plugin/",
+    ".github/",
+    "commands/",
+    "docs/",
+    "installer/",
+    "plugins/",
+    "rules/",
+    "scripts/",
+    "skills/",
+    "steering/",
+    "test/",
+    "GEMINI.md",
+    "LICENSE",
+    "POWER.md",
+    "README.md",
+    "gemini-extension.json",
+    "mcp.json",
+    "mcp_config.json",
+    "package.json",
+    "plugin.json",
+  ]) {
+    assert.ok(layout.includes(`\`${entry}\``), `${entry} must be documented`);
+  }
 });
 
 test("Antigravity and Gemini documentation keep separate lifecycle contracts", () => {
