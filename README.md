@@ -16,6 +16,7 @@ CLI, and Kiro IDE each install their own contract from the repository root:
 | [Repository root (Kiro)](.) | Kiro IDE | `POWER.md` |
 | [`plugins/claude/valency`](./plugins/claude/valency) | Claude Code | `.claude-plugin/plugin.json` |
 | [`plugins/copilot/valency`](./plugins/copilot/valency) | GitHub Copilot CLI | `plugin.json` |
+| [`plugins/cursor/valency`](./plugins/cursor/valency) | Cursor IDE and Agent CLI | `.cursor-plugin/plugin.json` |
 | [`plugins/grok/valency`](./plugins/grok/valency) | Grok Build | `.grok-plugin/plugin.json` |
 | [`plugins/openai/valency`](./plugins/openai/valency) | ChatGPT and Codex | `.codex-plugin/plugin.json` |
 
@@ -179,6 +180,38 @@ To uninstall the plugin and remove its marketplace:
 copilot plugin uninstall valency
 copilot plugin marketplace remove valency-copilot-plugin
 ```
+
+## Install in Cursor
+
+Add this repository as a Cursor plugin marketplace:
+
+```bash
+cursor-agent plugin marketplace add https://github.com/valency-oss/valency-bond
+```
+
+Start Cursor Agent CLI, open `/plugin`, switch to the **Marketplace tab**, and
+install **Valency**. Cursor does not currently provide a separate
+non-interactive plugin-install command. In the Cursor IDE, manage the same
+plugin from **Customize** after the marketplace is available. While this
+repository is private, the Git credentials used by Cursor must have access to
+`valency-oss/valency-bond`.
+
+Reload Cursor after installation. When the `valency` MCP connection presents
+**Connect**, **Needs authentication**, or an equivalent action, complete the
+Cursor-managed authentication flow. The package contains no OAuth client
+secret, bearer token, custom authorization header, or local command wrapper.
+
+This initial Cursor package uses the canonical full MCP surface at
+`https://labs.valency.io/mcp/`. It does not select a reduced tool profile.
+Alongside the complete connection, the package includes the seven shared
+research skills and the existing TeX/BibTeX literature rule from the original
+Cursor repository.
+
+### Update or uninstall from Cursor
+
+Use `/plugin` in Cursor Agent CLI or **Customize → Plugins** in the Cursor IDE
+to refresh, update, disable, or uninstall Valency. These host-owned controls
+avoid editing Cursor's generated plugin or MCP state directly.
 
 ## Install in Kiro
 

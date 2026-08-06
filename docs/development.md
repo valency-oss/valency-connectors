@@ -7,12 +7,12 @@ npm test
 ```
 
 These tests include static checks for the native Antigravity plugin, the Gemini
-extension, the Copilot marketplace and provider package, command routing, the
-Kiro Power, and the Grok marketplace and provider package. They also enforce
-byte-for-byte skill synchronization across the shared root, Claude, Copilot,
-Grok, OpenAI, and Kiro copies. The Antigravity checks pin the exact
-`plugin.json` and `mcp_config.json` contracts, the host-specific rule, and
-separation from the legacy Gemini payload.
+extension, the Copilot, Cursor, and Grok marketplaces and provider packages,
+command routing, and the Kiro Power. They also enforce byte-for-byte skill
+synchronization across the shared root, Claude, Copilot, Cursor, Grok, OpenAI,
+and Kiro copies. The Antigravity checks pin the exact `plugin.json` and
+`mcp_config.json` contracts, the host-specific rule, and separation from the
+legacy Gemini payload.
 
 The Kiro checks pin the supported `POWER.md` frontmatter, the credential-free
 remote endpoint in `mcp.json`, and the one-to-one mapping from all seven
@@ -23,10 +23,54 @@ Static checks catch repository drift, but do not prove that Antigravity CLI can
 install the plugin, complete OAuth, or invoke a remote tool. They likewise do
 not prove that a particular Gemini CLI release can complete OAuth or invoke the
 remote tools. They also do not prove that GitHub Copilot CLI can install its
-plugin, complete OAuth, or invoke a remote tool. Static validation does not
-prove that Grok Build can install the plugin, complete OAuth, or invoke a
-remote tool. The Kiro static checks do not
-prove that Kiro can install the Power, complete OAuth, or invoke a remote tool.
+plugin, complete OAuth, or invoke a remote tool. Cursor package checks do not
+prove that Cursor can install the plugin, complete OAuth, or invoke a remote
+tool. Static validation does not prove that Grok Build can install the plugin,
+complete OAuth, or invoke a remote tool. The Kiro static checks do not prove
+that Kiro can install the Power, complete OAuth, or invoke a remote tool.
+
+## Cursor provider package
+
+The root `.cursor-plugin/marketplace.json` routes Cursor to the self-contained
+package at `plugins/cursor/valency`. That package has its own native manifest,
+full-surface `mcp.json`, synchronized skills, and the TeX/BibTeX literature
+rule imported from `valency-oss/valency-cursor-bond`.
+
+The initial package connects only to the canonical full endpoint at
+`https://labs.valency.io/mcp/`. Profile selection and reduced authoring
+endpoints are intentionally deferred until those service contracts are ready.
+The package must not contain a profile-specific endpoint or server name,
+credentials, authorization headers, or a local MCP wrapper.
+
+Run `npm test` while changing the Cursor package. To check both JSON manifests
+against the current official Cursor schemas without adding a repository
+dependency, run:
+
+```bash
+uvx --from check-jsonschema==0.37.4 check-jsonschema \
+  --no-cache \
+  --schemafile https://raw.githubusercontent.com/cursor/plugins/main/schemas/marketplace.schema.json \
+  .cursor-plugin/marketplace.json
+uvx --from check-jsonschema==0.37.4 check-jsonschema \
+  --no-cache \
+  --schemafile https://raw.githubusercontent.com/cursor/plugins/main/schemas/plugin.schema.json \
+  plugins/cursor/valency/.cursor-plugin/plugin.json
+```
+
+For host validation, record the Cursor version and add this repository as a
+marketplace with `cursor-agent plugin marketplace add
+https://github.com/valency-oss/valency-bond`. Open `/plugin`, install Valency
+from the Marketplace tab, and confirm that all seven skills, the literature
+rule, and the `valency` MCP connection load. Complete Cursor-managed OAuth and
+run a representative read-only Valency Bond tool call.
+
+Record static validation, installation, OAuth, tool discovery, and tool-call
+results separately. If OAuth fails, record only the non-sensitive callback URI
+after removing its query and fragment components. Redact authorization codes,
+tokens, cookies, client secrets, and personal data from the OAuth results. Note
+the Cursor surface, then coordinate any Valency redirect-allowlist or upstream
+identity-provider work separately. Do not add credentials or a callback
+workaround to the provider package.
 
 ## Grok Build plugin
 

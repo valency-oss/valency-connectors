@@ -11,6 +11,8 @@ const skillDirectories = (root) =>
 
 const claudeMarketplace = readJson(".claude-plugin/marketplace.json");
 const claudePlugin = readJson("plugins/claude/valency/.claude-plugin/plugin.json");
+const cursorMarketplace = readJson(".cursor-plugin/marketplace.json");
+const cursorPlugin = readJson("plugins/cursor/valency/.cursor-plugin/plugin.json");
 const openaiMarketplace = readJson(".agents/plugins/marketplace.json");
 const openaiPlugin = readJson("plugins/openai/valency/.codex-plugin/plugin.json");
 const kiroPowerRoot = ".";
@@ -300,6 +302,82 @@ test("Copilot package enables the complete Valency Bond tool surface", () => {
   );
 });
 
+test("Cursor marketplace routes to its full-surface provider package", () => {
+  assert.deepEqual(cursorMarketplace, {
+    name: "valency-cursor-plugin",
+    owner: {
+      name: "Valency Systems Inc",
+      email: "support@valency.io",
+    },
+    metadata: {
+      description:
+        "The Valency research plugin marketplace for Cursor, powered by Valency Bond.",
+    },
+    plugins: [
+      {
+        name: "valency",
+        source: "./plugins/cursor/valency",
+        description:
+          "Search, profile, and analyze research papers through Valency Bond.",
+      },
+    ],
+  });
+
+  assert.deepEqual(cursorPlugin, {
+    name: "valency",
+    displayName: "Valency",
+    description:
+      "Search, profile, and analyze research papers through the Valency Bond MCP server.",
+    version: "0.1.0",
+    author: {
+      name: "Valency Systems Inc",
+      email: "support@valency.io",
+    },
+    publisher: "Valency Systems Inc",
+    homepage: "https://valency.io",
+    repository: "https://github.com/valency-oss/valency-bond",
+    license: "MIT",
+    keywords: [
+      "research",
+      "papers",
+      "literature-review",
+      "semantic-search",
+    ],
+    skills: "./skills/",
+    rules: "./rules/",
+    mcpServers: "./mcp.json",
+  });
+});
+
+test("Cursor package exposes only the complete Valency Bond MCP surface", () => {
+  assert.deepEqual(readJson("plugins/cursor/valency/mcp.json"), {
+    mcpServers: {
+      valency: {
+        type: "http",
+        url: "https://labs.valency.io/mcp/",
+      },
+    },
+  });
+
+  const mcpContents = readFileSync("plugins/cursor/valency/mcp.json", "utf8");
+  const packageContents = [
+    mcpContents,
+    readFileSync("plugins/cursor/valency/.cursor-plugin/plugin.json", "utf8"),
+    readFileSync("plugins/cursor/valency/rules/valency-bond.mdc", "utf8"),
+  ].join("\n");
+  assert.doesNotMatch(
+    packageContents,
+    /\/mcp\/authoring|valency-authoring/i,
+  );
+  assert.doesNotMatch(
+    mcpContents,
+    /"oauth"|"clientId"|"clientSecret"|"bearer"|"authorization"/i,
+  );
+  assert.equal(existsSync("plugins/cursor/valency/hooks"), false);
+  assert.equal(existsSync("plugins/cursor/valency/commands"), false);
+  assert.equal(existsSync("plugins/cursor/valency/agents"), false);
+});
+
 test("repository root is an installable Gemini extension", () => {
   assert.deepEqual(readJson("gemini-extension.json"), {
     name: "valency",
@@ -419,6 +497,14 @@ test("all providers ship byte-identical unprefixed skills", () => {
       ),
       canonical,
       `Copilot ${skill} must match the shared skill`,
+    );
+    assert.equal(
+      readFileSync(
+        `plugins/cursor/valency/skills/${skill}/SKILL.md`,
+        "utf8",
+      ),
+      canonical,
+      `Cursor ${skill} must match the shared skill`,
     );
     assert.equal(
       readFileSync(
@@ -547,11 +633,22 @@ test("each provider package contains its complete runtime payload", () => {
     "similar",
     "trends",
   ]);
+  assert.deepEqual(skillDirectories("plugins/cursor/valency/skills"), [
+    "fresh-collaborators",
+    "landscape",
+    "network",
+    "profile",
+    "reading-list",
+    "similar",
+    "trends",
+  ]);
 
   for (const path of [
     "plugins/claude/valency/LICENSE",
     "plugins/openai/valency/LICENSE",
     "plugins/copilot/valency/LICENSE",
+    "plugins/cursor/valency/LICENSE",
+    "plugins/cursor/valency/rules/valency-bond.mdc",
     "plugins/openai/valency/assets/avatar_solid_black_valency.png",
     "plugins/openai/valency/assets/avatar_solid_white_valency.png",
     "plugins/openai/valency/assets/favicon_solid_cyan_valency.svg",
@@ -595,6 +692,10 @@ test("repository metadata and installation docs point at the monorepo", () => {
     openaiPlugin.repository,
     "https://github.com/valency-oss/valency-bond",
   );
+  assert.equal(
+    cursorPlugin.repository,
+    "https://github.com/valency-oss/valency-bond",
+  );
 
   const readme = readFileSync("README.md", "utf8");
   const development = readFileSync("docs/development.md", "utf8");
@@ -606,6 +707,12 @@ test("repository metadata and installation docs point at the monorepo", () => {
   assert.match(readme, /claude plugin install valency@valency-claude-plugin --scope user/);
   assert.match(readme, /codex plugin marketplace add valency-oss\/valency-bond/);
   assert.match(readme, /codex plugin add valency@valency/);
+  assert.match(
+    readme,
+    /cursor-agent plugin marketplace add https:\/\/github\.com\/valency-oss\/valency-bond/,
+  );
+  assert.match(readme, /canonical full MCP surface/);
+  assert.doesNotMatch(readme, /mcp\/authoring|valency-authoring/);
   assert.match(
     readme,
     /npx skills@latest add valency-oss\/valency-bond(?=\s|`|$)/,
@@ -630,6 +737,8 @@ test("repository metadata and installation docs point at the monorepo", () => {
   assert.match(development, /npm test/);
   assert.match(development, /npm run validate:claude/);
   assert.match(development, /npm run validate:openai/);
+  assert.match(development, /Cursor provider package/);
+  assert.match(development, /plugins\/cursor\/valency/);
   assert.match(development, /gemini-extension\.json/);
   assert.match(
     development,
@@ -663,10 +772,10 @@ test("Kiro documentation uses the supported root GitHub lifecycle", () => {
   assert.match(development, /`POWER\.md` frontmatter/);
   assert.match(development, /endpoint in `mcp\.json`/);
   assert.match(development, /seven\s+workflows to `steering\/\*\.md`/);
-  assert.match(development, /byte-for-byte skill synchronization/);
+  assert.match(development, /byte-for-byte skill\s+synchronization/);
   assert.match(
     development,
-    /do not\s+prove that Kiro can\s+install the Power, complete OAuth, or invoke a remote tool/,
+    /do not\s+prove\s+that Kiro can\s+install the Power,\s+complete OAuth, or invoke a remote tool/,
   );
   assert.match(development, /Import power from\s+GitHub/);
   assert.match(development, /select the repository root/);
@@ -695,6 +804,7 @@ test("repository layout guide explains every intentional root entry", () => {
     ".agents/",
     ".claude-plugin/marketplace.json",
     ".claude-plugin/plugin.json",
+    ".cursor-plugin/",
     ".github/",
     "commands/",
     "docs/",
@@ -787,10 +897,48 @@ test("Copilot documentation uses marketplace-first CLI-only support", () => {
     /copilot plugin install (?:valency-oss\/valency-bond|https:\/\/github\.com\/valency-oss\/valency-bond(?:\.git)?)/,
   );
 
-  assert.match(development, /Copilot\s+marketplace and provider package/);
+  assert.match(
+    development,
+    /Copilot, Cursor, and Grok marketplaces and provider packages/,
+  );
   assert.match(
     development,
     /do not prove that GitHub\s+Copilot CLI can install its\s+plugin, complete OAuth, or invoke a remote tool/,
+  );
+});
+
+test("Cursor documentation keeps installation interactive and profile-free", () => {
+  const readme = readFileSync("README.md", "utf8");
+  const development = readFileSync("docs/development.md", "utf8");
+  const cursorSection = readme.match(
+    /^## Install in Cursor$([\s\S]*?)(?=^## )/m,
+  )?.[1];
+
+  assert.ok(cursorSection, "README must contain a Cursor install section");
+  assert.match(
+    readme,
+    /\| \[`plugins\/cursor\/valency`\]\(\.\/plugins\/cursor\/valency\) \| Cursor IDE and Agent CLI \| `\.cursor-plugin\/plugin\.json` \|/,
+  );
+  assert.match(
+    cursorSection,
+    /cursor-agent plugin marketplace add https:\/\/github\.com\/valency-oss\/valency-bond/,
+  );
+  assert.match(cursorSection, /`\/plugin`/);
+  assert.match(cursorSection, /Marketplace tab/);
+  assert.match(cursorSection, /Cursor-managed authentication/);
+  assert.match(cursorSection, /canonical full MCP surface/);
+  assert.match(cursorSection, /Customize/);
+  assert.doesNotMatch(
+    cursorSection,
+    /mcp\/authoring|valency-authoring|authoring profile|install\.sh/i,
+  );
+
+  assert.match(development, /Cursor provider package/);
+  assert.match(development, /official Cursor schemas/);
+  assert.match(development, /npm test/);
+  assert.match(
+    development,
+    /Cursor package checks do not\s+prove\s+that Cursor can\s+install the plugin,\s+complete OAuth, or invoke a remote\s+tool/,
   );
 });
 
@@ -830,7 +978,7 @@ test("Grok documentation uses the private marketplace lifecycle", () => {
   assert.match(development, /grok plugin validate plugins\/grok\/valency/);
   assert.match(
     development,
-    /does not\s+prove that Grok Build can install the plugin, complete OAuth, or invoke a\s+remote tool/,
+    /does not\s+prove that Grok Build can install the plugin,\s+complete OAuth, or invoke a\s+remote tool/,
   );
   assert.match(layout, /`\.grok-plugin\/` \| Grok Build/);
   assert.match(layout, /`plugins\/grok\/valency`/);
