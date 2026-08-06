@@ -1,24 +1,21 @@
 ---
-name: valency-network
+name: network
 description: "Use when the user asks about a researcher's collaborators, co-authors, research network, wants to map who works with whom, or wants to see how a researcher's focus has diverged from their collaborators. Triggers on questions like 'who does X collaborate with', 'show me X's network', 'find connections between researchers', or 'how has X's work drifted from their coauthors'."
 ---
 
 # Collaboration Network
 
-Map a researcher's collaboration network using the Valency research corpus.
-
-## Tool conventions
-
-- Use the Valency Bond MCP tools available in the current agent (e.g., `find_coauthors`). Tool names may be qualified with an MCP server prefix; call the matching exposed tool.
-- Never fabricate paper titles, authors, abstracts, or metadata. All data must come from tool results.
-- If a tool returns no results, say so plainly and suggest a different spelling or query.
-- Produce clean, scannable output with consistent markdown formatting.
+Map a researcher's collaboration network.
 
 ## Input
 
 The user provides an author name (e.g., "Yoshua Bengio").
 
-## Tool chain
+## Tool Chain
+
+Use the Valency Bond MCP tools available in the current host. Tool names may be
+qualified by an MCP server prefix; call the matching exposed tool. If the
+required Valency Bond tools are unavailable, say so and stop.
 
 ### Step 1: Get author baseline
 
@@ -64,15 +61,15 @@ Synthesize these into a one-sentence characterization per collaborator. Examples
 - *"More concentrated on astro-ph.GA (57% vs 41%); 2× the productivity; output accelerating in the Gaia era while focal author's has held steady."*
 - *"Pivoted toward cs.CL after 2022; less methodological output than focal author; collaboration appears to have cooled since the pivot."*
 
-## Output format
+## Output Format
 
-### Network summary
+### Network Summary
 
 A brief paragraph:
 - Author name and total direct collaborators count
 - Primary research domains (from Step 1)
 
-### Direct collaborators
+### Direct Collaborators
 
 A table of collaborators from Step 2 (top 10):
 
@@ -83,13 +80,13 @@ A table of collaborators from Step 2 (top 10):
 
 The "Primary domain" column comes from Step 4 comparison data for the top collaborators. For collaborators not included in the comparison, omit the domain or mark as "—".
 
-### Second-degree connections
+### Second-Degree Connections
 
 A list of notable second-degree connections from Step 3 — people who collaborate with the focal author's collaborators but not directly with the focal author. Show up to 10, prioritizing those who appear via multiple collaborators:
 
 - **Name** (connected through: Collaborator A, Collaborator B) — primary domain if known
 
-### Cross-domain bridges
+### Cross-Domain Bridges
 
 Highlight collaborators from Step 2 whose primary domain (from Step 4) differs from the focal author's primary domain. These represent interdisciplinary connections:
 
@@ -97,7 +94,7 @@ Highlight collaborators from Step 2 whose primary domain (from Step 4) differs f
 
 If no cross-domain collaborators are found, note that the author's network is concentrated within their primary domain.
 
-### Divergence analysis
+### Divergence Analysis
 
 For each top collaborator compared in Step 4, present the divergence characterization computed in Step 5. Use this format:
 
@@ -111,8 +108,8 @@ If all top collaborators have nearly-identical category distributions and timeli
 
 The point of this section is to make visible *how the focal author's intellectual position has drifted relative to their closest collaborators*. Lead with the most divergent collaborator, not the most-collaborated-with one.
 
-### Suggested follow-ups
+### Suggested Follow-ups
 
-- "Profile `<collaborator>`" — for any interesting collaborator
-- "Network for `<collaborator>`" — to explore a collaborator's own network
-- "Papers similar to `<paper_id>`" — for co-authored papers of interest
+- Ask for a profile of `<collaborator>` for any interesting collaborator.
+- Ask for `<collaborator>`'s network to explore their connections.
+- Ask for papers similar to `<paper_id>` for co-authored papers of interest.

@@ -1,16 +1,49 @@
 # Valency Bond
 
-This repository distributes the **Valency** plugin for multiple agent
-providers. The plugin connects each supported host to the **Valency Bond MCP
+This repository distributes **Valency** integrations for multiple agent
+providers. Each integration connects its host to the **Valency Bond MCP
 server** at `https://labs.valency.io/mcp/` and bundles seven guided research
 workflows.
 
-The provider packages are self-contained and versioned independently:
+The Claude and OpenAI packages are self-contained and versioned independently.
+The Gemini CLI extension is installed from the repository root:
 
 | Provider package | Hosts | Manifest |
 | --- | --- | --- |
+| [Repository root](.) | Gemini CLI | `gemini-extension.json` |
 | [`plugins/claude/valency`](./plugins/claude/valency) | Claude Code | `.claude-plugin/plugin.json` |
 | [`plugins/openai/valency`](./plugins/openai/valency) | ChatGPT and Codex | `.codex-plugin/plugin.json` |
+
+## Install in Gemini CLI
+
+Install the repository as a Gemini CLI extension and enable automatic updates:
+
+```bash
+gemini extensions install https://github.com/valency-oss/valency-bond --auto-update
+```
+
+Restart Gemini CLI so the extension's context, skills, and `/valency:*`
+commands are loaded. Start the browser-based authorization flow, then verify
+that the Valency server and tools are available:
+
+```text
+/mcp auth valency
+/mcp list
+```
+
+Gemini uses local TCP port `33418` while OAuth completes. The extension uses
+dynamic client registration, so you do not need to configure an OAuth client
+ID, client secret, or bearer token.
+
+### Update or uninstall from Gemini CLI
+
+```bash
+gemini extensions update valency
+gemini extensions uninstall valency
+```
+
+Restart Gemini CLI after updating so refreshed skills, commands, and context
+are loaded.
 
 ## Install in Claude Code
 
@@ -123,8 +156,11 @@ records and submits feedback only when you explicitly request it.
 
 ## License
 
-This repository and both packaged plugins are MIT-licensed. See
+This repository and its provider integrations are MIT-licensed. See
 [`LICENSE`](./LICENSE).
+
+See the [development guide](./docs/development.md) for packaging checks and
+provider-specific validation.
 
 Organization-wide contribution, trademark, and security policies for
 `valency-oss` are maintained at

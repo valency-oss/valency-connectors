@@ -1,0 +1,6 @@
+description = "Build a curated reading list for a researcher, organized by intellectual thread."
+prompt = """
+Activate the `reading-list` skill and build a reading list for: {{args}}
+
+Follow the skill's tool chain exactly: triangulate off the author's most-cited and most-recent work, find similar papers per seed, deduplicate, and group by thread. Use the Valency MCP tools loaded by this extension.
+"""

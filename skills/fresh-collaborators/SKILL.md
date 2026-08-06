@@ -1,5 +1,5 @@
 ---
-name: valency-fresh-collaborators
+name: fresh-collaborators
 description: "Use when the user asks who a researcher should be talking to that they aren't already, wants to find new potential collaborators outside an existing network, asks 'who else is doing this work', 'who should X meet', 'who are the new faces in this field', or wants to expand a researcher's collaboration network beyond their current circle. Triggers on requests to find recent, relevant researchers who are NOT in an author's existing coauthor list."
 ---
 
@@ -7,20 +7,17 @@ description: "Use when the user asks who a researcher should be talking to that 
 
 Find researchers doing recent (last 12–18 months), thematically relevant work who are **not** in the focal author's existing coauthor network. Useful for expanding a researcher's collaborator pool, suggesting first-author candidates for new projects, or surfacing people for an upcoming conference / visit.
 
-## Tool conventions
-
-- Use the Valency Bond MCP tools available in the current agent (e.g., `semantic_search_papers`). Tool names may be qualified with an MCP server prefix; call the matching exposed tool.
-- Never fabricate paper titles, authors, abstracts, or metadata. All data must come from tool results.
-- If a tool returns no results, say so plainly and suggest a different spelling or query.
-- Produce clean, scannable output with consistent markdown formatting.
-
 ## Input
 
 The user provides an author name (e.g., "David W. Hogg", "Karl Friston").
 
 Optional: a number of months for the recency window. If not specified, default to **18 months**.
 
-## Tool chain
+## Tool Chain
+
+Use the Valency Bond MCP tools available in the current host. Tool names may be
+qualified by an MCP server prefix; call the matching exposed tool. If the
+required Valency Bond tools are unavailable, say so and stop.
 
 **Date discipline:** Compute the cutoff date as `today - <window_months>`, formatted as `YYYY-MM-DD`. Use this cutoff string consistently in Step 5.
 
@@ -100,9 +97,9 @@ For each remaining paper, identify the **first author** as the primary "fresh fa
 
 3. **Deduplicate.** If the same first author appears via multiple papers, merge into a single entry and list all surfacing papers.
 
-## Output format
+## Output Format
 
-### Author summary
+### Author Summary
 
 A short block:
 - **Focal author**: name (resolved), total papers, primary domains
@@ -110,7 +107,7 @@ A short block:
 - **Recency window**: e.g. "Last 18 months (cutoff: 2024-10-07)"
 - **Themes searched**: bullet list of the 2–4 themes from Step 4
 
-### Fresh faces
+### Fresh Faces
 
 A ranked list of fresh-face candidates. Rank by: (a) number of distinct themes that surfaced them, then (b) similarity scores of their surfacing papers.
 
@@ -125,12 +122,12 @@ For each candidate:
 
 Show the top 10 candidates. If fewer than 10 survived, show all of them.
 
-### Theme coverage notes
+### Theme Coverage Notes
 
 For each theme from Step 4, report the number of papers returned by the date-restricted search and the number that survived exclusion filtering. This helps the user see which themes are crowded (lots of fresh activity) vs sparse (no one is doing this).
 
-### Suggested follow-ups
+### Suggested Follow-ups
 
-- "Profile `<fresh_face_name>`" — for a deeper look at any candidate
-- "Papers similar to `<surfacing_paper_id>`" — to find more work in that vein
-- "Reading list for `<focal_author>`" — for the *what* to read alongside the *who* to meet
+- Ask for a profile of `<fresh_face_name>` for a deeper look at any candidate.
+- Ask for papers similar to `<surfacing_paper_id>` to find more work in that vein.
+- Ask for a reading list for `<focal_author>` for the *what* to read alongside the *who* to meet.

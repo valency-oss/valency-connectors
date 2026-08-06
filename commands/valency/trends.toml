@@ -1,0 +1,6 @@
+description = "Show how a research topic or arXiv category has evolved over time."
+prompt = """
+Activate the `trends` skill and show publication trends for: {{args}}
+
+Follow the skill's tool chain exactly. If the input contains commas or "vs", produce a comparison. Use the Valency MCP tools loaded by this extension.
+"""

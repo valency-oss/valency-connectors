@@ -6,6 +6,18 @@ Run the cross-provider packaging checks:
 npm test
 ```
 
+These tests include static Gemini packaging checks for `gemini-extension.json`,
+the root context file, command routing, and byte-for-byte skill synchronization
+across Gemini, Claude, and OpenAI. Static checks catch repository drift, but do
+not prove that a particular Gemini CLI release can complete OAuth or invoke the
+remote tools.
+
+With Gemini CLI installed, validate the root extension and complete a live
+install, `/mcp auth valency`, `/mcp list`, and representative tool call before
+release. Record the Gemini CLI version with those results. The root extension
+installed from GitHub follows this repository's default branch; `--auto-update`
+keeps that checkout current.
+
 With Claude Code installed, run both strict Claude validators:
 
 ```bash
@@ -25,5 +37,6 @@ Record `codex --version` with release validation results so the validator's
 host revision is explicit without copying or pinning that external validator
 inside this repository.
 
-Provider release versions live in their respective plugin manifests and can
-advance without changing the other package.
+Provider release versions live in their respective manifests. The Claude and
+OpenAI package versions can advance independently; the root Gemini extension
+version lives in `gemini-extension.json`.
