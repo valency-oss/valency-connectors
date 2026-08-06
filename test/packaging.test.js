@@ -24,6 +24,30 @@ const kiroWorkflows = [
   "fresh-collaborators",
 ];
 
+test("Agent Skills CLI groups every canonical skill under one select-all row", () => {
+  assert.deepEqual(readJson(".claude-plugin/plugin.json"), {
+    name: "valency-skills",
+    version: "0.1.0",
+    description:
+      "Portable research-corpus workflows for agents using the Valency Bond MCP server.",
+    author: {
+      name: "Valency Systems Inc",
+    },
+    homepage: "https://valency.io",
+    repository: "https://github.com/valency-oss/valency-bond",
+    license: "MIT",
+    skills: [
+      "./skills/fresh-collaborators",
+      "./skills/landscape",
+      "./skills/network",
+      "./skills/profile",
+      "./skills/reading-list",
+      "./skills/similar",
+      "./skills/trends",
+    ],
+  });
+});
+
 test("repository root is an installable Antigravity plugin", () => {
   assert.deepEqual(readJson("plugin.json"), {
     name: "valency",
@@ -479,6 +503,12 @@ test("repository metadata and installation docs point at the monorepo", () => {
   assert.match(readme, /codex plugin add valency@valency/);
   assert.match(
     readme,
+    /npx skills@latest add valency-oss\/valency-bond(?=\s|`|$)/,
+  );
+  assert.match(readme, /toggle \*\*Valency Skills\*\* to select or clear all seven/);
+  assert.match(readme, /does not configure the Valency Bond MCP server/);
+  assert.match(
+    readme,
     /gemini extensions install https:\/\/github\.com\/valency-oss\/valency-bond --auto-update/,
   );
   assert.match(readme, /\/mcp auth valency/);
@@ -549,7 +579,8 @@ test("repository layout guide explains every intentional root entry", () => {
 
   for (const entry of [
     ".agents/",
-    ".claude-plugin/",
+    ".claude-plugin/marketplace.json",
+    ".claude-plugin/plugin.json",
     ".github/",
     "commands/",
     "docs/",

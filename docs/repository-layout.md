@@ -36,7 +36,8 @@ unless every affected provider contract and packaging test is updated.
 | Entry | Consumer | Purpose |
 | --- | --- | --- |
 | `.agents/` | Codex | Declares this repository's OpenAI plugin marketplace. |
-| `.claude-plugin/` | Claude Code | Declares this repository's Claude plugin marketplace. |
+| `.claude-plugin/marketplace.json` | Claude Code | Declares this repository's Claude plugin marketplace. |
+| `.claude-plugin/plugin.json` | Agent Skills CLI | Groups every canonical workflow under the `Valency Skills` select-all row. It does not define another provider package. |
 | `.github/` | GitHub and CI | Contains the GitHub Copilot marketplace plus GitHub Actions workflows. |
 | `plugins/` | Claude, Copilot, and OpenAI hosts | Contains self-contained provider packages for hosts that install from a nested marketplace path. Kiro is at the root because its GitHub importer requires root `POWER.md`. |
 
