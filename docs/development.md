@@ -6,11 +6,12 @@ Run the cross-provider packaging checks:
 npm test
 ```
 
-These tests include static Gemini packaging checks for `gemini-extension.json`,
-the root context file, command routing, and byte-for-byte skill synchronization
-across Gemini, Claude, and OpenAI. Static checks catch repository drift, but do
-not prove that a particular Gemini CLI release can complete OAuth or invoke the
-remote tools.
+These tests include static checks for the Gemini extension, the Copilot
+marketplace and provider package, command routing, and byte-for-byte skill
+synchronization across Gemini, Claude, Copilot, and OpenAI. Static checks catch
+repository drift, but do not prove that a particular Gemini CLI release can
+complete OAuth or invoke the remote tools. They also do not prove that GitHub
+Copilot CLI can install the plugin, complete OAuth, or invoke a remote tool.
 
 With Gemini CLI installed, validate the root extension and complete a live
 install, `/mcp auth valency`, `/mcp list`, and representative tool call before
@@ -38,5 +39,6 @@ host revision is explicit without copying or pinning that external validator
 inside this repository.
 
 Provider release versions live in their respective manifests. The Claude and
-OpenAI package versions can advance independently; the root Gemini extension
+OpenAI package versions can advance independently; the Copilot package version
+lives in `plugins/copilot/valency/plugin.json`, and the root Gemini extension
 version lives in `gemini-extension.json`.

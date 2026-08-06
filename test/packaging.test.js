@@ -14,6 +14,69 @@ const claudePlugin = readJson("plugins/claude/valency/.claude-plugin/plugin.json
 const openaiMarketplace = readJson(".agents/plugins/marketplace.json");
 const openaiPlugin = readJson("plugins/openai/valency/.codex-plugin/plugin.json");
 
+test("Copilot marketplace routes to its independent provider package", () => {
+  assert.deepEqual(readJson(".github/plugin/marketplace.json"), {
+    name: "valency-copilot-plugin",
+    owner: {
+      name: "Valency Systems Inc",
+    },
+    metadata: {
+      description:
+        "The Valency research plugin marketplace for GitHub Copilot CLI, powered by Valency Bond.",
+      version: "0.1.0",
+    },
+    plugins: [
+      {
+        name: "valency",
+        source: "./plugins/copilot/valency",
+        description:
+          "Search, profile, and analyze research papers through Valency Bond.",
+        version: "0.1.0",
+      },
+    ],
+  });
+
+  assert.deepEqual(readJson("plugins/copilot/valency/plugin.json"), {
+    name: "valency",
+    description:
+      "Search, profile, and analyze research papers through the Valency Bond MCP server.",
+    version: "0.1.0",
+    author: {
+      name: "Valency Systems Inc",
+      email: "support@valency.io",
+      url: "https://valency.io",
+    },
+    homepage: "https://valency.io",
+    repository: "https://github.com/valency-oss/valency-bond",
+    license: "MIT",
+    keywords: [
+      "research",
+      "papers",
+      "literature-review",
+      "semantic-search",
+    ],
+    skills: "skills/",
+    mcpServers: ".mcp.json",
+  });
+});
+
+test("Copilot package enables the complete Valency Bond tool surface", () => {
+  assert.deepEqual(readJson("plugins/copilot/valency/.mcp.json"), {
+    mcpServers: {
+      valency: {
+        type: "http",
+        url: "https://labs.valency.io/mcp/",
+        tools: ["*"],
+      },
+    },
+  });
+
+  assert.doesNotMatch(
+    readFileSync("plugins/copilot/valency/.mcp.json", "utf8"),
+    /oauthClientId|clientSecret|bearer|authorization/i,
+  );
+});
+
 test("repository root is an installable Gemini extension", () => {
   assert.deepEqual(readJson("gemini-extension.json"), {
     name: "valency",
@@ -110,6 +173,14 @@ test("all providers ship byte-identical unprefixed skills", () => {
       ),
       canonical,
       `OpenAI ${skill} must match the shared skill`,
+    );
+    assert.equal(
+      readFileSync(
+        `plugins/copilot/valency/skills/${skill}/SKILL.md`,
+        "utf8",
+      ),
+      canonical,
+      `Copilot ${skill} must match the shared skill`,
     );
   }
 });
@@ -221,10 +292,20 @@ test("each provider package contains its complete runtime payload", () => {
     "similar",
     "trends",
   ]);
+  assert.deepEqual(skillDirectories("plugins/copilot/valency/skills"), [
+    "fresh-collaborators",
+    "landscape",
+    "network",
+    "profile",
+    "reading-list",
+    "similar",
+    "trends",
+  ]);
 
   for (const path of [
     "plugins/claude/valency/LICENSE",
     "plugins/openai/valency/LICENSE",
+    "plugins/copilot/valency/LICENSE",
     "plugins/openai/valency/assets/avatar_solid_black_valency.png",
     "plugins/openai/valency/assets/avatar_solid_white_valency.png",
     "plugins/openai/valency/assets/favicon_solid_cyan_valency.svg",
@@ -298,5 +379,33 @@ test("repository metadata and installation docs point at the monorepo", () => {
   assert.match(development, /npm run validate:claude/);
   assert.match(development, /npm run validate:openai/);
   assert.match(development, /gemini-extension\.json/);
-  assert.match(development, /static Gemini packaging checks/);
+  assert.match(development, /static checks for the Gemini extension/);
+});
+
+test("Copilot documentation uses marketplace-first CLI-only support", () => {
+  const readme = readFileSync("README.md", "utf8");
+  const development = readFileSync("docs/development.md", "utf8");
+
+  assert.match(
+    readme,
+    /copilot plugin marketplace add valency-oss\/valency-bond/,
+  );
+  assert.match(
+    readme,
+    /copilot plugin install valency@valency-copilot-plugin/,
+  );
+  assert.match(readme, /\/mcp auth valency/);
+  assert.match(readme, /GitHub Copilot CLI/);
+  assert.match(readme, /Copilot coding agent/);
+  assert.match(readme, /Copilot code review/);
+  assert.doesNotMatch(
+    readme,
+    /copilot plugin install (?:valency-oss\/valency-bond|https:\/\/github\.com\/valency-oss\/valency-bond(?:\.git)?)/,
+  );
+
+  assert.match(development, /Copilot\s+marketplace and provider package/);
+  assert.match(
+    development,
+    /do not prove that GitHub\s+Copilot CLI can install the plugin, complete OAuth, or invoke a remote tool/,
+  );
 });

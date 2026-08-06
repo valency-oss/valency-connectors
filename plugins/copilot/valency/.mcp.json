@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "valency": {
+      "type": "http",
+      "url": "https://labs.valency.io/mcp/",
+      "tools": ["*"]
+    }
+  }
+}
