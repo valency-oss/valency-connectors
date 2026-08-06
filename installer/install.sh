@@ -635,6 +635,13 @@ interactive_select_targets() {
   CLAUDE_SELECTED=$CLAUDE_AVAILABLE
   CODEX_SELECTED=$CODEX_AVAILABLE
 
+  if [ "$CLAUDE_EXECUTABLE_FOUND" -eq 1 ] && [ "$CLAUDE_AVAILABLE" -eq 0 ]; then
+    printf 'Claude Code is installed but lacks required plugin commands; upgrade it.\n' >&2
+  fi
+  if [ "$CODEX_EXECUTABLE_FOUND" -eq 1 ] && [ "$CODEX_AVAILABLE" -eq 0 ]; then
+    printf 'Codex is installed but lacks required plugin commands; upgrade it.\n' >&2
+  fi
+
   reset_menu "Select harnesses for Valency" "All detected harnesses" "Selected harnesses" 0 \
     "Install Valency for" "answer once for each detected harness."
   if [ "$CLAUDE_AVAILABLE" -eq 1 ]; then add_menu_item claude "Claude Code" 1; fi

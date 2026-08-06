@@ -2,6 +2,15 @@
 
 set -u
 
+if [ -z "${MOCK_LOG-}" ]; then
+  printf 'MOCK_LOG must name the mock command log.\n' >&2
+  exit 64
+fi
+if [ -z "${MOCK_STATE-}" ]; then
+  printf 'MOCK_STATE must name the mock state directory.\n' >&2
+  exit 64
+fi
+
 provider=$(basename "$0")
 printf '%s %s\n' "$provider" "$*" >> "$MOCK_LOG"
 

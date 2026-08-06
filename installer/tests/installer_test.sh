@@ -13,7 +13,18 @@ FAIL_COUNT=0
 cleanup() {
   rm -rf "$TEST_ROOT"
 }
-trap cleanup EXIT HUP INT TERM
+
+exit_after_signal() {
+  signal_status=$1
+  trap - EXIT HUP INT TERM
+  cleanup
+  exit "$signal_status"
+}
+
+trap cleanup EXIT
+trap 'exit_after_signal 129' HUP
+trap 'exit_after_signal 130' INT
+trap 'exit_after_signal 143' TERM
 
 fail() {
   printf 'FAIL: %s\n' "$1" >&2
@@ -819,6 +830,21 @@ test_interactive_selector_preselects_detected_providers() {
   pass "$TEST_NAME"
 }
 
+test_interactive_selector_explains_an_unsupported_provider() {
+  new_case interactive-unsupported-provider
+  enable_claude
+  enable_codex
+  : > "$MOCK_STATE/claude-missing-capability"
+  printf '\n\n' > "$TTY_INPUT"
+  run_with_terminal --no-auth
+  assert_status 0 || return
+  assert_output_contains "Claude Code is installed but lacks required plugin commands; upgrade it." || return
+  assert_output_contains "Selected harnesses: Codex" || return
+  assert_log_not_contains "claude plugin install valency@valency-claude-plugin --scope user" || return
+  assert_log_contains "codex plugin add valency@valency" || return
+  pass "$TEST_NAME"
+}
+
 test_interactive_selector_can_deselect_a_provider() {
   new_case interactive-deselect-codex
   enable_claude
@@ -1186,6 +1212,7 @@ test_midfile_truncated_download_is_inert
 test_codex_bearer_token_auth_counts_as_connected
 test_dry_run_shows_migration_and_replacement_plan_without_mutation
 test_interactive_selector_preselects_detected_providers
+test_interactive_selector_explains_an_unsupported_provider
 test_interactive_selector_can_deselect_a_provider
 test_interactive_select_all_can_clear_and_restore_defaults
 test_interactive_selector_rejects_an_empty_required_selection

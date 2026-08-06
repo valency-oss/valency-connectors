@@ -19,6 +19,28 @@ not prove that a particular Gemini CLI release can complete OAuth or invoke the
 remote tools. They also do not prove that GitHub Copilot CLI can install its
 plugin, complete OAuth, or invoke a remote tool.
 
+## Universal installer
+
+The canonical installer source lives in `installer/install.sh`. Its initial
+provider adapters detect, install, update, and optionally authenticate the
+Claude Code and Codex packages from this repository. Hosting the script at the
+public Valency URL is a separate deployment step; this repository does not
+claim that route is available merely because the source has been merged.
+
+The installer tests invoke the complete script with isolated home directories,
+controlled terminal input, and mocked provider executables. Run them through
+the installer test command, or invoke their component checks while iterating:
+
+```bash
+npm run test:installer
+bash -n installer/install.sh
+bash installer/tests/installer_test.sh
+shellcheck installer/install.sh installer/tests/installer_test.sh installer/tests/fixtures/mock-provider
+```
+
+The CI workflow also executes the same installer suite under Bash 3.2, which is
+the Bash version supplied by older macOS releases.
+
 With Antigravity CLI installed, record `agy --version`, install the repository,
 confirm it with `agy plugin list`, then use the interactive `/mcp` manager to
 authenticate `valency` and make a representative tool call. Capture the dynamic
