@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # Provider state is read and written through controlled Bash-3.2-compatible
-# accessors, which ShellCheck cannot follow through eval.
+# accessors. ShellCheck cannot follow the dynamic variable names.
 # shellcheck disable=SC2034
 
 set -u
@@ -188,8 +188,7 @@ write_provider_state() {
     EXECUTABLE_FOUND|AVAILABLE|SELECTED|INSTALL_RESULT|AUTH_AVAILABLE|AUTH_STATE|AUTH_SELECTED|AUTH_RESULT) ;;
     *) return 1 ;;
   esac
-  PROVIDER_STATE_NEW_VALUE=$3
-  eval "${PROVIDER_PREFIX}_$2=\${PROVIDER_STATE_NEW_VALUE}"
+  printf -v "${PROVIDER_PREFIX}_$2" '%s' "$3"
 }
 
 read_provider_target() {
