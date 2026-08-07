@@ -1,31 +1,28 @@
+<p align="center">
+  <a href="https://valency.io">
+    <img
+      src="./docs/assets/horizontal_solid_cyan_valency.svg"
+      alt="Valency"
+      width="420"
+    >
+  </a>
+</p>
+
 # Valency Bond
 
-This repository distributes **Valency** integrations for multiple agent
-providers. Each integration connects its host to the **Valency Bond MCP
-server** at `https://labs.valency.io/mcp/` and bundles seven guided research
-workflows.
+Valency Bond connects AI assistants to [Valency](https://valency.io) for
+research discovery and analysis. Each provider package connects to the hosted
+Valency Bond MCP server and includes seven guided workflows for researcher
+profiles, field landscapes, similar papers, publication trends, collaboration
+networks, reading lists, and fresh collaborators.
 
-The provider packages are self-contained. Where a host supports manifest
-versions, the packages are versioned independently. Antigravity CLI, Gemini
-CLI, and Kiro IDE each install their own contract from the repository root:
+Authentication is handled through your agent's browser-based sign-in flow. The
+packages do not require a client secret, bearer token, or manually configured
+authorization header.
 
-| Provider package | Hosts | Manifest |
-| --- | --- | --- |
-| [Repository root (Antigravity)](.) | Antigravity CLI | `plugin.json` |
-| [Repository root (Gemini)](.) | Gemini CLI | `gemini-extension.json` |
-| [Repository root (Kiro)](.) | Kiro IDE | `POWER.md` |
-| [`plugins/claude/valency`](./plugins/claude/valency) | Claude Code | `.claude-plugin/plugin.json` |
-| [`plugins/copilot/valency`](./plugins/copilot/valency) | GitHub Copilot CLI | `plugin.json` |
-| [`plugins/cursor/valency`](./plugins/cursor/valency) | Cursor IDE and Agent CLI | `.cursor-plugin/plugin.json` |
-| [`plugins/grok/valency`](./plugins/grok/valency) | Grok Build | `.grok-plugin/plugin.json` |
-| [`plugins/openai/valency`](./plugins/openai/valency) | ChatGPT and Codex | `.codex-plugin/plugin.json` |
+## Install
 
-The root contains several provider-specific entry points because each host has
-its own installation contract. See the
-[repository root layout](./docs/repository-layout.md) for the owner and purpose
-of every root entry.
-
-## Install with the universal installer
+### Universal installer
 
 From a clone of this repository, run:
 
@@ -33,15 +30,12 @@ From a clone of this repository, run:
 bash installer/install.sh
 ```
 
-The interactive checklist detects and preselects supported installations of
-Claude Code, Codex, Antigravity CLI, Gemini CLI, GitHub Copilot CLI, and Grok
-Build. It shows one complete plan before changing provider state and verifies
-each provider independently, so one provider failure does not block the rest.
-Cursor and Kiro remain in their host-owned UI flows because neither exposes a
-complete noninteractive package installation contract.
+The interactive checklist detects and preselects Claude Code, Codex,
+Antigravity CLI, Gemini CLI, GitHub Copilot CLI, and Grok Build. It shows one
+complete plan before changing provider state and verifies each provider
+independently. Cursor and Kiro remain in their host-owned installation flows.
 
-For unattended use, select one or more targets explicitly and skip the
-interactive authentication phase:
+For unattended use, select targets explicitly and skip authentication:
 
 ```bash
 bash installer/install.sh \
@@ -54,332 +48,119 @@ bash installer/install.sh \
 Use `--target all` for every detected supported CLI and `--dry-run` to inspect
 the plan without changing provider state. Claude Code and Codex can run their
 standalone MCP login commands after installation. Antigravity, Gemini,
-Copilot, and Grok instead print the exact in-host OAuth action; the installer
-does not launch their full interactive agents.
+Copilot, and Grok print the exact in-host OAuth action without launching their
+full interactive agents.
 
-## Install the skills only
-
-To add the seven guided workflows to an existing agent without installing a
-provider plugin, run:
+### Claude Code
 
 ```bash
-npx skills@latest add valency-oss/valency-bond
+claude plugin marketplace add valency-oss/valency-bond --scope user
+claude plugin install valency@valency-claude-plugin --scope user
+claude mcp login plugin:valency:valency
 ```
 
-In the selector, toggle **Valency Skills** to select or clear all seven
-workflows at once, or choose individual workflows underneath it. This installs
-the skill instructions only; it does not configure the Valency Bond MCP server
-or authenticate it. Install the provider package for your host when you need
-the complete integration.
+Restart Claude Code or run `/reload-plugins` after installation.
 
-## Install in Antigravity CLI
-
-Install the repository as a native Antigravity plugin, then confirm that it is
-listed:
+### Codex
 
 ```bash
-agy plugin install https://github.com/valency-oss/valency-bond
-agy plugin list
+codex plugin marketplace add valency-oss/valency-bond
+codex plugin add valency@valency
+codex mcp login valency
 ```
 
-Start Antigravity CLI and open the interactive `/mcp` manager. Select
-`valency`, complete the browser-based authorization flow, and confirm that the
-server connects. Valency supports dynamic client registration, so you do not
-need to configure an OAuth client ID, client secret, or bearer token.
+Start a new Codex session after installation so its skills and MCP tools load.
 
-OAuth and remote tool use have not yet been verified end to end with
-Antigravity CLI. If its captured registration request uses a redirect host that
-Valency does not currently allow, the MCP redirect allowlist and Clerk OAuth
-application must be updated and deployed separately before authentication will
-succeed.
+### ChatGPT
 
-The plugin packages the Valency MCP server, host-specific guidance, and seven
-research skills. Antigravity exposes installed skills as slash commands; use
-the skill-derived commands shown by the CLI.
+In ChatGPT desktop, add `valency-oss/valency-bond` as a plugin marketplace,
+install **Valency**, and complete the browser-based authorization flow when
+prompted.
 
-### Disable, enable, or uninstall from Antigravity CLI
+ChatGPT web cannot install directly from a repository marketplace. It requires
+Valency to be distributed through the ChatGPT plugin directory or a ChatGPT
+workspace.
+
+### Cursor
 
 ```bash
-agy plugin disable valency
-agy plugin enable valency
-agy plugin uninstall valency
+cursor-agent plugin marketplace add https://github.com/valency-oss/valency-bond
 ```
 
-## Install in Grok Build
+Then open `/plugin` in Cursor Agent, select the **Marketplace** tab, and install
+**Valency**. In the Cursor IDE, use **Customize → Plugins**. Reload Cursor and
+complete the Cursor-managed authentication flow when the `valency` MCP server
+prompts you to connect.
 
-Add the repository-level marketplace, then install and trust Valency:
-
-```bash
-grok plugin marketplace add valency-oss/valency-bond
-grok plugin install valency --trust
-```
-
-The marketplace maps the user-visible `valency` name to the dedicated Grok
-package inside this repository, so testers do not need to enter its nested
-path. The `--trust` flag permits Grok to activate the package's remote MCP
-server; the package contains no local executable, hook, credential, API key,
-or bearer token.
-
-Start a new Grok session after installation, or reload plugins from the
-Plugins tab. Open `/mcps`, select `valency`, and press `i` to begin the
-browser-based OAuth flow. Grok uses dynamic client registration, so do not add
-a static client ID, client secret, callback port, or bearer token to the
-package.
-
-Native Grok installation, OAuth, and a real Valency tool call have not yet
-been verified in this environment. If OAuth fails, capture the Grok version
-and the non-sensitive callback URI, then coordinate any Valency OAuth broker
-or upstream application change separately from this package.
-
-### Update or uninstall from Grok Build
-
-Refresh the Valency marketplace and update the installed plugin:
-
-```bash
-grok plugin marketplace update valency-bond
-grok plugin update valency
-```
-
-To uninstall Valency and remove its marketplace source:
-
-```bash
-grok plugin uninstall valency
-grok plugin marketplace remove https://github.com/valency-oss/valency-bond.git
-```
-
-## Install in Gemini CLI
-
-Install the repository as a Gemini CLI extension and enable automatic updates:
+### Gemini CLI
 
 ```bash
 gemini extensions install https://github.com/valency-oss/valency-bond --auto-update
 ```
 
-Restart Gemini CLI so the extension's context, skills, and `/valency:*`
-commands are loaded. Start the browser-based authorization flow, then verify
-that the Valency server and tools are available:
+Restart Gemini CLI, then authenticate and verify the connection:
 
 ```text
 /mcp auth valency
 /mcp list
 ```
 
-### Update or uninstall from Gemini CLI
-
-```bash
-gemini extensions update valency
-gemini extensions uninstall valency
-```
-
-Restart Gemini CLI after updating so refreshed skills, commands, and context
-are loaded.
-
-## Install in GitHub Copilot CLI
-
-Add this repository as a marketplace, then install Valency:
+### GitHub Copilot CLI
 
 ```bash
 copilot plugin marketplace add valency-oss/valency-bond
 copilot plugin install valency@valency-copilot-plugin
 ```
 
-Start GitHub Copilot CLI and authenticate the plugin-provided Valency server:
+Start Copilot CLI and run `/mcp auth valency`. Valency Bond is supported in
+Copilot CLI; Copilot coding agent and Copilot code review do not currently
+support its remote OAuth MCP server.
 
-```text
-/mcp auth valency
-```
-
-The complete plugin is supported in GitHub Copilot CLI. Copilot coding agent
-and Copilot code review do not currently support remote OAuth MCP servers, so
-the Valency Bond tools are not supported on those hosted surfaces.
-
-### Update or uninstall from GitHub Copilot CLI
-
-Refresh the marketplace and update Valency:
+### Antigravity CLI
 
 ```bash
-copilot plugin marketplace update valency-copilot-plugin
-copilot plugin update valency
+agy plugin install https://github.com/valency-oss/valency-bond
+agy plugin list
 ```
 
-To uninstall the plugin and remove its marketplace:
+Open Antigravity's `/mcp` manager, select `valency`, and complete the browser
+authorization flow.
+
+### Grok Build
 
 ```bash
-copilot plugin uninstall valency
-copilot plugin marketplace remove valency-copilot-plugin
+grok plugin marketplace add valency-oss/valency-bond
+grok plugin install valency --trust
 ```
 
-## Install in Cursor
+Start a new Grok session, open `/mcps`, select `valency`, and press `i` to
+authenticate. `--trust` allows Grok to activate the package's remote MCP
+server; the package does not contain a local executable or credentials.
 
-Add this repository as a Cursor plugin marketplace:
+### Kiro
 
-```bash
-cursor-agent plugin marketplace add https://github.com/valency-oss/valency-bond
-```
-
-Start Cursor Agent CLI, open `/plugin`, switch to the **Marketplace tab**, and
-install **Valency**. Cursor does not currently provide a separate
-non-interactive plugin-install command. In the Cursor IDE, manage the same
-plugin from **Customize** after the marketplace is available.
-
-Reload Cursor after installation. When the `valency` MCP connection presents
-**Connect**, **Needs authentication**, or an equivalent action, complete the
-Cursor-managed authentication flow. The package contains no OAuth client
-secret, bearer token, custom authorization header, or local command wrapper.
-
-This initial Cursor package uses the canonical full MCP surface at
-`https://labs.valency.io/mcp/`. It does not select a reduced tool profile.
-Alongside the complete connection, the package includes the seven shared
-research skills and the existing TeX/BibTeX literature rule from the original
-Cursor repository.
-
-### Update or uninstall from Cursor
-
-Use `/plugin` in Cursor Agent CLI or **Customize → Plugins** in the Cursor IDE
-to refresh, update, disable, or uninstall Valency. These host-owned controls
-avoid editing Cursor's generated plugin or MCP state directly.
-
-## Install in Kiro
-
-Kiro's repository importer requires a Power at the repository root. This
-repository provides the complete Kiro contract through the root `POWER.md`,
-`mcp.json`, and `steering/` directory.
-
-In the Kiro IDE:
-
-1. Open the **Powers panel** and choose **Add Custom Power**.
+1. Open the **Powers** panel and choose **Add Custom Power**.
 2. Select **Import power from GitHub**.
-3. Enter `https://github.com/valency-oss/valency-bond`, then install the Power.
+3. Enter `https://github.com/valency-oss/valency-bond` and install the Power.
 4. Activate Valency and complete Kiro's browser-based authorization flow.
 
-Kiro registers the `valency` server from the bundled `mcp.json`. Kiro manages
-OAuth and dynamic client registration; the package contains no client ID,
-client secret, bearer token, or fixed callback URL.
+### Skills-only installation
 
-### Update or remove Valency from Kiro
-
-Open **Powers panel** → **Installed Powers** → **Valency**. Choose **Check for
-updates**, followed by **Install updates** when Kiro offers one.
-
-To uninstall, use the Power detail controls to remove Valency from Installed
-Powers. Removing the Power should be done in Kiro rather than by editing its
-generated MCP configuration directly.
-
-## Install in Claude Code
-
-Add this repository as a user-scoped marketplace, then install Valency:
+To install the seven guided workflows without the Valency Bond MCP server:
 
 ```bash
-claude plugin marketplace add valency-oss/valency-bond --scope user
-claude plugin install valency@valency-claude-plugin --scope user
+npx skills@latest add valency-oss/valency-bond
 ```
 
-Start or restart Claude Code, open `/mcp`, and authenticate `plugin:valency:valency` 
-when prompted. You can start the same browser flow from a terminal:
+Toggle **Valency Skills** to select or clear all seven workflows, or choose
+individual skills. This does not configure or authenticate the MCP server.
 
-```bash
-claude mcp login plugin:valency:valency
-```
+## More information
 
-Claude uses local TCP port `33418` while OAuth completes. If the port is
-unavailable, identify the process holding it and stop that process only when it
-is safe to do so:
+- [Uninstall Valency Bond](./docs/uninstall.md)
+- [Development and validation](./docs/development.md)
+- [Repository layout](./docs/repository-layout.md)
+- [MIT license](./LICENSE)
 
-```bash
-lsof -nP -iTCP:33418 -sTCP:LISTEN
-```
-
-On Windows PowerShell, use
-`Get-NetTCPConnection -LocalPort 33418 -State Listen`.
-
-### Existing manual Claude MCP connections
-
-Installing Valency never deletes an MCP connection you configured yourself.
-Authenticate and verify `plugin:valency:valency` first. If Claude shows two
-sets of Valency tools, inspect the existing entry with `claude mcp list` and
-`claude mcp get SERVER_NAME`. You may then explicitly remove that old entry
-with:
-
-```bash
-claude mcp remove SERVER_NAME --scope SCOPE
-```
-
-Replace `SERVER_NAME` with the name reported by Claude. `SCOPE` must be
-`local`, `project`, or `user`.
-
-### Update or uninstall from Claude Code
-
-```bash
-claude plugin marketplace update valency-claude-plugin
-claude plugin update valency@valency-claude-plugin --scope user
-```
-
-Restart Claude Code or run `/reload-plugins` after updating. To uninstall:
-
-```bash
-claude plugin uninstall valency@valency-claude-plugin --scope user
-claude plugin marketplace remove valency-claude-plugin --scope user
-```
-
-Uninstalling the plugin does not remove unrelated or manually configured MCP
-connections.
-
-## Install in Codex
-
-Add this repository as a marketplace, then install Valency:
-
-```bash
-codex plugin marketplace add valency-oss/valency-bond
-codex plugin add valency@valency
-```
-
-Start a new Codex session so the bundled skills and Valency Bond tools are
-loaded. If installation finishes without opening the host-managed authorization
-flow, run:
-
-```bash
-codex mcp login valency
-```
-
-Codex manages the resulting credentials. The plugin does not accept or require
-a manually configured bearer token.
-
-## Use in ChatGPT
-
-ChatGPT and Codex share the OpenAI provider package in this repository.
-ChatGPT desktop can install from a repository marketplace and complete the
-host-managed Valency Bond authorization flow.
-
-ChatGPT web does **not** install directly from a repository marketplace. Web
-distribution requires either a published directory listing or a plugin shared
-through a ChatGPT workspace. Until one of those sources contains Valency, use
-ChatGPT desktop, Claude Code, or Codex instead.
-
-## Guided workflows
-
-Valency can run seven research workflows from natural-language requests:
-
-- Build a researcher profile.
-- Map a research landscape.
-- Find papers similar to a title or stable identifier.
-- Analyze publication trends.
-- Map a collaboration network.
-- Build a researcher reading list.
-- Find fresh collaborators outside an author's established network.
-
-The Valency Bond MCP server works with research discovery, metadata, abstracts,
-citations, relationships, semantic similarity, and corpus analytics.
-Availability varies by record and source. Valency never fabricates missing
-records and submits feedback only when you explicitly request it.
-
-## License
-
-This repository and its provider integrations are MIT-licensed. See
-[`LICENSE`](./LICENSE).
-
-See the [development guide](./docs/development.md) for packaging checks and
-provider-specific validation.
-
-Organization-wide contribution, trademark, and security policies for
-`valency-oss` are maintained at
-[`valency-oss/.github`](https://github.com/valency-oss/.github).
+Organization-wide contribution, trademark, and security policies are
+maintained in [`valency-oss/.github`](https://github.com/valency-oss/.github).
