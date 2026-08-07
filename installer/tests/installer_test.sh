@@ -220,6 +220,17 @@ test_antigravity_fresh_install() {
   pass "$TEST_NAME"
 }
 
+test_antigravity_capability_order_is_irrelevant() {
+  new_case antigravity-capability-order
+  enable_antigravity
+  : > "$MOCK_STATE/agy-reversed-capabilities"
+  run_without_terminal --target antigravity --yes --no-auth
+  assert_status 0 || return
+  assert_log_contains "agy plugin install https://github.com/valency-oss/valency-bond" || return
+  assert_output_contains "Antigravity CLI installation: installed" || return
+  pass "$TEST_NAME"
+}
+
 test_gemini_fresh_install() {
   new_case gemini-fresh-install
   enable_gemini
@@ -1380,6 +1391,7 @@ test_no_harnesses
 test_claude_fresh_install
 test_codex_fresh_install
 test_antigravity_fresh_install
+test_antigravity_capability_order_is_irrelevant
 test_gemini_fresh_install
 test_copilot_fresh_install
 test_copilot_json_inventory_ignores_same_named_wrong_id

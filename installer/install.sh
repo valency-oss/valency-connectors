@@ -363,7 +363,11 @@ antigravity_has_required_commands() {
   # side-effect-free `plugin help` output is therefore the capability probe.
   plugin_help=$(agy plugin help 2>/dev/null) || return 1
   case $plugin_help in
-    *"list"*"install <target>"*) return 0 ;;
+    *"list"*) ;;
+    *) return 1 ;;
+  esac
+  case $plugin_help in
+    *"install <target>"*) return 0 ;;
   esac
   return 1
 }
@@ -1070,6 +1074,10 @@ inspect_antigravity_state() {
     *'"imports":['*) ;;
     *) printf 'Error: Antigravity CLI returned an unrecognized plugin list; no changes were made.\n' >&2; return 1 ;;
   esac
+  # Antigravity 1.1.11 normalizes every native install to source
+  # "antigravity" and exposes no repository URL. The adapter therefore never
+  # removes an existing import: it refreshes through the fixed Valency GitHub
+  # URL and verifies the resulting component inventory after installation.
   if json_entry_contains "$compact_plugins" '"name":"valency"' '"source":"antigravity"'; then
     ANTIGRAVITY_PLUGIN_PRESENT=1
   fi
@@ -1128,8 +1136,9 @@ inspect_copilot_plugin_state() {
   fi
   case $plugin_output in
     *"valency@valency-copilot-plugin ("*)
-      # Stable Copilot exposes no enabled field in this fallback. Its exact
-      # installed-plugin token is the strongest verification available.
+      # Stable Copilot 1.0.78 has no enable/disable command and exposes no
+      # enabled field in this fallback. Its exact installed-plugin token is
+      # the strongest activation evidence that version provides.
       COPILOT_PLUGIN_PRESENT=1
       COPILOT_PLUGIN_ENABLED=1
       ;;

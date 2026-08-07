@@ -39,7 +39,11 @@ if [ "$provider" = agy ]; then
   case "$*" in
     "plugin help")
       [ ! -f "$MOCK_STATE/agy-missing-capability" ] || exit 1
-      printf 'Commands: list install <target> uninstall enable disable validate\n'
+      if [ -f "$MOCK_STATE/agy-reversed-capabilities" ]; then
+        printf 'Commands: install <target> list uninstall enable disable validate\n'
+      else
+        printf 'Commands: list install <target> uninstall enable disable validate\n'
+      fi
       ;;
     "plugin list")
       [ ! -f "$MOCK_STATE/fail-agy-plugin-list" ] || exit 1
