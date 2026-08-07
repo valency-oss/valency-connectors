@@ -243,6 +243,35 @@ test_copilot_fresh_install() {
   pass "$TEST_NAME"
 }
 
+test_copilot_json_inventory_ignores_same_named_wrong_id() {
+  new_case copilot-json-wrong-id
+  enable_copilot
+  : > "$MOCK_STATE/copilot-marketplace"
+  : > "$MOCK_STATE/copilot-json-inventory"
+  : > "$MOCK_STATE/copilot-plugin-wrong-id"
+  run_without_terminal --target copilot --yes --no-auth
+  assert_status 0 || return
+  assert_log_contains "copilot plugin install valency@valency-copilot-plugin" || return
+  assert_log_not_contains "copilot plugin update valency" || return
+  assert_output_contains "GitHub Copilot CLI installation: installed" || return
+  pass "$TEST_NAME"
+}
+
+test_copilot_json_verification_rejects_disabled_plugin() {
+  new_case copilot-json-disabled
+  enable_copilot
+  : > "$MOCK_STATE/copilot-marketplace"
+  : > "$MOCK_STATE/copilot-plugin"
+  : > "$MOCK_STATE/copilot-json-inventory"
+  : > "$MOCK_STATE/copilot-plugin-disabled"
+  run_without_terminal --target copilot --yes --no-auth
+  assert_status 1 || return
+  assert_log_contains "copilot plugin update valency" || return
+  assert_output_contains "GitHub Copilot CLI installation: failed verification" || return
+  assert_output_not_contains "In GitHub Copilot CLI: run /mcp auth valency." || return
+  pass "$TEST_NAME"
+}
+
 test_grok_fresh_install() {
   new_case grok-fresh-install
   enable_grok
@@ -1353,6 +1382,8 @@ test_codex_fresh_install
 test_antigravity_fresh_install
 test_gemini_fresh_install
 test_copilot_fresh_install
+test_copilot_json_inventory_ignores_same_named_wrong_id
+test_copilot_json_verification_rejects_disabled_plugin
 test_grok_fresh_install
 test_new_provider_rerun_updates
 test_new_provider_verification_failure_is_isolated

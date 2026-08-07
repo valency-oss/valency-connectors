@@ -112,11 +112,17 @@ if [ "$provider" = copilot ]; then
     "plugins list --kind plugin --scope user --json")
       # Copilot 1.0.78 documents this inventory but does not ship it yet.
       [ -f "$MOCK_STATE/copilot-json-inventory" ] || exit 1
-      if [ -f "$MOCK_STATE/copilot-plugin" ] && [ ! -f "$MOCK_STATE/fail-copilot-verification" ]; then
-        printf '[{"kind":"plugin","name":"valency","id":"valency@valency-copilot-plugin","scope":"user","enabled":true}]\n'
-      else
-        printf '[]\n'
+      printf '['
+      separator=""
+      if [ -f "$MOCK_STATE/copilot-plugin-wrong-id" ]; then
+        printf '%s{"kind":"plugin","name":"valency","id":"valency@lookalike-marketplace","scope":"user","enabled":true}' "$separator"
+        separator=,
       fi
+      if [ -f "$MOCK_STATE/copilot-plugin" ] && [ ! -f "$MOCK_STATE/fail-copilot-verification" ]; then
+        if [ -f "$MOCK_STATE/copilot-plugin-disabled" ]; then enabled=false; else enabled=true; fi
+        printf '%s{"kind":"plugin","name":"valency","id":"valency@valency-copilot-plugin","scope":"user","enabled":%s}' "$separator" "$enabled"
+      fi
+      printf ']\n'
       ;;
     "plugin marketplace add valency-oss/valency-bond")
       [ ! -f "$MOCK_STATE/fail-copilot-marketplace-add" ] || exit 1

@@ -78,6 +78,7 @@ COPILOT_SELECTED=0
 COPILOT_MARKETPLACE_PRESENT=0
 COPILOT_MARKETPLACE_CONFLICT=0
 COPILOT_PLUGIN_PRESENT=0
+COPILOT_PLUGIN_ENABLED=0
 COPILOT_INSTALL_RESULT="not selected"
 COPILOT_AUTH_RESULT="not offered"
 COPILOT_AUTH_AVAILABLE=0
@@ -1102,6 +1103,7 @@ inspect_gemini_state() {
 
 inspect_copilot_plugin_state() {
   COPILOT_PLUGIN_PRESENT=0
+  COPILOT_PLUGIN_ENABLED=0
   # Current Copilot docs define a JSON inventory command, but stable 1.0.78
   # still reports it unavailable. Prefer it when present and otherwise parse
   # only the exact installed-plugin token from the stable text command.
@@ -1111,8 +1113,11 @@ inspect_copilot_plugin_state() {
       \[*\]) ;;
       *) printf 'Error: GitHub Copilot CLI returned an unrecognized JSON plugin list; no changes were made.\n' >&2; return 1 ;;
     esac
-    if json_entry_contains "$compact_plugins" '"name":"valency"' '"kind":"plugin"' '"scope":"user"'; then
+    if json_entry_contains "$compact_plugins" '"id":"valency@valency-copilot-plugin"' '"name":"valency"' '"kind":"plugin"' '"scope":"user"'; then
       COPILOT_PLUGIN_PRESENT=1
+      if json_entry_contains "$compact_plugins" '"id":"valency@valency-copilot-plugin"' '"name":"valency"' '"kind":"plugin"' '"scope":"user"' '"enabled":true'; then
+        COPILOT_PLUGIN_ENABLED=1
+      fi
     fi
     return 0
   fi
@@ -1122,7 +1127,12 @@ inspect_copilot_plugin_state() {
     return 1
   fi
   case $plugin_output in
-    *"valency@valency-copilot-plugin ("*) COPILOT_PLUGIN_PRESENT=1 ;;
+    *"valency@valency-copilot-plugin ("*)
+      # Stable Copilot exposes no enabled field in this fallback. Its exact
+      # installed-plugin token is the strongest verification available.
+      COPILOT_PLUGIN_PRESENT=1
+      COPILOT_PLUGIN_ENABLED=1
+      ;;
   esac
 }
 
@@ -1659,7 +1669,7 @@ install_gemini() {
 
 verify_copilot_plugin() {
   inspect_copilot_plugin_state || return 1
-  [ "$COPILOT_PLUGIN_PRESENT" -eq 1 ]
+  [ "$COPILOT_PLUGIN_PRESENT" -eq 1 ] && [ "$COPILOT_PLUGIN_ENABLED" -eq 1 ]
 }
 
 install_copilot() {
