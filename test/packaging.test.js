@@ -699,7 +699,27 @@ test("repository metadata and installation docs point at the monorepo", () => {
 
   const readme = readFileSync("README.md", "utf8");
   const development = readFileSync("docs/development.md", "utf8");
+  const uninstall = readFileSync("docs/uninstall.md", "utf8");
   assert.match(readme, /^# Valency Bond$/m);
+  assert.match(readme, /\.\/docs\/assets\/horizontal_solid_cyan_valency\.svg/);
+  assert.equal(
+    existsSync("docs/assets/horizontal_solid_cyan_valency.svg"),
+    true,
+  );
+  for (const surface of [
+    "Claude Code",
+    "Codex",
+    "ChatGPT",
+    "Cursor",
+    "Gemini CLI",
+    "GitHub Copilot CLI",
+    "Antigravity CLI",
+    "Grok Build",
+    "Kiro",
+    "Skills only",
+  ]) {
+    assert.match(readme, new RegExp(`^### ${surface}$`, "m"));
+  }
   assert.match(
     readme,
     /claude plugin marketplace add valency-oss\/valency-bond --scope user/,
@@ -711,23 +731,21 @@ test("repository metadata and installation docs point at the monorepo", () => {
     readme,
     /cursor-agent plugin marketplace add https:\/\/github\.com\/valency-oss\/valency-bond/,
   );
-  assert.match(readme, /canonical full MCP surface/);
   assert.doesNotMatch(readme, /mcp\/authoring|valency-authoring/);
   assert.match(
     readme,
     /npx skills@latest add valency-oss\/valency-bond(?=\s|`|$)/,
   );
-  assert.match(readme, /toggle \*\*Valency Skills\*\* to select or clear all seven/);
-  assert.match(readme, /does not configure the Valency Bond MCP server/);
+  assert.match(readme, /Toggle \*\*Valency Skills\*\* to select or clear all seven/);
+  assert.match(readme, /does not configure or authenticate the MCP server/);
   assert.match(
     readme,
     /gemini extensions install https:\/\/github\.com\/valency-oss\/valency-bond --auto-update/,
   );
   assert.match(readme, /\/mcp auth valency/);
-  assert.match(readme, /gemini extensions update valency/);
-  assert.match(readme, /gemini extensions uninstall valency/);
   assert.match(readme, /ChatGPT web/);
   assert.match(readme, /Valency Bond MCP server/);
+  assert.match(readme, /\.\/docs\/uninstall\.md/);
   assert.match(readme, /\.\/docs\/development\.md/);
   assert.doesNotMatch(readme, /valency-gemini/);
   assert.doesNotMatch(readme, /^## Permissions$/m);
@@ -744,29 +762,25 @@ test("repository metadata and installation docs point at the monorepo", () => {
     development,
     /static checks for the native Antigravity plugin, the Gemini\s+extension/,
   );
+  assert.match(uninstall, /^# Uninstall Valency Bond$/m);
 });
 
 test("Kiro documentation uses the supported root GitHub lifecycle", () => {
   const readme = readFileSync("README.md", "utf8");
   const development = readFileSync("docs/development.md", "utf8");
+  const uninstall = readFileSync("docs/uninstall.md", "utf8");
   const kiroSection = readme.match(
-    /^## Install in Kiro$([\s\S]*?)(?=^## )/m,
+    /^### Kiro$([\s\S]*?)(?=^### |^## )/m,
   )?.[1];
 
   assert.ok(kiroSection, "README must contain a Kiro install section");
-  assert.match(
-    readme,
-    /\| \[Repository root \(Kiro\)\]\(\.\) \| Kiro IDE \| `POWER\.md` \|/,
-  );
-  assert.match(kiroSection, /Powers panel/);
+  assert.match(kiroSection, /Powers/);
   assert.match(kiroSection, /Add Custom Power/);
   assert.match(kiroSection, /Import power from\s+GitHub/);
   assert.match(kiroSection, /https:\/\/github\.com\/valency-oss\/valency-bond/);
-  assert.match(kiroSection, /root `POWER\.md`,\s+`mcp\.json`, and `steering\/`/);
-  assert.match(kiroSection, /Check for\s+updates/);
-  assert.match(kiroSection, /Install\s+updates/);
-  assert.match(kiroSection, /remove Valency from Installed\s+Powers/i);
   assert.doesNotMatch(kiroSection, /plugins\/kiro\/valency/);
+  assert.match(uninstall, /^## Kiro$/m);
+  assert.match(uninstall, /Powers → Installed Powers → Valency/);
 
   assert.match(development, /Kiro Power/);
   assert.match(development, /`POWER\.md` frontmatter/);
@@ -780,6 +794,41 @@ test("Kiro documentation uses the supported root GitHub lifecycle", () => {
   assert.match(development, /Import power from\s+GitHub/);
   assert.match(development, /select the repository root/);
   assert.match(development, /dynamic client registration/);
+});
+
+test("uninstall instructions live in the linked guide", () => {
+  const readme = readFileSync("README.md", "utf8");
+  const uninstall = readFileSync("docs/uninstall.md", "utf8");
+
+  assert.match(readme, /\[Uninstall Valency Bond\]\(\.\/docs\/uninstall\.md\)/);
+  assert.doesNotMatch(readme, /^### (?:Update or |Disable, enable, or )?Uninstall/m);
+
+  for (const surface of [
+    "Claude Code",
+    "Codex",
+    "ChatGPT",
+    "Cursor",
+    "Gemini CLI",
+    "GitHub Copilot CLI",
+    "Antigravity CLI",
+    "Grok Build",
+    "Kiro",
+    "Skills-only installation",
+  ]) {
+    assert.match(uninstall, new RegExp(`^## ${surface}$`, "m"));
+  }
+
+  for (const command of [
+    "claude plugin uninstall valency@valency-claude-plugin --scope user",
+    "codex plugin remove valency@valency",
+    "gemini extensions uninstall valency",
+    "copilot plugin uninstall valency",
+    "agy plugin uninstall valency",
+    "grok plugin uninstall valency",
+    "npx skills@latest remove",
+  ]) {
+    assert.ok(uninstall.includes(command), `${command} must be documented`);
+  }
 });
 
 test("repository layout guide explains every intentional root entry", () => {
@@ -832,36 +881,19 @@ test("repository layout guide explains every intentional root entry", () => {
 test("Antigravity and Gemini documentation keep separate lifecycle contracts", () => {
   const readme = readFileSync("README.md", "utf8");
   const development = readFileSync("docs/development.md", "utf8");
+  const uninstall = readFileSync("docs/uninstall.md", "utf8");
   const antigravitySection = readme.match(
-    /^## Install in Antigravity CLI$([\s\S]*?)(?=^## )/m,
+    /^### Antigravity CLI$([\s\S]*?)(?=^### |^## )/m,
   )?.[1];
 
   assert.ok(antigravitySection, "README must contain an Antigravity install section");
-  assert.match(
-    readme,
-    /\| \[Repository root \(Antigravity\)\]\(\.\) \| Antigravity CLI \| `plugin\.json` \|/,
-  );
-  assert.match(
-    readme,
-    /\| \[Repository root \(Gemini\)\]\(\.\) \| Gemini CLI \| `gemini-extension\.json` \|/,
-  );
   assert.match(
     antigravitySection,
     /agy plugin install https:\/\/github\.com\/valency-oss\/valency-bond/,
   );
   assert.match(antigravitySection, /agy plugin list/);
-  assert.match(antigravitySection, /interactive `\/mcp` manager/);
-  assert.match(
-    antigravitySection,
-    /OAuth and remote tool use have not yet been verified end to end/,
-  );
-  assert.match(
-    antigravitySection,
-    /MCP redirect allowlist and Clerk OAuth\s+application must be updated and deployed separately/,
-  );
-  assert.match(antigravitySection, /agy plugin disable valency/);
-  assert.match(antigravitySection, /agy plugin enable valency/);
-  assert.match(antigravitySection, /agy plugin uninstall valency/);
+  assert.match(antigravitySection, /`\/mcp` manager/);
+  assert.match(uninstall, /agy plugin uninstall valency/);
   assert.doesNotMatch(
     antigravitySection,
     /--auto-update|gemini extensions|\/mcp auth valency|33418|agy plugin update/i,
@@ -910,24 +942,22 @@ test("Copilot documentation uses marketplace-first CLI-only support", () => {
 test("Cursor documentation keeps installation interactive and profile-free", () => {
   const readme = readFileSync("README.md", "utf8");
   const development = readFileSync("docs/development.md", "utf8");
+  const uninstall = readFileSync("docs/uninstall.md", "utf8");
   const cursorSection = readme.match(
-    /^## Install in Cursor$([\s\S]*?)(?=^## )/m,
+    /^### Cursor$([\s\S]*?)(?=^### |^## )/m,
   )?.[1];
 
   assert.ok(cursorSection, "README must contain a Cursor install section");
-  assert.match(
-    readme,
-    /\| \[`plugins\/cursor\/valency`\]\(\.\/plugins\/cursor\/valency\) \| Cursor IDE and Agent CLI \| `\.cursor-plugin\/plugin\.json` \|/,
-  );
   assert.match(
     cursorSection,
     /cursor-agent plugin marketplace add https:\/\/github\.com\/valency-oss\/valency-bond/,
   );
   assert.match(cursorSection, /`\/plugin`/);
-  assert.match(cursorSection, /Marketplace tab/);
+  assert.match(cursorSection, /Marketplace\*\* tab/);
   assert.match(cursorSection, /Cursor-managed authentication/);
-  assert.match(cursorSection, /canonical full MCP surface/);
   assert.match(cursorSection, /Customize/);
+  assert.match(uninstall, /^## Cursor$/m);
+  assert.match(uninstall, /disable or uninstall \*\*Valency\*\*/);
   assert.doesNotMatch(
     cursorSection,
     /mcp\/authoring|valency-authoring|authoring profile|install\.sh/i,
@@ -946,28 +976,23 @@ test("Grok documentation uses the private marketplace lifecycle", () => {
   const readme = readFileSync("README.md", "utf8");
   const development = readFileSync("docs/development.md", "utf8");
   const layout = readFileSync("docs/repository-layout.md", "utf8");
+  const uninstall = readFileSync("docs/uninstall.md", "utf8");
   const grokSection = readme.match(
-    /^## Install in Grok Build$([\s\S]*?)(?=^## |(?![\s\S]))/m,
+    /^### Grok Build$([\s\S]*?)(?=^### |^## |(?![\s\S]))/m,
   )?.[1];
 
   assert.ok(grokSection, "README must contain a Grok Build install section");
-  assert.match(
-    readme,
-    /\| \[`plugins\/grok\/valency`\]\(\.\/plugins\/grok\/valency\) \| Grok Build \| `\.grok-plugin\/plugin\.json` \|/,
-  );
   assert.match(
     grokSection,
     /grok plugin marketplace add valency-oss\/valency-bond/,
   );
   assert.match(grokSection, /grok plugin install valency --trust/);
-  assert.match(grokSection, /private during development/i);
-  assert.match(grokSection, /authorized Git access/i);
+  assert.match(readme, /repository is private/i);
+  assert.match(readme, /GitHub credentials\s+> with access/i);
   assert.match(grokSection, /`\/mcps`/);
-  assert.match(grokSection, /grok plugin marketplace update valency/);
-  assert.match(grokSection, /grok plugin update valency/);
-  assert.match(grokSection, /grok plugin uninstall valency/);
+  assert.match(uninstall, /grok plugin uninstall valency/);
   assert.match(
-    grokSection,
+    uninstall,
     /grok plugin marketplace remove https:\/\/github\.com\/valency-oss\/valency-bond\.git/,
   );
   assert.doesNotMatch(
