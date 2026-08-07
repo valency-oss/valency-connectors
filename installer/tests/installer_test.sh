@@ -306,6 +306,44 @@ test_grok_fresh_install() {
   pass "$TEST_NAME"
 }
 
+test_gemini_foreign_extension_source_fails_closed() {
+  new_case gemini-foreign-source
+  enable_gemini
+  : > "$MOCK_STATE/gemini-extension"
+  : > "$MOCK_STATE/gemini-extension-foreign"
+  run_without_terminal --target gemini --yes --no-auth
+  assert_status 1 || return
+  assert_output_contains "Gemini CLI installation: failed (extension conflict)" || return
+  assert_output_contains "does not come from valency-oss/valency-bond" || return
+  assert_no_mutations || return
+  pass "$TEST_NAME"
+}
+
+test_copilot_foreign_marketplace_source_fails_closed() {
+  new_case copilot-foreign-source
+  enable_copilot
+  : > "$MOCK_STATE/copilot-marketplace-foreign"
+  run_without_terminal --target copilot --yes --no-auth
+  assert_status 1 || return
+  assert_output_contains "GitHub Copilot CLI installation: failed (marketplace conflict)" || return
+  assert_output_contains "does not come from valency-oss/valency-bond" || return
+  assert_no_mutations || return
+  pass "$TEST_NAME"
+}
+
+test_grok_foreign_source_fails_closed() {
+  new_case grok-foreign-source
+  enable_grok
+  : > "$MOCK_STATE/grok-marketplace-foreign"
+  : > "$MOCK_STATE/grok-plugin-foreign"
+  run_without_terminal --target grok --yes --no-auth
+  assert_status 1 || return
+  assert_output_contains "Grok Build installation: failed (source conflict)" || return
+  assert_output_contains "does not come from valency-oss/valency-bond" || return
+  assert_no_mutations || return
+  pass "$TEST_NAME"
+}
+
 test_new_provider_rerun_updates() {
   new_case new-provider-rerun-updates
   enable_antigravity
@@ -1442,6 +1480,9 @@ test_copilot_fresh_install
 test_copilot_json_inventory_ignores_same_named_wrong_id
 test_copilot_json_verification_rejects_disabled_plugin
 test_grok_fresh_install
+test_gemini_foreign_extension_source_fails_closed
+test_copilot_foreign_marketplace_source_fails_closed
+test_grok_foreign_source_fails_closed
 test_new_provider_rerun_updates
 test_new_provider_verification_failure_is_isolated
 test_new_provider_capability_failure_is_isolated

@@ -77,7 +77,12 @@ if [ "$provider" = gemini ]; then
       [ ! -f "$MOCK_STATE/fail-gemini-extension-list" ] || exit 1
       if [ -f "$MOCK_STATE/gemini-extension" ] && [ ! -f "$MOCK_STATE/fail-gemini-verification" ]; then
         if [ -f "$MOCK_STATE/gemini-extension-disabled" ]; then active=false; else active=true; fi
-        printf '[{"name":"valency","version":"1.1.0","isActive":%s,"installMetadata":{"type":"git","source":"https://github.com/valency-oss/valency-bond"}}]\n' "$active"
+        if [ -f "$MOCK_STATE/gemini-extension-foreign" ]; then
+          extension_source=https://github.com/imitator/valency-lookalike
+        else
+          extension_source=https://github.com/valency-oss/valency-bond
+        fi
+        printf '[{"name":"valency","version":"1.1.0","isActive":%s,"installMetadata":{"type":"git","source":"%s"}}]\n' "$active" "$extension_source"
       else
         printf '[]\n'
       fi
@@ -107,7 +112,9 @@ if [ "$provider" = copilot ]; then
     "plugin marketplace list")
       [ ! -f "$MOCK_STATE/fail-copilot-marketplace-list" ] || exit 1
       printf 'Included with GitHub Copilot:\n  ◆ copilot-plugins (GitHub: github/copilot-plugins)\n'
-      if [ -f "$MOCK_STATE/copilot-marketplace" ]; then
+      if [ -f "$MOCK_STATE/copilot-marketplace-foreign" ]; then
+        printf '\nRegistered marketplaces:\n  • valency-copilot-plugin (GitHub: imitator/valency-lookalike)\n'
+      elif [ -f "$MOCK_STATE/copilot-marketplace" ]; then
         printf '\nRegistered marketplaces:\n  • valency-copilot-plugin (GitHub: valency-oss/valency-bond)\n'
       fi
       ;;
@@ -161,7 +168,9 @@ if [ "$provider" = grok ]; then
   case "$*" in
     "plugin marketplace list --json")
       [ ! -f "$MOCK_STATE/fail-grok-marketplace-list" ] || exit 1
-      if [ -f "$MOCK_STATE/grok-marketplace" ]; then
+      if [ -f "$MOCK_STATE/grok-marketplace-foreign" ]; then
+        printf '[{"name":"valency-bond","kind":"git","source":{"url":"https://github.com/imitator/valency-lookalike.git","branch":null}}]\n'
+      elif [ -f "$MOCK_STATE/grok-marketplace" ]; then
         printf '[{"name":"valency-bond","kind":"git","source":{"url":"https://github.com/valency-oss/valency-bond.git","branch":null}}]\n'
       else
         printf '[]\n'
@@ -169,7 +178,9 @@ if [ "$provider" = grok ]; then
       ;;
     "plugin list --json")
       [ ! -f "$MOCK_STATE/fail-grok-plugin-list" ] || exit 1
-      if [ -f "$MOCK_STATE/grok-plugin" ] && [ ! -f "$MOCK_STATE/fail-grok-verification" ]; then
+      if [ -f "$MOCK_STATE/grok-plugin-foreign" ]; then
+        printf '[{"status":"installed","name":"valency","repo_key":"valency-bond","version":"0.1.0","source":"https://github.com/imitator/valency-lookalike.git","marketplace":"valency-bond"}]\n'
+      elif [ -f "$MOCK_STATE/grok-plugin" ] && [ ! -f "$MOCK_STATE/fail-grok-verification" ]; then
         printf '[{"status":"installed","name":"valency","repo_key":"valency-bond","version":"0.1.0","source":"https://github.com/valency-oss/valency-bond.git","marketplace":"valency-bond"}]\n'
       else
         printf '[]\n'
