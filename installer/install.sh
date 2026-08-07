@@ -1913,7 +1913,7 @@ prepare_authentication() {
     provider_selected=$PROVIDER_STATE_VALUE
     read_provider_state "$provider" INSTALL_RESULT
     if [ "$provider_selected" -eq 1 ] && installation_succeeded "$PROVIDER_STATE_VALUE"; then
-      if [ "$DRY_RUN" -eq 1 ]; then
+      if [ "$DRY_RUN" -eq 1 ] && [ "$PROVIDER_AUTH_METHOD" = in-host ]; then
         if [ "$AUTH_MODE" = no ]; then
           write_provider_state "$provider" AUTH_RESULT "skipped"
         else

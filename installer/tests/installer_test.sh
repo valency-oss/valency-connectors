@@ -401,6 +401,22 @@ test_in_host_authentication_is_planned_during_dry_run() {
   pass "$TEST_NAME"
 }
 
+test_standalone_dry_run_preserves_inspected_auth_states() {
+  new_case standalone-auth-dry-run
+  enable_claude
+  enable_codex
+  : > "$MOCK_STATE/claude-auth-connected"
+  : > "$MOCK_STATE/codex-auth-capability-missing"
+  run_with_terminal --target claude --target codex --yes --auth --dry-run
+  assert_status 0 || return
+  assert_output_contains "Claude Code authentication: already connected" || return
+  assert_output_contains "Codex authentication: unavailable" || return
+  assert_output_not_contains "Claude Code authentication: planned" || return
+  assert_output_not_contains "Codex authentication: planned" || return
+  assert_no_mutations || return
+  pass "$TEST_NAME"
+}
+
 test_in_host_authentication_never_launches_new_hosts() {
   new_case in-host-authentication
   enable_antigravity
@@ -1431,6 +1447,7 @@ test_new_provider_verification_failure_is_isolated
 test_new_provider_capability_failure_is_isolated
 test_all_providers_dry_run_is_non_destructive
 test_in_host_authentication_is_planned_during_dry_run
+test_standalone_dry_run_preserves_inspected_auth_states
 test_in_host_authentication_never_launches_new_hosts
 test_interactive_selector_defaults_to_all_six_providers
 test_rerun_updates_both_providers
