@@ -1,5 +1,9 @@
 #!/usr/bin/env bash
 
+# Provider state is read and written through controlled Bash-3.2-compatible
+# accessors, which ShellCheck cannot follow through eval.
+# shellcheck disable=SC2034
+
 set -u
 
 MARKETPLACE_SOURCE="valency-oss/valency-bond"
@@ -11,6 +15,10 @@ CODEX_PLUGIN="valency@valency"
 TARGETS_SPECIFIED=0
 TARGET_CLAUDE=0
 TARGET_CODEX=0
+TARGET_ANTIGRAVITY=0
+TARGET_GEMINI=0
+TARGET_COPILOT=0
+TARGET_GROK=0
 TARGET_ALL=0
 ASSUME_YES=0
 ALLOW_MIGRATION=0
@@ -45,6 +53,53 @@ CLAUDE_AUTH_STATE="unknown"
 CODEX_AUTH_STATE="unknown"
 CLAUDE_AUTH_SELECTED=0
 CODEX_AUTH_SELECTED=0
+ANTIGRAVITY_EXECUTABLE_FOUND=0
+ANTIGRAVITY_AVAILABLE=0
+ANTIGRAVITY_SELECTED=0
+ANTIGRAVITY_PLUGIN_PRESENT=0
+ANTIGRAVITY_INSTALL_RESULT="not selected"
+ANTIGRAVITY_AUTH_RESULT="not offered"
+ANTIGRAVITY_AUTH_AVAILABLE=0
+ANTIGRAVITY_AUTH_STATE="in-host"
+ANTIGRAVITY_AUTH_SELECTED=0
+GEMINI_EXECUTABLE_FOUND=0
+GEMINI_AVAILABLE=0
+GEMINI_SELECTED=0
+GEMINI_EXTENSION_PRESENT=0
+GEMINI_EXTENSION_CONFLICT=0
+GEMINI_INSTALL_RESULT="not selected"
+GEMINI_AUTH_RESULT="not offered"
+GEMINI_AUTH_AVAILABLE=0
+GEMINI_AUTH_STATE="in-host"
+GEMINI_AUTH_SELECTED=0
+COPILOT_EXECUTABLE_FOUND=0
+COPILOT_AVAILABLE=0
+COPILOT_SELECTED=0
+COPILOT_MARKETPLACE_PRESENT=0
+COPILOT_MARKETPLACE_CONFLICT=0
+COPILOT_PLUGIN_PRESENT=0
+COPILOT_INSTALL_RESULT="not selected"
+COPILOT_AUTH_RESULT="not offered"
+COPILOT_AUTH_AVAILABLE=0
+COPILOT_AUTH_STATE="in-host"
+COPILOT_AUTH_SELECTED=0
+GROK_EXECUTABLE_FOUND=0
+GROK_AVAILABLE=0
+GROK_SELECTED=0
+GROK_MARKETPLACE_PRESENT=0
+GROK_MARKETPLACE_CONFLICT=0
+GROK_PLUGIN_PRESENT=0
+GROK_PLUGIN_CONFLICT=0
+GROK_INSTALL_RESULT="not selected"
+GROK_AUTH_RESULT="not offered"
+GROK_AUTH_AVAILABLE=0
+GROK_AUTH_STATE="in-host"
+GROK_AUTH_SELECTED=0
+
+# Provider order is user-visible in the checklist, plan, execution, and
+# summary. Indexed arrays are supported by Bash 3.2; provider-specific state
+# remains named so each adapter is easy to inspect in this single-file script.
+PROVIDER_IDS=(claude codex antigravity gemini copilot grok)
 
 # The interactive checklist is deliberately generic so harness installation
 # and optional authentication share one keyboard model. Parallel indexed
@@ -64,6 +119,91 @@ MENU_MESSAGE=""
 MENU_KEY=""
 MENU_SIGNAL_STATUS=0
 
+load_provider_metadata() {
+  case $1 in
+    claude)
+      PROVIDER_LABEL="Claude Code"
+      PROVIDER_EXECUTABLE=claude
+      PROVIDER_COMPONENT=plugin
+      PROVIDER_AUTH_METHOD=standalone
+      ;;
+    codex)
+      PROVIDER_LABEL="Codex"
+      PROVIDER_EXECUTABLE=codex
+      PROVIDER_COMPONENT=plugin
+      PROVIDER_AUTH_METHOD=standalone
+      ;;
+    antigravity)
+      PROVIDER_LABEL="Antigravity CLI"
+      PROVIDER_EXECUTABLE=agy
+      PROVIDER_COMPONENT=plugin
+      PROVIDER_AUTH_METHOD=in-host
+      ;;
+    gemini)
+      PROVIDER_LABEL="Gemini CLI"
+      PROVIDER_EXECUTABLE=gemini
+      PROVIDER_COMPONENT=extension
+      PROVIDER_AUTH_METHOD=in-host
+      ;;
+    copilot)
+      PROVIDER_LABEL="GitHub Copilot CLI"
+      PROVIDER_EXECUTABLE=copilot
+      PROVIDER_COMPONENT=plugin
+      PROVIDER_AUTH_METHOD=in-host
+      ;;
+    grok)
+      PROVIDER_LABEL="Grok Build"
+      PROVIDER_EXECUTABLE=grok
+      PROVIDER_COMPONENT=plugin
+      PROVIDER_AUTH_METHOD=in-host
+      ;;
+    *) return 1 ;;
+  esac
+}
+
+load_provider_prefix() {
+  case $1 in
+    claude) PROVIDER_PREFIX=CLAUDE ;;
+    codex) PROVIDER_PREFIX=CODEX ;;
+    antigravity) PROVIDER_PREFIX=ANTIGRAVITY ;;
+    gemini) PROVIDER_PREFIX=GEMINI ;;
+    copilot) PROVIDER_PREFIX=COPILOT ;;
+    grok) PROVIDER_PREFIX=GROK ;;
+    *) return 1 ;;
+  esac
+}
+
+read_provider_state() {
+  load_provider_prefix "$1" || return 1
+  case $2 in
+    EXECUTABLE_FOUND|AVAILABLE|SELECTED|INSTALL_RESULT|AUTH_AVAILABLE|AUTH_STATE|AUTH_SELECTED|AUTH_RESULT) ;;
+    *) return 1 ;;
+  esac
+  eval "PROVIDER_STATE_VALUE=\${${PROVIDER_PREFIX}_$2}"
+}
+
+write_provider_state() {
+  load_provider_prefix "$1" || return 1
+  case $2 in
+    EXECUTABLE_FOUND|AVAILABLE|SELECTED|INSTALL_RESULT|AUTH_AVAILABLE|AUTH_STATE|AUTH_SELECTED|AUTH_RESULT) ;;
+    *) return 1 ;;
+  esac
+  PROVIDER_STATE_NEW_VALUE=$3
+  eval "${PROVIDER_PREFIX}_$2=\${PROVIDER_STATE_NEW_VALUE}"
+}
+
+read_provider_target() {
+  case $1 in
+    claude) PROVIDER_STATE_VALUE=$TARGET_CLAUDE ;;
+    codex) PROVIDER_STATE_VALUE=$TARGET_CODEX ;;
+    antigravity) PROVIDER_STATE_VALUE=$TARGET_ANTIGRAVITY ;;
+    gemini) PROVIDER_STATE_VALUE=$TARGET_GEMINI ;;
+    copilot) PROVIDER_STATE_VALUE=$TARGET_COPILOT ;;
+    grok) PROVIDER_STATE_VALUE=$TARGET_GROK ;;
+    *) return 1 ;;
+  esac
+}
+
 print_help() {
   cat <<'EOF'
 Valency plugin installer
@@ -72,7 +212,8 @@ Usage:
   install.sh [options]
 
 Options:
-  --target claude|codex|all  Select a provider; may be repeated.
+  --target claude|codex|antigravity|gemini|copilot|grok|all
+                             Select a provider; may be repeated.
   --yes                      Confirm the displayed plan.
   --migrate                  Approve legacy marketplace migration.
   --auth                     Offer authentication after installation.
@@ -152,6 +293,10 @@ add_target() {
   case $1 in
     claude) TARGET_CLAUDE=1 ;;
     codex) TARGET_CODEX=1 ;;
+    antigravity) TARGET_ANTIGRAVITY=1 ;;
+    gemini) TARGET_GEMINI=1 ;;
+    copilot) TARGET_COPILOT=1 ;;
+    grok) TARGET_GROK=1 ;;
     all) TARGET_ALL=1 ;;
     '')
       printf 'Error: --target requires a value.\n' >&2
@@ -213,21 +358,105 @@ codex_has_auth_commands() {
     codex mcp login --help >/dev/null 2>&1
 }
 
+antigravity_has_required_commands() {
+  # Antigravity's plugin subcommands do not accept --help individually. Its
+  # side-effect-free `plugin help` output is therefore the capability probe.
+  plugin_help=$(agy plugin help 2>/dev/null) || return 1
+  case $plugin_help in
+    *"list"*"install <target>"*) return 0 ;;
+  esac
+  return 1
+}
+
+gemini_has_required_commands() {
+  gemini extensions install --help >/dev/null 2>&1 &&
+    gemini extensions list --help >/dev/null 2>&1 &&
+    gemini extensions update --help >/dev/null 2>&1 &&
+    gemini extensions enable --help >/dev/null 2>&1
+}
+
+copilot_has_required_commands() {
+  copilot plugin marketplace add --help >/dev/null 2>&1 &&
+    copilot plugin marketplace list --help >/dev/null 2>&1 &&
+    copilot plugin marketplace update --help >/dev/null 2>&1 &&
+    copilot plugin install --help >/dev/null 2>&1 &&
+    copilot plugin update --help >/dev/null 2>&1 &&
+    copilot plugin list --help >/dev/null 2>&1
+}
+
+grok_has_required_commands() {
+  grok plugin marketplace add --help >/dev/null 2>&1 &&
+    grok plugin marketplace list --help >/dev/null 2>&1 &&
+    grok plugin marketplace update --help >/dev/null 2>&1 &&
+    grok plugin install --help >/dev/null 2>&1 &&
+    grok plugin update --help >/dev/null 2>&1 &&
+    grok plugin list --help >/dev/null 2>&1
+}
+
+provider_has_required_commands() {
+  case $1 in
+    claude) claude_has_required_commands ;;
+    codex) codex_has_required_commands ;;
+    antigravity) antigravity_has_required_commands ;;
+    gemini) gemini_has_required_commands ;;
+    copilot) copilot_has_required_commands ;;
+    grok) grok_has_required_commands ;;
+    *) return 1 ;;
+  esac
+}
+
+provider_has_auth_commands() {
+  case $1 in
+    claude) claude_has_auth_commands ;;
+    codex) codex_has_auth_commands ;;
+    *) return 1 ;;
+  esac
+}
+
 detect_provider_executables() {
-  if command -v claude >/dev/null 2>&1; then
-    CLAUDE_EXECUTABLE_FOUND=1
-    if claude_has_required_commands; then
-      CLAUDE_AVAILABLE=1
-      if claude_has_auth_commands; then CLAUDE_AUTH_AVAILABLE=1; fi
+  provider_index=0
+  while [ "$provider_index" -lt "${#PROVIDER_IDS[@]}" ]; do
+    provider=${PROVIDER_IDS[$provider_index]}
+    load_provider_metadata "$provider"
+    if command -v "$PROVIDER_EXECUTABLE" >/dev/null 2>&1; then
+      write_provider_state "$provider" EXECUTABLE_FOUND 1
+      if provider_has_required_commands "$provider"; then
+        write_provider_state "$provider" AVAILABLE 1
+        if provider_has_auth_commands "$provider"; then
+          write_provider_state "$provider" AUTH_AVAILABLE 1
+        fi
+      fi
     fi
+    provider_index=$((provider_index + 1))
+  done
+}
+
+report_unsupported_provider() {
+  provider=$1
+  target_all=$2
+  load_provider_metadata "$provider"
+  if [ "$target_all" -eq 1 ]; then
+    printf 'Error: %s is installed but lacks required %s commands; upgrade it or drop it from --target.\n' "$PROVIDER_LABEL" "$PROVIDER_COMPONENT" >&2
+  else
+    printf 'Error: %s is installed but lacks required %s commands; upgrade it.\n' "$PROVIDER_LABEL" "$PROVIDER_COMPONENT" >&2
   fi
-  if command -v codex >/dev/null 2>&1; then
-    CODEX_EXECUTABLE_FOUND=1
-    if codex_has_required_commands; then
-      CODEX_AVAILABLE=1
-      if codex_has_auth_commands; then CODEX_AUTH_AVAILABLE=1; fi
-    fi
-  fi
+  write_provider_state "$provider" INSTALL_RESULT "failed (unsupported CLI)"
+  PREINSTALL_FAILURES=$((PREINSTALL_FAILURES + 1))
+}
+
+report_missing_provider() {
+  provider=$1
+  load_provider_metadata "$provider"
+  case $provider in
+    claude|codex|gemini)
+      printf 'Error: %s was requested but its CLI is not on PATH.\n' "$PROVIDER_LABEL" >&2
+      ;;
+    *)
+      printf 'Error: %s was requested but %s is not on PATH.\n' "$PROVIDER_LABEL" "$PROVIDER_EXECUTABLE" >&2
+      ;;
+  esac
+  write_provider_state "$provider" INSTALL_RESULT "failed (not installed)"
+  PREINSTALL_FAILURES=$((PREINSTALL_FAILURES + 1))
 }
 
 select_requested_targets() {
@@ -251,54 +480,30 @@ select_requested_targets() {
     AUTH_MODE="no"
   fi
 
-  if [ "$TARGET_ALL" -eq 1 ]; then
-    CLAUDE_SELECTED=$CLAUDE_AVAILABLE
-    CODEX_SELECTED=$CODEX_AVAILABLE
-    # An installed provider whose CLI lacks the required commands is a
-    # provider-specific failure, not a silent omission: --target all promised
-    # every installed provider, so the run must end nonzero and say why.
-    if [ "$CLAUDE_EXECUTABLE_FOUND" -eq 1 ] && [ "$CLAUDE_AVAILABLE" -eq 0 ]; then
-      printf 'Error: Claude Code is installed but lacks required plugin commands; upgrade it or drop it from --target.\n' >&2
-      CLAUDE_INSTALL_RESULT="failed (unsupported CLI)"
-      PREINSTALL_FAILURES=$((PREINSTALL_FAILURES + 1))
-    fi
-    if [ "$CODEX_EXECUTABLE_FOUND" -eq 1 ] && [ "$CODEX_AVAILABLE" -eq 0 ]; then
-      printf 'Error: Codex is installed but lacks required plugin commands; upgrade it or drop it from --target.\n' >&2
-      CODEX_INSTALL_RESULT="failed (unsupported CLI)"
-      PREINSTALL_FAILURES=$((PREINSTALL_FAILURES + 1))
-    fi
-  fi
-  # Explicitly requested providers are failure-isolated like --target all:
-  # one unavailable target must not prevent another requested, available
-  # target from installing. The run still ends nonzero.
-  if [ "$TARGET_CLAUDE" -eq 1 ]; then
-    if [ "$CLAUDE_AVAILABLE" -eq 0 ]; then
-      if [ "$CLAUDE_EXECUTABLE_FOUND" -eq 1 ]; then
-        printf 'Error: Claude Code is installed but lacks required plugin commands; upgrade it.\n' >&2
-        CLAUDE_INSTALL_RESULT="failed (unsupported CLI)"
+  # Every provider follows the same selection contract. Failures are recorded
+  # per provider so one missing or outdated CLI never blocks another target.
+  provider_index=0
+  while [ "$provider_index" -lt "${#PROVIDER_IDS[@]}" ]; do
+    provider=${PROVIDER_IDS[$provider_index]}
+    read_provider_target "$provider"
+    provider_requested=$PROVIDER_STATE_VALUE
+    if [ "$TARGET_ALL" -eq 1 ]; then provider_requested=1; fi
+    if [ "$provider_requested" -eq 1 ]; then
+      read_provider_state "$provider" AVAILABLE
+      provider_available=$PROVIDER_STATE_VALUE
+      if [ "$provider_available" -eq 1 ]; then
+        write_provider_state "$provider" SELECTED 1
       else
-        printf 'Error: Claude Code was requested but its CLI is not on PATH.\n' >&2
-        CLAUDE_INSTALL_RESULT="failed (not installed)"
+        read_provider_state "$provider" EXECUTABLE_FOUND
+        if [ "$PROVIDER_STATE_VALUE" -eq 1 ]; then
+          report_unsupported_provider "$provider" "$TARGET_ALL"
+        elif [ "$TARGET_ALL" -eq 0 ]; then
+          report_missing_provider "$provider"
+        fi
       fi
-      PREINSTALL_FAILURES=$((PREINSTALL_FAILURES + 1))
-    else
-      CLAUDE_SELECTED=1
     fi
-  fi
-  if [ "$TARGET_CODEX" -eq 1 ]; then
-    if [ "$CODEX_AVAILABLE" -eq 0 ]; then
-      if [ "$CODEX_EXECUTABLE_FOUND" -eq 1 ]; then
-        printf 'Error: Codex is installed but lacks required plugin commands; upgrade it.\n' >&2
-        CODEX_INSTALL_RESULT="failed (unsupported CLI)"
-      else
-        printf 'Error: Codex was requested but its CLI is not on PATH.\n' >&2
-        CODEX_INSTALL_RESULT="failed (not installed)"
-      fi
-      PREINSTALL_FAILURES=$((PREINSTALL_FAILURES + 1))
-    else
-      CODEX_SELECTED=1
-    fi
-  fi
+    provider_index=$((provider_index + 1))
+  done
 }
 
 reset_menu() {
@@ -617,35 +822,39 @@ run_multiselect() {
 }
 
 apply_target_menu_selection() {
-  CLAUDE_SELECTED=0
-  CODEX_SELECTED=0
+  provider_index=0
+  while [ "$provider_index" -lt "${#PROVIDER_IDS[@]}" ]; do
+    write_provider_state "${PROVIDER_IDS[$provider_index]}" SELECTED 0
+    provider_index=$((provider_index + 1))
+  done
   menu_index=0
   while [ "$menu_index" -lt "${#MENU_IDS[@]}" ]; do
     if [ "${MENU_SELECTED[$menu_index]}" -eq 1 ]; then
-      case ${MENU_IDS[$menu_index]} in
-        claude) CLAUDE_SELECTED=1 ;;
-        codex) CODEX_SELECTED=1 ;;
-      esac
+      write_provider_state "${MENU_IDS[$menu_index]}" SELECTED 1
     fi
     menu_index=$((menu_index + 1))
   done
 }
 
 interactive_select_targets() {
-  CLAUDE_SELECTED=$CLAUDE_AVAILABLE
-  CODEX_SELECTED=$CODEX_AVAILABLE
-
-  if [ "$CLAUDE_EXECUTABLE_FOUND" -eq 1 ] && [ "$CLAUDE_AVAILABLE" -eq 0 ]; then
-    printf 'Claude Code is installed but lacks required plugin commands; upgrade it.\n' >&2
-  fi
-  if [ "$CODEX_EXECUTABLE_FOUND" -eq 1 ] && [ "$CODEX_AVAILABLE" -eq 0 ]; then
-    printf 'Codex is installed but lacks required plugin commands; upgrade it.\n' >&2
-  fi
-
   reset_menu "Select harnesses for Valency" "All detected harnesses" "Selected harnesses" 0 \
     "Install Valency for" "answer once for each detected harness."
-  if [ "$CLAUDE_AVAILABLE" -eq 1 ]; then add_menu_item claude "Claude Code" 1; fi
-  if [ "$CODEX_AVAILABLE" -eq 1 ]; then add_menu_item codex "Codex" 1; fi
+  provider_index=0
+  while [ "$provider_index" -lt "${#PROVIDER_IDS[@]}" ]; do
+    provider=${PROVIDER_IDS[$provider_index]}
+    load_provider_metadata "$provider"
+    read_provider_state "$provider" AVAILABLE
+    provider_available=$PROVIDER_STATE_VALUE
+    read_provider_state "$provider" EXECUTABLE_FOUND
+    if [ "$PROVIDER_STATE_VALUE" -eq 1 ] && [ "$provider_available" -eq 0 ]; then
+      printf '%s is installed but lacks required %s commands; upgrade it.\n' "$PROVIDER_LABEL" "$PROVIDER_COMPONENT" >&2
+    fi
+    if [ "$provider_available" -eq 1 ]; then
+      write_provider_state "$provider" SELECTED 1
+      add_menu_item "$provider" "$PROVIDER_LABEL" 1
+    fi
+    provider_index=$((provider_index + 1))
+  done
   run_multiselect
   menu_status=$?
   if [ "$menu_status" -ne 0 ]; then return "$menu_status"; fi
@@ -779,40 +988,224 @@ inspect_claude_state() {
   fi
 }
 
+provider_inspect_state() {
+  case $1 in
+    claude) inspect_claude_state ;;
+    codex) inspect_codex_state ;;
+    antigravity) inspect_antigravity_state ;;
+    gemini) inspect_gemini_state ;;
+    copilot) inspect_copilot_state ;;
+    grok) inspect_grok_state ;;
+    *) return 1 ;;
+  esac
+}
+
+provider_inspection_is_acceptable() {
+  PROVIDER_INSPECTION_RESULT=""
+  case $1 in
+    claude)
+      if [ "$CLAUDE_MARKETPLACE_CONFLICT" -eq 1 ]; then
+        printf 'Error: an existing Claude Code marketplace named %s does not come from %s; Claude Code was not changed.\n' "$CLAUDE_MARKETPLACE" "$MARKETPLACE_SOURCE" >&2
+        printf 'Review where it came from, then remove it and rerun this installer: claude plugin marketplace remove %s --scope user\n' "$CLAUDE_MARKETPLACE" >&2
+        PROVIDER_INSPECTION_RESULT="failed (marketplace conflict)"
+        return 1
+      fi
+      ;;
+    gemini)
+      if [ "$GEMINI_EXTENSION_CONFLICT" -eq 1 ]; then
+        printf 'Error: the installed Gemini extension named valency does not come from %s; Gemini CLI was not changed.\n' "$MARKETPLACE_SOURCE" >&2
+        PROVIDER_INSPECTION_RESULT="failed (extension conflict)"
+        return 1
+      fi
+      ;;
+    copilot)
+      if [ "$COPILOT_MARKETPLACE_CONFLICT" -eq 1 ]; then
+        printf 'Error: the Copilot marketplace named valency-copilot-plugin does not come from %s; Copilot was not changed.\n' "$MARKETPLACE_SOURCE" >&2
+        PROVIDER_INSPECTION_RESULT="failed (marketplace conflict)"
+        return 1
+      fi
+      ;;
+    grok)
+      if [ "$GROK_MARKETPLACE_CONFLICT" -eq 1 ] || [ "$GROK_PLUGIN_CONFLICT" -eq 1 ]; then
+        printf 'Error: an existing Grok marketplace or plugin named valency does not come from %s; Grok Build was not changed.\n' "$MARKETPLACE_SOURCE" >&2
+        PROVIDER_INSPECTION_RESULT="failed (source conflict)"
+        return 1
+      fi
+      ;;
+  esac
+}
+
 inspect_provider_state() {
-  # Inspection failures are provider-specific: one provider's unreadable state
-  # must not block the other selected provider, so the failed provider is
-  # reported, counted toward the exit status, and dropped before any mutation.
-  if [ "$CLAUDE_SELECTED" -eq 1 ]; then
-    if ! inspect_claude_state; then
-      CLAUDE_SELECTED=0
-      CLAUDE_INSTALL_RESULT="failed (state inspection)"
-      PREINSTALL_FAILURES=$((PREINSTALL_FAILURES + 1))
-    elif [ "$CLAUDE_MARKETPLACE_CONFLICT" -eq 1 ]; then
-      printf 'Error: an existing Claude Code marketplace named %s does not come from %s; Claude Code was not changed.\n' "$CLAUDE_MARKETPLACE" "$MARKETPLACE_SOURCE" >&2
-      printf 'Review where it came from, then remove it and rerun this installer: claude plugin marketplace remove %s --scope user\n' "$CLAUDE_MARKETPLACE" >&2
-      CLAUDE_SELECTED=0
-      CLAUDE_INSTALL_RESULT="failed (marketplace conflict)"
-      PREINSTALL_FAILURES=$((PREINSTALL_FAILURES + 1))
+  # Inspection failures stay isolated: the dispatch drops only the affected
+  # provider before any mutation while the remaining selected providers run.
+  provider_index=0
+  while [ "$provider_index" -lt "${#PROVIDER_IDS[@]}" ]; do
+    provider=${PROVIDER_IDS[$provider_index]}
+    read_provider_state "$provider" SELECTED
+    if [ "$PROVIDER_STATE_VALUE" -eq 1 ]; then
+      if ! provider_inspect_state "$provider"; then
+        write_provider_state "$provider" SELECTED 0
+        write_provider_state "$provider" INSTALL_RESULT "failed (state inspection)"
+        PREINSTALL_FAILURES=$((PREINSTALL_FAILURES + 1))
+      elif ! provider_inspection_is_acceptable "$provider"; then
+        write_provider_state "$provider" SELECTED 0
+        write_provider_state "$provider" INSTALL_RESULT "$PROVIDER_INSPECTION_RESULT"
+        PREINSTALL_FAILURES=$((PREINSTALL_FAILURES + 1))
+      fi
     fi
+    provider_index=$((provider_index + 1))
+  done
+}
+
+inspect_antigravity_state() {
+  if ! plugin_output=$(agy plugin list 2>/dev/null); then
+    printf 'Error: could not inspect Antigravity CLI plugin state; no changes were made.\n' >&2
+    return 1
   fi
-  if [ "$CODEX_SELECTED" -eq 1 ] && ! inspect_codex_state; then
-    CODEX_SELECTED=0
-    CODEX_INSTALL_RESULT="failed (state inspection)"
-    PREINSTALL_FAILURES=$((PREINSTALL_FAILURES + 1))
+  case $plugin_output in
+    "No imported plugins."*) return 0 ;;
+  esac
+  compact_plugins=$(printf '%s' "$plugin_output" | compact_json)
+  case $compact_plugins in
+    *'"imports":['*) ;;
+    *) printf 'Error: Antigravity CLI returned an unrecognized plugin list; no changes were made.\n' >&2; return 1 ;;
+  esac
+  if json_entry_contains "$compact_plugins" '"name":"valency"' '"source":"antigravity"'; then
+    ANTIGRAVITY_PLUGIN_PRESENT=1
   fi
+}
+
+gemini_extension_source_trusted() {
+  json_entry_contains "$1" '"name":"valency"' "\"source\":\"https://github.com/$MARKETPLACE_SOURCE\"" ||
+    json_entry_contains "$1" '"name":"valency"' "\"source\":\"https://github.com/$MARKETPLACE_SOURCE.git\""
+}
+
+inspect_gemini_state() {
+  if ! extension_json=$(gemini extensions list --output-format json 2>/dev/null); then
+    printf 'Error: could not inspect Gemini CLI extension state; no changes were made.\n' >&2
+    return 1
+  fi
+  compact_extensions=$(printf '%s' "$extension_json" | compact_json)
+  case $compact_extensions in
+    \[*\]) ;;
+    *) printf 'Error: Gemini CLI returned an unrecognized extension list; no changes were made.\n' >&2; return 1 ;;
+  esac
+  case $compact_extensions in
+    *'"name":"valency"'*)
+      if gemini_extension_source_trusted "$compact_extensions"; then
+        GEMINI_EXTENSION_PRESENT=1
+      else
+        GEMINI_EXTENSION_CONFLICT=1
+      fi
+      ;;
+  esac
+}
+
+inspect_copilot_plugin_state() {
+  COPILOT_PLUGIN_PRESENT=0
+  # Current Copilot docs define a JSON inventory command, but stable 1.0.78
+  # still reports it unavailable. Prefer it when present and otherwise parse
+  # only the exact installed-plugin token from the stable text command.
+  if plugin_output=$(copilot plugins list --kind plugin --scope user --json 2>/dev/null); then
+    compact_plugins=$(printf '%s' "$plugin_output" | compact_json)
+    case $compact_plugins in
+      \[*\]) ;;
+      *) printf 'Error: GitHub Copilot CLI returned an unrecognized JSON plugin list; no changes were made.\n' >&2; return 1 ;;
+    esac
+    if json_entry_contains "$compact_plugins" '"name":"valency"' '"kind":"plugin"' '"scope":"user"'; then
+      COPILOT_PLUGIN_PRESENT=1
+    fi
+    return 0
+  fi
+
+  if ! plugin_output=$(copilot plugin list 2>/dev/null); then
+    printf 'Error: could not inspect GitHub Copilot CLI plugin state; no changes were made.\n' >&2
+    return 1
+  fi
+  case $plugin_output in
+    *"valency@valency-copilot-plugin ("*) COPILOT_PLUGIN_PRESENT=1 ;;
+  esac
+}
+
+inspect_copilot_state() {
+  if ! marketplace_output=$(copilot plugin marketplace list 2>/dev/null); then
+    printf 'Error: could not inspect GitHub Copilot CLI marketplace state; no changes were made.\n' >&2
+    return 1
+  fi
+  case $marketplace_output in
+    *"valency-copilot-plugin (GitHub: $MARKETPLACE_SOURCE)"*) COPILOT_MARKETPLACE_PRESENT=1 ;;
+    *"valency-copilot-plugin"*) COPILOT_MARKETPLACE_CONFLICT=1 ;;
+  esac
+  inspect_copilot_plugin_state
+}
+
+grok_source_url() {
+  printf 'https://github.com/%s.git' "$MARKETPLACE_SOURCE"
+}
+
+inspect_grok_state() {
+  if ! marketplace_json=$(grok plugin marketplace list --json 2>/dev/null); then
+    printf 'Error: could not inspect Grok Build marketplace state; no changes were made.\n' >&2
+    return 1
+  fi
+  if ! plugin_json=$(grok plugin list --json 2>/dev/null); then
+    printf 'Error: could not inspect Grok Build plugin state; no changes were made.\n' >&2
+    return 1
+  fi
+  compact_marketplaces=$(printf '%s' "$marketplace_json" | compact_json)
+  compact_plugins=$(printf '%s' "$plugin_json" | compact_json)
+  case $compact_marketplaces in
+    \[*\]) ;;
+    *) printf 'Error: Grok Build returned an unrecognized marketplace list; no changes were made.\n' >&2; return 1 ;;
+  esac
+  case $compact_plugins in
+    \[*\]) ;;
+    *) printf 'Error: Grok Build returned an unrecognized plugin list; no changes were made.\n' >&2; return 1 ;;
+  esac
+
+  expected_grok_source=$(grok_source_url)
+  case $compact_marketplaces in
+    *'"name":"valency-bond"'*)
+      if json_entry_contains "$compact_marketplaces" '"name":"valency-bond"' "\"url\":\"$expected_grok_source\""; then
+        GROK_MARKETPLACE_PRESENT=1
+      else
+        GROK_MARKETPLACE_CONFLICT=1
+      fi
+      ;;
+  esac
+  case $compact_plugins in
+    *'"name":"valency"'*)
+      if json_entry_contains "$compact_plugins" '"name":"valency"' '"status":"installed"' "\"source\":\"$expected_grok_source\""; then
+        GROK_PLUGIN_PRESENT=1
+      else
+        GROK_PLUGIN_CONFLICT=1
+      fi
+      ;;
+  esac
 }
 
 inspect_auth_states() {
   if [ "$AUTH_MODE" = "no" ]; then
     return
   fi
-  if [ "$CLAUDE_SELECTED" -eq 1 ]; then
-    inspect_claude_auth_state
-  fi
-  if [ "$CODEX_SELECTED" -eq 1 ]; then
-    inspect_codex_auth_state
-  fi
+  provider_index=0
+  while [ "$provider_index" -lt "${#PROVIDER_IDS[@]}" ]; do
+    provider=${PROVIDER_IDS[$provider_index]}
+    load_provider_metadata "$provider"
+    read_provider_state "$provider" SELECTED
+    if [ "$PROVIDER_STATE_VALUE" -eq 1 ] && [ "$PROVIDER_AUTH_METHOD" = standalone ]; then
+      provider_inspect_auth_state "$provider"
+    fi
+    provider_index=$((provider_index + 1))
+  done
+}
+
+provider_inspect_auth_state() {
+  case $1 in
+    claude) inspect_claude_auth_state ;;
+    codex) inspect_codex_auth_state ;;
+    *) return 0 ;;
+  esac
 }
 
 inspect_claude_auth_state() {
@@ -922,9 +1315,9 @@ codex_marketplace_source_trusted() {
     json_entry_contains "$1" "\"name\":\"$CODEX_MARKETPLACE\"" "\"source\":\"$MARKETPLACE_SOURCE\""
 }
 
-print_plan() {
-  printf '\nValency installation plan\n'
-  if [ "$CLAUDE_SELECTED" -eq 1 ]; then
+print_provider_plan() {
+  case $1 in
+    claude)
     # The marketplace verb comes from the marketplace state, not the plugin
     # state: a plugin can outlive its marketplace and vice versa, and the
     # displayed plan must match the commands that will actually run.
@@ -941,8 +1334,8 @@ print_plan() {
     if [ "$CLAUDE_LEGACY_PLUGIN_PRESENT" -eq 1 ] || [ "$CLAUDE_LEGACY_MARKETPLACE_PRESENT" -eq 1 ]; then
       printf '    Conditional migration: after verification, remove valency@valency-plugin and the valency-plugin marketplace.\n'
     fi
-  fi
-  if [ "$CODEX_SELECTED" -eq 1 ]; then
+      ;;
+    codex)
     if [ "$CODEX_MARKETPLACE_PRESENT" -eq 1 ] && [ "$CODEX_REPLACEMENT_REQUIRED" -eq 0 ]; then
       codex_marketplace_step="refresh the $CODEX_MARKETPLACE marketplace"
     else
@@ -957,7 +1350,59 @@ print_plan() {
       printf '    Conditional replacement: remove the existing marketplace named valency, add %s, then install and verify %s.\n' "$MARKETPLACE_SOURCE" "$CODEX_PLUGIN"
       printf '    The existing marketplace source will not be inspected and cannot be restored automatically.\n'
     fi
-  fi
+      ;;
+    antigravity)
+    if [ "$ANTIGRAVITY_PLUGIN_PRESENT" -eq 1 ]; then
+      printf '  Antigravity CLI: reinstall Valency from %s to refresh it, then verify the import.\n' "$MARKETPLACE_SOURCE"
+    else
+      printf '  Antigravity CLI: install Valency from %s, then verify the import.\n' "$MARKETPLACE_SOURCE"
+    fi
+      ;;
+    gemini)
+    if [ "$GEMINI_EXTENSION_PRESENT" -eq 1 ]; then
+      printf '  Gemini CLI: update and enable the valency extension, then verify it is active.\n'
+    else
+      printf '  Gemini CLI: install valency from %s with automatic updates, then verify it is active.\n' "$MARKETPLACE_SOURCE"
+    fi
+      ;;
+    copilot)
+    if [ "$COPILOT_MARKETPLACE_PRESENT" -eq 1 ]; then
+      copilot_marketplace_step="refresh the valency-copilot-plugin marketplace"
+    else
+      copilot_marketplace_step="add the $MARKETPLACE_SOURCE marketplace"
+    fi
+    if [ "$COPILOT_PLUGIN_PRESENT" -eq 1 ]; then
+      printf '  GitHub Copilot CLI: %s, update valency, then verify the installed plugin.\n' "$copilot_marketplace_step"
+    else
+      printf '  GitHub Copilot CLI: %s, install valency@valency-copilot-plugin, then verify it.\n' "$copilot_marketplace_step"
+    fi
+      ;;
+    grok)
+    if [ "$GROK_MARKETPLACE_PRESENT" -eq 1 ]; then
+      grok_marketplace_step="refresh the valency-bond marketplace"
+    else
+      grok_marketplace_step="add the $MARKETPLACE_SOURCE marketplace"
+    fi
+    if [ "$GROK_PLUGIN_PRESENT" -eq 1 ]; then
+      printf '  Grok Build: %s, update valency, then verify its installed record.\n' "$grok_marketplace_step"
+    else
+      printf '  Grok Build: %s, install and trust valency, then verify its installed record.\n' "$grok_marketplace_step"
+    fi
+      ;;
+  esac
+}
+
+print_plan() {
+  printf '\nValency installation plan\n'
+  provider_index=0
+  while [ "$provider_index" -lt "${#PROVIDER_IDS[@]}" ]; do
+    provider=${PROVIDER_IDS[$provider_index]}
+    read_provider_state "$provider" SELECTED
+    if [ "$PROVIDER_STATE_VALUE" -eq 1 ]; then
+      print_provider_plan "$provider"
+    fi
+    provider_index=$((provider_index + 1))
+  done
   if [ "$AUTH_MODE" = "no" ]; then
     if [ "$DRY_RUN" -eq 1 ]; then
       printf '  Authentication: skipped; a real run prints the manual login commands.\n'
@@ -966,8 +1411,17 @@ print_plan() {
     fi
   else
     printf '  Authentication: offered after verified installation.\n'
-    if [ "$CLAUDE_SELECTED" -eq 1 ]; then printf '    Claude Code status: %s.\n' "$CLAUDE_AUTH_STATE"; fi
-    if [ "$CODEX_SELECTED" -eq 1 ]; then printf '    Codex status: %s.\n' "$CODEX_AUTH_STATE"; fi
+    provider_index=0
+    while [ "$provider_index" -lt "${#PROVIDER_IDS[@]}" ]; do
+      provider=${PROVIDER_IDS[$provider_index]}
+      load_provider_metadata "$provider"
+      read_provider_state "$provider" SELECTED
+      if [ "$PROVIDER_STATE_VALUE" -eq 1 ] && [ "$PROVIDER_AUTH_METHOD" = standalone ]; then
+        read_provider_state "$provider" AUTH_STATE
+        printf '    %s status: %s.\n' "$PROVIDER_LABEL" "$PROVIDER_STATE_VALUE"
+      fi
+      provider_index=$((provider_index + 1))
+    done
   fi
   if [ "$DRY_RUN" -eq 1 ]; then
     printf '  Mode: dry run; no provider state will change.\n'
@@ -1107,7 +1561,7 @@ install_claude() {
     success_result="installed"
   fi
 
-  if ! verify_claude_plugin; then
+  if ! verify_provider claude; then
     CLAUDE_INSTALL_RESULT="failed verification"
     return 1
   fi
@@ -1135,6 +1589,173 @@ verify_codex_plugin() {
   plugin_json=$(codex plugin list --json 2>/dev/null) || return 1
   compact_plugins=$(printf '%s' "$plugin_json" | compact_json)
   json_entry_contains "$compact_plugins" "\"pluginId\":\"$CODEX_PLUGIN\"" '"installed":true' '"enabled":true'
+}
+
+verify_antigravity_plugin() {
+  plugin_output=$(agy plugin list 2>/dev/null) || return 1
+  compact_plugins=$(printf '%s' "$plugin_output" | compact_json)
+  json_entry_contains "$compact_plugins" '"name":"valency"' '"source":"antigravity"' '"mcpServers"'
+}
+
+install_antigravity() {
+  if [ "$DRY_RUN" -eq 1 ]; then
+    ANTIGRAVITY_INSTALL_RESULT="planned"
+    return 0
+  fi
+
+  if [ "$ANTIGRAVITY_PLUGIN_PRESENT" -eq 1 ]; then
+    success_result="updated"
+  else
+    success_result="installed"
+  fi
+  # Antigravity has no separate update verb. Reinstalling the same source is
+  # its supported idempotent refresh path and does not prompt for confirmation.
+  if ! run_quietly agy plugin install "https://github.com/$MARKETPLACE_SOURCE"; then
+    ANTIGRAVITY_INSTALL_RESULT="failed"
+    return 1
+  fi
+  if ! verify_provider antigravity; then
+    ANTIGRAVITY_INSTALL_RESULT="failed verification"
+    return 1
+  fi
+  ANTIGRAVITY_INSTALL_RESULT=$success_result
+}
+
+verify_gemini_extension() {
+  extension_json=$(gemini extensions list --output-format json 2>/dev/null) || return 1
+  compact_extensions=$(printf '%s' "$extension_json" | compact_json)
+  gemini_extension_source_trusted "$compact_extensions" &&
+    json_entry_contains "$compact_extensions" '"name":"valency"' '"isActive":true'
+}
+
+install_gemini() {
+  if [ "$DRY_RUN" -eq 1 ]; then
+    GEMINI_INSTALL_RESULT="planned"
+    return 0
+  fi
+
+  if [ "$GEMINI_EXTENSION_PRESENT" -eq 1 ]; then
+    if ! run_quietly gemini extensions update valency; then
+      GEMINI_INSTALL_RESULT="failed"
+      return 1
+    fi
+    if ! run_quietly gemini extensions enable valency --scope user; then
+      GEMINI_INSTALL_RESULT="failed"
+      return 1
+    fi
+    success_result="updated"
+  else
+    if ! run_quietly gemini extensions install "https://github.com/$MARKETPLACE_SOURCE" --auto-update --consent; then
+      GEMINI_INSTALL_RESULT="failed"
+      return 1
+    fi
+    success_result="installed"
+  fi
+  if ! verify_provider gemini; then
+    GEMINI_INSTALL_RESULT="failed verification"
+    return 1
+  fi
+  GEMINI_INSTALL_RESULT=$success_result
+}
+
+verify_copilot_plugin() {
+  inspect_copilot_plugin_state || return 1
+  [ "$COPILOT_PLUGIN_PRESENT" -eq 1 ]
+}
+
+install_copilot() {
+  if [ "$DRY_RUN" -eq 1 ]; then
+    COPILOT_INSTALL_RESULT="planned"
+    return 0
+  fi
+
+  if [ "$COPILOT_MARKETPLACE_PRESENT" -eq 1 ]; then
+    if ! run_quietly copilot plugin marketplace update valency-copilot-plugin; then
+      COPILOT_INSTALL_RESULT="failed"
+      return 1
+    fi
+  else
+    if ! run_quietly copilot plugin marketplace add "$MARKETPLACE_SOURCE"; then
+      COPILOT_INSTALL_RESULT="failed"
+      return 1
+    fi
+  fi
+  if [ "$COPILOT_PLUGIN_PRESENT" -eq 1 ]; then
+    if ! run_quietly copilot plugin update valency; then
+      COPILOT_INSTALL_RESULT="failed"
+      return 1
+    fi
+    success_result="updated"
+  else
+    if ! run_quietly copilot plugin install valency@valency-copilot-plugin; then
+      COPILOT_INSTALL_RESULT="failed"
+      return 1
+    fi
+    success_result="installed"
+  fi
+  if ! verify_provider copilot; then
+    COPILOT_INSTALL_RESULT="failed verification"
+    return 1
+  fi
+  COPILOT_INSTALL_RESULT=$success_result
+}
+
+verify_grok_plugin() {
+  plugin_json=$(grok plugin list --json 2>/dev/null) || return 1
+  compact_plugins=$(printf '%s' "$plugin_json" | compact_json)
+  expected_grok_source=$(grok_source_url)
+  json_entry_contains "$compact_plugins" '"name":"valency"' '"status":"installed"' "\"source\":\"$expected_grok_source\""
+}
+
+verify_provider() {
+  case $1 in
+    claude) verify_claude_plugin ;;
+    codex) verify_codex_plugin ;;
+    antigravity) verify_antigravity_plugin ;;
+    gemini) verify_gemini_extension ;;
+    copilot) verify_copilot_plugin ;;
+    grok) verify_grok_plugin ;;
+    *) return 1 ;;
+  esac
+}
+
+install_grok() {
+  if [ "$DRY_RUN" -eq 1 ]; then
+    GROK_INSTALL_RESULT="planned"
+    return 0
+  fi
+
+  if [ "$GROK_MARKETPLACE_PRESENT" -eq 1 ]; then
+    if ! run_quietly grok plugin marketplace update valency-bond; then
+      GROK_INSTALL_RESULT="failed"
+      return 1
+    fi
+  else
+    if ! run_quietly grok plugin marketplace add "$MARKETPLACE_SOURCE"; then
+      GROK_INSTALL_RESULT="failed"
+      return 1
+    fi
+  fi
+  if [ "$GROK_PLUGIN_PRESENT" -eq 1 ]; then
+    if ! run_quietly grok plugin update valency; then
+      GROK_INSTALL_RESULT="failed"
+      return 1
+    fi
+    success_result="updated"
+  else
+    # --trust is the host's noninteractive acknowledgement for activating the
+    # plugin's remote MCP server and avoids a surprise second confirmation.
+    if ! run_quietly grok plugin install valency --trust; then
+      GROK_INSTALL_RESULT="failed"
+      return 1
+    fi
+    success_result="installed"
+  fi
+  if ! verify_provider grok; then
+    GROK_INSTALL_RESULT="failed verification"
+    return 1
+  fi
+  GROK_INSTALL_RESULT=$success_result
 }
 
 install_codex() {
@@ -1203,7 +1824,7 @@ install_codex() {
     fi
     return 1
   fi
-  if ! verify_codex_plugin; then
+  if ! verify_provider codex; then
     if [ "$codex_replacement_started" -eq 1 ]; then
       CODEX_INSTALL_RESULT="failed marketplace replacement"
       print_codex_recovery
@@ -1223,16 +1844,30 @@ print_codex_recovery() {
   printf '  codex plugin add valency@valency\n' >&2
 }
 
+install_provider() {
+  case $1 in
+    claude) install_claude ;;
+    codex) install_codex ;;
+    antigravity) install_antigravity ;;
+    gemini) install_gemini ;;
+    copilot) install_copilot ;;
+    grok) install_grok ;;
+    *) return 1 ;;
+  esac
+}
+
 install_selected_providers() {
-  # Provider failures are isolated: a broken Claude install must not prevent a
-  # selected Codex install (or vice versa), and verified work is never rolled back.
+  # Provider failures are isolated and verified work is never rolled back.
   install_failures=0
-  if [ "$CLAUDE_SELECTED" -eq 1 ]; then
-    install_claude || install_failures=$((install_failures + 1))
-  fi
-  if [ "$CODEX_SELECTED" -eq 1 ]; then
-    install_codex || install_failures=$((install_failures + 1))
-  fi
+  provider_index=0
+  while [ "$provider_index" -lt "${#PROVIDER_IDS[@]}" ]; do
+    provider=${PROVIDER_IDS[$provider_index]}
+    read_provider_state "$provider" SELECTED
+    if [ "$PROVIDER_STATE_VALUE" -eq 1 ]; then
+      install_provider "$provider" || install_failures=$((install_failures + 1))
+    fi
+    provider_index=$((provider_index + 1))
+  done
   return "$install_failures"
 }
 
@@ -1255,17 +1890,39 @@ plugin_ready_for_login() {
 }
 
 prepare_authentication() {
-  if [ "$CLAUDE_SELECTED" -eq 1 ] && installation_succeeded "$CLAUDE_INSTALL_RESULT"; then
-    prepare_provider_auth claude "$CLAUDE_AUTH_STATE"
-  fi
-  if [ "$CODEX_SELECTED" -eq 1 ] && installation_succeeded "$CODEX_INSTALL_RESULT"; then
-    prepare_provider_auth codex "$CODEX_AUTH_STATE"
-  fi
+  provider_index=0
+  while [ "$provider_index" -lt "${#PROVIDER_IDS[@]}" ]; do
+    provider=${PROVIDER_IDS[$provider_index]}
+    load_provider_metadata "$provider"
+    read_provider_state "$provider" SELECTED
+    provider_selected=$PROVIDER_STATE_VALUE
+    read_provider_state "$provider" INSTALL_RESULT
+    if [ "$provider_selected" -eq 1 ] && installation_succeeded "$PROVIDER_STATE_VALUE"; then
+      if [ "$PROVIDER_AUTH_METHOD" = in-host ]; then
+        # These providers own OAuth inside their TUI. The installer reports the
+        # exact action instead of launching a full interactive agent.
+        write_provider_state "$provider" AUTH_RESULT "manual action required"
+      else
+        read_provider_state "$provider" AUTH_STATE
+        prepare_provider_auth "$provider" "$PROVIDER_STATE_VALUE"
+      fi
+    fi
+    provider_index=$((provider_index + 1))
+  done
 
-  if [ "$AUTH_MODE" = "prompt" ] &&
-    { [ "$CLAUDE_AUTH_SELECTED" -eq 1 ] || [ "$CODEX_AUTH_SELECTED" -eq 1 ]; }; then
+  if [ "$AUTH_MODE" = "prompt" ] && any_provider_auth_selected; then
     prompt_for_authentication_selection
   fi
+}
+
+any_provider_auth_selected() {
+  provider_index=0
+  while [ "$provider_index" -lt "${#PROVIDER_IDS[@]}" ]; do
+    read_provider_state "${PROVIDER_IDS[$provider_index]}" AUTH_SELECTED
+    if [ "$PROVIDER_STATE_VALUE" -eq 1 ]; then return 0; fi
+    provider_index=$((provider_index + 1))
+  done
+  return 1
 }
 
 prepare_provider_auth() {
@@ -1283,50 +1940,89 @@ prepare_provider_auth() {
     set_auth_result "$provider" "already connected"
     return
   fi
-  if [ "$provider" = claude ]; then CLAUDE_AUTH_SELECTED=1; else CODEX_AUTH_SELECTED=1; fi
+  write_provider_state "$provider" AUTH_SELECTED 1
 }
 
 set_auth_result() {
-  if [ "$1" = claude ]; then CLAUDE_AUTH_RESULT=$2; else CODEX_AUTH_RESULT=$2; fi
+  write_provider_state "$1" AUTH_RESULT "$2"
 }
 
 prompt_for_authentication_selection() {
   reset_menu "Optional authentication" "All available providers" "Authentication" 1 \
     "Authenticate" "answer once for each available provider."
-  if [ "$CLAUDE_SELECTED" -eq 1 ] && installation_succeeded "$CLAUDE_INSTALL_RESULT" && [ "$CLAUDE_AUTH_STATE" != "unavailable" ]; then
-    add_menu_item claude "Claude Code ($CLAUDE_AUTH_STATE)" "$CLAUDE_AUTH_SELECTED"
-  fi
-  if [ "$CODEX_SELECTED" -eq 1 ] && installation_succeeded "$CODEX_INSTALL_RESULT" && [ "$CODEX_AUTH_STATE" != "unavailable" ]; then
-    add_menu_item codex "Codex ($CODEX_AUTH_STATE)" "$CODEX_AUTH_SELECTED"
-  fi
+  provider_index=0
+  while [ "$provider_index" -lt "${#PROVIDER_IDS[@]}" ]; do
+    provider=${PROVIDER_IDS[$provider_index]}
+    load_provider_metadata "$provider"
+    read_provider_state "$provider" SELECTED
+    provider_selected=$PROVIDER_STATE_VALUE
+    read_provider_state "$provider" INSTALL_RESULT
+    provider_install_result=$PROVIDER_STATE_VALUE
+    read_provider_state "$provider" AUTH_STATE
+    provider_auth_state=$PROVIDER_STATE_VALUE
+    read_provider_state "$provider" AUTH_SELECTED
+    if [ "$PROVIDER_AUTH_METHOD" = standalone ] && [ "$provider_selected" -eq 1 ] &&
+      installation_succeeded "$provider_install_result" && [ "$provider_auth_state" != "unavailable" ]; then
+      add_menu_item "$provider" "$PROVIDER_LABEL ($provider_auth_state)" "$PROVIDER_STATE_VALUE"
+    fi
+    provider_index=$((provider_index + 1))
+  done
 
   run_multiselect
   menu_status=$?
   if [ "$menu_status" -ne 0 ]; then
-    CLAUDE_AUTH_SELECTED=0
-    CODEX_AUTH_SELECTED=0
+    provider_index=0
+    while [ "$provider_index" -lt "${#PROVIDER_IDS[@]}" ]; do
+      write_provider_state "${PROVIDER_IDS[$provider_index]}" AUTH_SELECTED 0
+      provider_index=$((provider_index + 1))
+    done
     printf 'Authentication skipped.\n'
     return 0
   fi
 
-  CLAUDE_AUTH_SELECTED=0
-  CODEX_AUTH_SELECTED=0
+  provider_index=0
+  while [ "$provider_index" -lt "${#PROVIDER_IDS[@]}" ]; do
+    write_provider_state "${PROVIDER_IDS[$provider_index]}" AUTH_SELECTED 0
+    provider_index=$((provider_index + 1))
+  done
   menu_index=0
   while [ "$menu_index" -lt "${#MENU_IDS[@]}" ]; do
     if [ "${MENU_SELECTED[$menu_index]}" -eq 1 ]; then
-      case ${MENU_IDS[$menu_index]} in
-        claude) CLAUDE_AUTH_SELECTED=1 ;;
-        codex) CODEX_AUTH_SELECTED=1 ;;
-      esac
+      write_provider_state "${MENU_IDS[$menu_index]}" AUTH_SELECTED 1
     fi
     menu_index=$((menu_index + 1))
   done
 }
 
+run_provider_auth() {
+  provider=$1
+  load_provider_metadata "$provider"
+  case $provider in
+    claude) claude mcp login plugin:valency:valency <&3 ;;
+    codex) codex mcp login valency <&3 ;;
+    *) return 1 ;;
+  esac
+  auth_status=$?
+  if [ "$auth_status" -eq 0 ]; then
+    write_provider_state "$provider" AUTH_RESULT "authenticated"
+  else
+    write_provider_state "$provider" AUTH_RESULT "failed (plugin remains installed)"
+    printf 'Warning: %s authentication did not complete; the verified plugin remains installed.\n' "$PROVIDER_LABEL" >&2
+  fi
+  return 0
+}
+
 run_authentication() {
   if [ "$DRY_RUN" -eq 1 ]; then
-    if [ "$CLAUDE_AUTH_SELECTED" -eq 1 ]; then CLAUDE_AUTH_RESULT="planned"; fi
-    if [ "$CODEX_AUTH_SELECTED" -eq 1 ]; then CODEX_AUTH_RESULT="planned"; fi
+    provider_index=0
+    while [ "$provider_index" -lt "${#PROVIDER_IDS[@]}" ]; do
+      provider=${PROVIDER_IDS[$provider_index]}
+      read_provider_state "$provider" AUTH_SELECTED
+      if [ "$PROVIDER_STATE_VALUE" -eq 1 ]; then
+        write_provider_state "$provider" AUTH_RESULT "planned"
+      fi
+      provider_index=$((provider_index + 1))
+    done
     finalize_unselected_auth_results
     return
   fi
@@ -1334,57 +2030,110 @@ run_authentication() {
   # Login output passes straight through to the user: device-code flows print
   # a URL the user must see, exactly as if they ran the login command by hand.
   # The installer never captures or re-prints that output itself.
-  if [ "$CLAUDE_AUTH_SELECTED" -eq 1 ]; then
-    if claude mcp login plugin:valency:valency <&3; then
-      CLAUDE_AUTH_RESULT="authenticated"
-    else
-      CLAUDE_AUTH_RESULT="failed (plugin remains installed)"
-      printf 'Warning: Claude Code authentication did not complete; the verified plugin remains installed.\n' >&2
+  provider_index=0
+  while [ "$provider_index" -lt "${#PROVIDER_IDS[@]}" ]; do
+    provider=${PROVIDER_IDS[$provider_index]}
+    read_provider_state "$provider" AUTH_SELECTED
+    if [ "$PROVIDER_STATE_VALUE" -eq 1 ]; then
+      run_provider_auth "$provider"
     fi
-  fi
-  if [ "$CODEX_AUTH_SELECTED" -eq 1 ]; then
-    if codex mcp login valency <&3; then
-      CODEX_AUTH_RESULT="authenticated"
-    else
-      CODEX_AUTH_RESULT="failed (plugin remains installed)"
-      printf 'Warning: Codex authentication did not complete; the verified plugin remains installed.\n' >&2
-    fi
-  fi
+    provider_index=$((provider_index + 1))
+  done
   finalize_unselected_auth_results
 }
 
 finalize_unselected_auth_results() {
-  if [ "$CLAUDE_SELECTED" -eq 1 ] && installation_succeeded "$CLAUDE_INSTALL_RESULT" && [ "$CLAUDE_AUTH_RESULT" = "not offered" ]; then
-    CLAUDE_AUTH_RESULT="skipped"
-  fi
-  if [ "$CODEX_SELECTED" -eq 1 ] && installation_succeeded "$CODEX_INSTALL_RESULT" && [ "$CODEX_AUTH_RESULT" = "not offered" ]; then
-    CODEX_AUTH_RESULT="skipped"
-  fi
+  provider_index=0
+  while [ "$provider_index" -lt "${#PROVIDER_IDS[@]}" ]; do
+    provider=${PROVIDER_IDS[$provider_index]}
+    read_provider_state "$provider" SELECTED
+    provider_selected=$PROVIDER_STATE_VALUE
+    read_provider_state "$provider" INSTALL_RESULT
+    provider_install_result=$PROVIDER_STATE_VALUE
+    read_provider_state "$provider" AUTH_RESULT
+    if [ "$provider_selected" -eq 1 ] && installation_succeeded "$provider_install_result" && [ "$PROVIDER_STATE_VALUE" = "not offered" ]; then
+      write_provider_state "$provider" AUTH_RESULT "skipped"
+    fi
+    provider_index=$((provider_index + 1))
+  done
 }
 
-print_summary() {
-  printf '\nSummary\n'
-  if [ "$CLAUDE_SELECTED" -eq 1 ] || [ "$CLAUDE_INSTALL_RESULT" != "not selected" ]; then
-    printf '  Claude Code installation: %s\n' "$CLAUDE_INSTALL_RESULT"
-    printf '  Claude Code authentication: %s\n' "$CLAUDE_AUTH_RESULT"
-    if plugin_ready_for_login "$CLAUDE_INSTALL_RESULT" && [ "$CLAUDE_AUTH_RESULT" != "authenticated" ] && [ "$CLAUDE_AUTH_RESULT" != "already connected" ]; then
-      if [ "$CLAUDE_AUTH_AVAILABLE" -eq 1 ]; then
+print_provider_auth_guidance() {
+  provider=$1
+  read_provider_state "$provider" AUTH_AVAILABLE
+  provider_auth_available=$PROVIDER_STATE_VALUE
+  case $provider in
+    claude)
+      if [ "$provider_auth_available" -eq 1 ]; then
         printf '  Manual Claude login: claude mcp login plugin:valency:valency\n'
       else
         printf '  This Claude Code version lacks mcp login; upgrade it, then run: claude mcp login plugin:valency:valency\n'
       fi
-    fi
-  fi
-  if [ "$CODEX_SELECTED" -eq 1 ] || [ "$CODEX_INSTALL_RESULT" != "not selected" ]; then
-    printf '  Codex installation: %s\n' "$CODEX_INSTALL_RESULT"
-    printf '  Codex authentication: %s\n' "$CODEX_AUTH_RESULT"
-    if plugin_ready_for_login "$CODEX_INSTALL_RESULT" && [ "$CODEX_AUTH_RESULT" != "authenticated" ] && [ "$CODEX_AUTH_RESULT" != "already connected" ]; then
-      if [ "$CODEX_AUTH_AVAILABLE" -eq 1 ]; then
+      ;;
+    codex)
+      if [ "$provider_auth_available" -eq 1 ]; then
         printf '  Manual Codex login: codex mcp login valency\n'
       else
         printf '  This Codex version lacks mcp login; upgrade it, then run: codex mcp login valency\n'
       fi
+      ;;
+    antigravity) printf '  In Antigravity CLI: open /mcp, select valency, and complete browser authentication.\n' ;;
+    gemini) printf '  In Gemini CLI: run /mcp auth valency.\n' ;;
+    copilot) printf '  In GitHub Copilot CLI: run /mcp auth valency.\n' ;;
+    grok) printf '  In Grok Build: open /mcps, select valency, and press i to authenticate.\n' ;;
+  esac
+}
+
+print_summary() {
+  printf '\nSummary\n'
+  provider_index=0
+  while [ "$provider_index" -lt "${#PROVIDER_IDS[@]}" ]; do
+    provider=${PROVIDER_IDS[$provider_index]}
+    load_provider_metadata "$provider"
+    read_provider_state "$provider" SELECTED
+    provider_selected=$PROVIDER_STATE_VALUE
+    read_provider_state "$provider" INSTALL_RESULT
+    provider_install_result=$PROVIDER_STATE_VALUE
+    read_provider_state "$provider" AUTH_RESULT
+    provider_auth_result=$PROVIDER_STATE_VALUE
+    if [ "$provider_selected" -eq 1 ] || [ "$provider_install_result" != "not selected" ]; then
+      printf '  %s installation: %s\n' "$PROVIDER_LABEL" "$provider_install_result"
+      printf '  %s authentication: %s\n' "$PROVIDER_LABEL" "$provider_auth_result"
+      if plugin_ready_for_login "$provider_install_result" && [ "$provider_auth_result" != "authenticated" ] && [ "$provider_auth_result" != "already connected" ]; then
+        print_provider_auth_guidance "$provider"
+      fi
     fi
+    provider_index=$((provider_index + 1))
+  done
+}
+
+any_provider_state_equals() {
+  field=$1
+  expected=$2
+  provider_index=0
+  while [ "$provider_index" -lt "${#PROVIDER_IDS[@]}" ]; do
+    read_provider_state "${PROVIDER_IDS[$provider_index]}" "$field"
+    if [ "$PROVIDER_STATE_VALUE" = "$expected" ]; then return 0; fi
+    provider_index=$((provider_index + 1))
+  done
+  return 1
+}
+
+report_no_supported_providers() {
+  found_any=0
+  provider_index=0
+  while [ "$provider_index" -lt "${#PROVIDER_IDS[@]}" ]; do
+    provider=${PROVIDER_IDS[$provider_index]}
+    load_provider_metadata "$provider"
+    read_provider_state "$provider" EXECUTABLE_FOUND
+    if [ "$PROVIDER_STATE_VALUE" -eq 1 ]; then
+      found_any=1
+      printf 'Error: %s is installed but lacks required %s commands; upgrade it.\n' "$PROVIDER_LABEL" "$PROVIDER_COMPONENT" >&2
+    fi
+    provider_index=$((provider_index + 1))
+  done
+  if [ "$found_any" -eq 0 ]; then
+    printf 'No supported provider CLIs were found on PATH (expected claude, codex, agy, gemini, copilot, or grok).\n' >&2
   fi
 }
 
@@ -1400,24 +2149,16 @@ main() {
 
   initialize_terminal
   detect_provider_executables
-  if [ "$CLAUDE_AVAILABLE" -eq 0 ] && [ "$CODEX_AVAILABLE" -eq 0 ]; then
+  if ! any_provider_state_equals AVAILABLE 1; then
     # Present-but-unsupported CLIs get a precise message; claiming nothing
     # was found on PATH would misdirect the user away from the real fix.
-    if [ "$CLAUDE_EXECUTABLE_FOUND" -eq 1 ]; then
-      printf 'Error: Claude Code is installed but lacks required plugin commands; upgrade it.\n' >&2
-    fi
-    if [ "$CODEX_EXECUTABLE_FOUND" -eq 1 ]; then
-      printf 'Error: Codex is installed but lacks required plugin commands; upgrade it.\n' >&2
-    fi
-    if [ "$CLAUDE_EXECUTABLE_FOUND" -eq 0 ] && [ "$CODEX_EXECUTABLE_FOUND" -eq 0 ]; then
-      printf 'No supported provider CLIs were found on PATH (expected claude or codex).\n' >&2
-    fi
+    report_no_supported_providers
     return 1
   fi
 
   select_requested_targets || return $?
   inspect_provider_state
-  if [ "$CLAUDE_SELECTED" -eq 0 ] && [ "$CODEX_SELECTED" -eq 0 ]; then
+  if ! any_provider_state_equals SELECTED 1; then
     # Every requested provider was unavailable or failed inspection; nothing
     # was changed.
     print_summary
@@ -1427,7 +2168,7 @@ main() {
   print_plan
   authorize_migrations || return $?
   validate_migration_preflights
-  if [ "$CLAUDE_SELECTED" -eq 0 ] && [ "$CODEX_SELECTED" -eq 0 ]; then
+  if ! any_provider_state_equals SELECTED 1; then
     print_summary
     if [ "$PREINSTALL_FAILURES" -ne 0 ]; then
       return 1

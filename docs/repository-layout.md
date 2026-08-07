@@ -66,7 +66,7 @@ marketplace package.
 | --- | --- |
 | `README.md` | User-facing installation and usage documentation for every provider. |
 | `docs/` | Maintainer documentation, including validation instructions and this layout guide. |
-| `installer/` | Source and isolated tests for the interactive multi-provider installer. Provider support is added here only when the host exposes a supported install flow. |
+| `installer/` | Source and isolated tests for the interactive multi-provider installer. Its uniform lifecycle currently dispatches to Claude, Codex, Antigravity, Gemini, Copilot, and Grok adapters; GUI-only Cursor and Kiro installation remains in their hosts. |
 | `scripts/` | Repository validation helpers, including the OpenAI package validator wrapper. |
 | `test/` | Cross-provider packaging tests that pin manifests, endpoints, workflow mappings, and synchronization. |
 | `package.json` | Defines the repository's Node-based validation commands. This repository is not published as an npm package. |

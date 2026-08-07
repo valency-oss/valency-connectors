@@ -25,6 +25,38 @@ its own installation contract. See the
 [repository root layout](./docs/repository-layout.md) for the owner and purpose
 of every root entry.
 
+## Install with the universal installer
+
+From a clone of this repository, run:
+
+```bash
+bash installer/install.sh
+```
+
+The interactive checklist detects and preselects supported installations of
+Claude Code, Codex, Antigravity CLI, Gemini CLI, GitHub Copilot CLI, and Grok
+Build. It shows one complete plan before changing provider state and verifies
+each provider independently, so one provider failure does not block the rest.
+Cursor and Kiro remain in their host-owned UI flows because neither exposes a
+complete noninteractive package installation contract.
+
+For unattended use, select one or more targets explicitly and skip the
+interactive authentication phase:
+
+```bash
+bash installer/install.sh \
+  --target gemini \
+  --target grok \
+  --yes \
+  --no-auth
+```
+
+Use `--target all` for every detected supported CLI and `--dry-run` to inspect
+the plan without changing provider state. Claude Code and Codex can run their
+standalone MCP login commands after installation. Antigravity, Gemini,
+Copilot, and Grok instead print the exact in-host OAuth action; the installer
+does not launch their full interactive agents.
+
 ## Install the skills only
 
 To add the seven guided workflows to an existing agent without installing a
@@ -75,10 +107,6 @@ agy plugin uninstall valency
 
 ## Install in Grok Build
 
-The Valency Bond repository is private during development. Private testers
-need authorized Git access to `valency-oss/valency-bond`, with Git credentials
-that can clone the repository, before adding its Grok marketplace.
-
 Add the repository-level marketplace, then install and trust Valency:
 
 ```bash
@@ -108,11 +136,11 @@ or upstream application change separately from this package.
 Refresh the Valency marketplace and update the installed plugin:
 
 ```bash
-grok plugin marketplace update valency
+grok plugin marketplace update valency-bond
 grok plugin update valency
 ```
 
-To uninstall Valency and remove its private marketplace source:
+To uninstall Valency and remove its marketplace source:
 
 ```bash
 grok plugin uninstall valency
@@ -192,9 +220,7 @@ cursor-agent plugin marketplace add https://github.com/valency-oss/valency-bond
 Start Cursor Agent CLI, open `/plugin`, switch to the **Marketplace tab**, and
 install **Valency**. Cursor does not currently provide a separate
 non-interactive plugin-install command. In the Cursor IDE, manage the same
-plugin from **Customize** after the marketplace is available. While this
-repository is private, the Git credentials used by Cursor must have access to
-`valency-oss/valency-bond`.
+plugin from **Customize** after the marketplace is available.
 
 Reload Cursor after installation. When the `valency` MCP connection presents
 **Connect**, **Needs authentication**, or an equivalent action, complete the

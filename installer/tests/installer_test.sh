@@ -77,7 +77,7 @@ assert_log_not_contains() {
 }
 
 assert_no_mutations() {
-  if grep -E '(plugin (install|update|uninstall|add|remove)|plugin marketplace (add|update|upgrade|remove)|mcp login)' "$MOCK_LOG" | grep -v -- '--help' >/dev/null 2>&1; then
+  if grep -E '(plugin (install|update|uninstall|add|remove)|plugin marketplace (add|update|upgrade|remove)|extensions (install|update|enable|disable|uninstall)|mcp login)' "$MOCK_LOG" | grep -v -- '--help' >/dev/null 2>&1; then
     fail "$TEST_NAME (provider state was mutated)"
     return 1
   fi
@@ -159,6 +159,22 @@ enable_codex() {
   ln -s "$REPO_ROOT/tests/fixtures/mock-provider" "$MOCK_BIN/codex"
 }
 
+enable_antigravity() {
+  ln -s "$REPO_ROOT/tests/fixtures/mock-provider" "$MOCK_BIN/agy"
+}
+
+enable_gemini() {
+  ln -s "$REPO_ROOT/tests/fixtures/mock-provider" "$MOCK_BIN/gemini"
+}
+
+enable_copilot() {
+  ln -s "$REPO_ROOT/tests/fixtures/mock-provider" "$MOCK_BIN/copilot"
+}
+
+enable_grok() {
+  ln -s "$REPO_ROOT/tests/fixtures/mock-provider" "$MOCK_BIN/grok"
+}
+
 enable_repository_check() {
   ln -s "$REPO_ROOT/tests/fixtures/mock-provider" "$MOCK_BIN/curl"
 }
@@ -190,6 +206,168 @@ test_codex_fresh_install() {
   assert_log_contains "codex plugin marketplace add valency-oss/valency-bond" || return
   assert_log_contains "codex plugin add valency@valency" || return
   assert_output_contains "Codex installation: installed" || return
+  pass "$TEST_NAME"
+}
+
+test_antigravity_fresh_install() {
+  new_case antigravity-fresh-install
+  enable_antigravity
+  run_without_terminal --target antigravity --yes --no-auth
+  assert_status 0 || return
+  assert_log_contains "agy plugin install https://github.com/valency-oss/valency-bond" || return
+  assert_output_contains "Antigravity CLI installation: installed" || return
+  assert_output_contains "In Antigravity CLI: open /mcp, select valency, and complete browser authentication." || return
+  pass "$TEST_NAME"
+}
+
+test_gemini_fresh_install() {
+  new_case gemini-fresh-install
+  enable_gemini
+  run_without_terminal --target gemini --yes --no-auth
+  assert_status 0 || return
+  assert_log_contains "gemini extensions install https://github.com/valency-oss/valency-bond --auto-update --consent" || return
+  assert_output_contains "Gemini CLI installation: installed" || return
+  assert_output_contains "In Gemini CLI: run /mcp auth valency." || return
+  pass "$TEST_NAME"
+}
+
+test_copilot_fresh_install() {
+  new_case copilot-fresh-install
+  enable_copilot
+  run_without_terminal --target copilot --yes --no-auth
+  assert_status 0 || return
+  assert_log_contains "copilot plugin marketplace add valency-oss/valency-bond" || return
+  assert_log_contains "copilot plugin install valency@valency-copilot-plugin" || return
+  assert_output_contains "GitHub Copilot CLI installation: installed" || return
+  assert_output_contains "In GitHub Copilot CLI: run /mcp auth valency." || return
+  pass "$TEST_NAME"
+}
+
+test_grok_fresh_install() {
+  new_case grok-fresh-install
+  enable_grok
+  run_without_terminal --target grok --yes --no-auth
+  assert_status 0 || return
+  assert_log_contains "grok plugin marketplace add valency-oss/valency-bond" || return
+  assert_log_contains "grok plugin install valency --trust" || return
+  assert_output_contains "Grok Build installation: installed" || return
+  assert_output_contains "In Grok Build: open /mcps, select valency, and press i to authenticate." || return
+  pass "$TEST_NAME"
+}
+
+test_new_provider_rerun_updates() {
+  new_case new-provider-rerun-updates
+  enable_antigravity
+  enable_gemini
+  enable_copilot
+  enable_grok
+  : > "$MOCK_STATE/agy-plugin"
+  : > "$MOCK_STATE/gemini-extension"
+  : > "$MOCK_STATE/copilot-marketplace"
+  : > "$MOCK_STATE/copilot-plugin"
+  : > "$MOCK_STATE/copilot-json-inventory"
+  : > "$MOCK_STATE/grok-marketplace"
+  : > "$MOCK_STATE/grok-plugin"
+  run_without_terminal --target antigravity --target gemini --target copilot --target grok --yes --no-auth
+  assert_status 0 || return
+  assert_log_contains "agy plugin install https://github.com/valency-oss/valency-bond" || return
+  assert_log_contains "gemini extensions update valency" || return
+  assert_log_contains "gemini extensions enable valency --scope user" || return
+  assert_log_contains "copilot plugin marketplace update valency-copilot-plugin" || return
+  assert_log_contains "copilot plugin update valency" || return
+  assert_log_contains "grok plugin marketplace update valency-bond" || return
+  assert_log_contains "grok plugin update valency" || return
+  assert_output_contains "Antigravity CLI installation: updated" || return
+  assert_output_contains "Gemini CLI installation: updated" || return
+  assert_output_contains "GitHub Copilot CLI installation: updated" || return
+  assert_output_contains "Grok Build installation: updated" || return
+  pass "$TEST_NAME"
+}
+
+test_new_provider_verification_failure_is_isolated() {
+  new_case new-provider-verification-isolation
+  enable_antigravity
+  enable_gemini
+  enable_grok
+  : > "$MOCK_STATE/fail-gemini-verification"
+  run_without_terminal --target antigravity --target gemini --target grok --yes --no-auth
+  assert_status 1 || return
+  assert_output_contains "Antigravity CLI installation: installed" || return
+  assert_output_contains "Gemini CLI installation: failed verification" || return
+  assert_output_contains "Grok Build installation: installed" || return
+  assert_log_contains "grok plugin install valency --trust" || return
+  assert_output_not_contains "In Gemini CLI: run /mcp auth valency." || return
+  pass "$TEST_NAME"
+}
+
+test_new_provider_capability_failure_is_isolated() {
+  new_case new-provider-capability-isolation
+  enable_gemini
+  enable_grok
+  : > "$MOCK_STATE/gemini-missing-capability"
+  run_without_terminal --target gemini --target grok --yes --no-auth
+  assert_status 1 || return
+  assert_output_contains "Gemini CLI installation: failed (unsupported CLI)" || return
+  assert_output_contains "Grok Build installation: installed" || return
+  assert_log_contains "grok plugin install valency --trust" || return
+  pass "$TEST_NAME"
+}
+
+test_all_providers_dry_run_is_non_destructive() {
+  new_case all-provider-dry-run
+  enable_claude
+  enable_codex
+  enable_antigravity
+  enable_gemini
+  enable_copilot
+  enable_grok
+  run_without_terminal --target all --yes --no-auth --dry-run
+  assert_status 0 || return
+  assert_no_mutations || return
+  assert_output_contains "Claude Code installation: planned" || return
+  assert_output_contains "Codex installation: planned" || return
+  assert_output_contains "Antigravity CLI installation: planned" || return
+  assert_output_contains "Gemini CLI installation: planned" || return
+  assert_output_contains "GitHub Copilot CLI installation: planned" || return
+  assert_output_contains "Grok Build installation: planned" || return
+  pass "$TEST_NAME"
+}
+
+test_in_host_authentication_never_launches_new_hosts() {
+  new_case in-host-authentication
+  enable_antigravity
+  enable_gemini
+  enable_copilot
+  enable_grok
+  run_with_terminal --target antigravity --target gemini --target copilot --target grok --yes --auth
+  assert_status 0 || return
+  assert_output_contains "Antigravity CLI authentication: manual action required" || return
+  assert_output_contains "Gemini CLI authentication: manual action required" || return
+  assert_output_contains "GitHub Copilot CLI authentication: manual action required" || return
+  assert_output_contains "Grok Build authentication: manual action required" || return
+  assert_log_not_contains "mcp auth valency" || return
+  assert_log_not_contains "grok /mcps" || return
+  pass "$TEST_NAME"
+}
+
+test_interactive_selector_defaults_to_all_six_providers() {
+  new_case interactive-all-six
+  enable_claude
+  enable_codex
+  enable_antigravity
+  enable_gemini
+  enable_copilot
+  enable_grok
+  printf '\n\n' > "$TTY_INPUT"
+  run_with_terminal --no-auth
+  assert_status 0 || return
+  assert_output_contains "Selected harnesses: Claude Code, Codex, Antigravity CLI, Gemini CLI, GitHub Copilot CLI, Grok Build" || return
+  assert_log_contains "claude plugin install valency@valency-claude-plugin --scope user" || return
+  assert_log_contains "codex plugin add valency@valency" || return
+  assert_log_contains "agy plugin install https://github.com/valency-oss/valency-bond" || return
+  assert_log_contains "gemini extensions install https://github.com/valency-oss/valency-bond --auto-update --consent" || return
+  assert_log_contains "copilot plugin install valency@valency-copilot-plugin" || return
+  assert_log_contains "grok plugin install valency --trust" || return
   pass "$TEST_NAME"
 }
 
@@ -660,7 +838,7 @@ test_help_is_non_destructive() {
   enable_claude
   run_without_terminal --help
   assert_status 0 || return
-  assert_output_contains "--target claude|codex|all" || return
+  assert_output_contains "--target claude|codex|antigravity|gemini|copilot|grok|all" || return
   assert_no_mutations || return
   pass "$TEST_NAME"
 }
@@ -1172,6 +1350,16 @@ test_codex_plugin_failure_after_replacement_prints_recovery() {
 test_no_harnesses
 test_claude_fresh_install
 test_codex_fresh_install
+test_antigravity_fresh_install
+test_gemini_fresh_install
+test_copilot_fresh_install
+test_grok_fresh_install
+test_new_provider_rerun_updates
+test_new_provider_verification_failure_is_isolated
+test_new_provider_capability_failure_is_isolated
+test_all_providers_dry_run_is_non_destructive
+test_in_host_authentication_never_launches_new_hosts
+test_interactive_selector_defaults_to_all_six_providers
 test_rerun_updates_both_providers
 test_installed_plugin_with_missing_marketplace_is_repaired
 test_plan_shows_refresh_for_existing_marketplace_with_fresh_plugin

@@ -35,6 +35,153 @@ if has_arg --help "$@"; then
   exit 0
 fi
 
+if [ "$provider" = agy ]; then
+  case "$*" in
+    "plugin help")
+      [ ! -f "$MOCK_STATE/agy-missing-capability" ] || exit 1
+      printf 'Commands: list install <target> uninstall enable disable validate\n'
+      ;;
+    "plugin list")
+      [ ! -f "$MOCK_STATE/fail-agy-plugin-list" ] || exit 1
+      if [ -f "$MOCK_STATE/agy-plugin" ] && [ ! -f "$MOCK_STATE/fail-agy-verification" ]; then
+        printf '{"imports":[{"name":"valency","source":"antigravity","components":["skills","commands","mcpServers"]}]}\n'
+      else
+        printf 'No imported plugins.\n'
+      fi
+      ;;
+    "plugin install https://github.com/valency-oss/valency-bond")
+      [ ! -f "$MOCK_STATE/fail-agy-plugin-install" ] || exit 1
+      : > "$MOCK_STATE/agy-plugin"
+      ;;
+    *)
+      printf 'Unexpected mock Antigravity command: %s\n' "$*" >&2
+      exit 64
+      ;;
+  esac
+  exit 0
+fi
+
+if [ "$provider" = gemini ]; then
+  case "$*" in
+    "extensions list --output-format json")
+      [ ! -f "$MOCK_STATE/fail-gemini-extension-list" ] || exit 1
+      if [ -f "$MOCK_STATE/gemini-extension" ] && [ ! -f "$MOCK_STATE/fail-gemini-verification" ]; then
+        if [ -f "$MOCK_STATE/gemini-extension-disabled" ]; then active=false; else active=true; fi
+        printf '[{"name":"valency","version":"1.1.0","isActive":%s,"installMetadata":{"type":"git","source":"https://github.com/valency-oss/valency-bond"}}]\n' "$active"
+      else
+        printf '[]\n'
+      fi
+      ;;
+    "extensions install https://github.com/valency-oss/valency-bond --auto-update --consent")
+      [ ! -f "$MOCK_STATE/fail-gemini-extension-install" ] || exit 1
+      : > "$MOCK_STATE/gemini-extension"
+      rm -f "$MOCK_STATE/gemini-extension-disabled"
+      ;;
+    "extensions update valency")
+      [ ! -f "$MOCK_STATE/fail-gemini-extension-update" ] || exit 1
+      ;;
+    "extensions enable valency --scope user")
+      [ ! -f "$MOCK_STATE/fail-gemini-extension-enable" ] || exit 1
+      rm -f "$MOCK_STATE/gemini-extension-disabled"
+      ;;
+    *)
+      printf 'Unexpected mock Gemini command: %s\n' "$*" >&2
+      exit 64
+      ;;
+  esac
+  exit 0
+fi
+
+if [ "$provider" = copilot ]; then
+  case "$*" in
+    "plugin marketplace list")
+      [ ! -f "$MOCK_STATE/fail-copilot-marketplace-list" ] || exit 1
+      printf 'Included with GitHub Copilot:\n  ◆ copilot-plugins (GitHub: github/copilot-plugins)\n'
+      if [ -f "$MOCK_STATE/copilot-marketplace" ]; then
+        printf '\nRegistered marketplaces:\n  • valency-copilot-plugin (GitHub: valency-oss/valency-bond)\n'
+      fi
+      ;;
+    "plugin list")
+      [ ! -f "$MOCK_STATE/fail-copilot-plugin-list" ] || exit 1
+      if [ -f "$MOCK_STATE/copilot-plugin" ] && [ ! -f "$MOCK_STATE/fail-copilot-verification" ]; then
+        printf 'Installed plugins:\n  • valency@valency-copilot-plugin (v0.1.0)\n'
+      else
+        printf 'No plugins installed.\n'
+      fi
+      ;;
+    "plugins list --kind plugin --scope user --json")
+      # Copilot 1.0.78 documents this inventory but does not ship it yet.
+      [ -f "$MOCK_STATE/copilot-json-inventory" ] || exit 1
+      if [ -f "$MOCK_STATE/copilot-plugin" ] && [ ! -f "$MOCK_STATE/fail-copilot-verification" ]; then
+        printf '[{"kind":"plugin","name":"valency","id":"valency@valency-copilot-plugin","scope":"user","enabled":true}]\n'
+      else
+        printf '[]\n'
+      fi
+      ;;
+    "plugin marketplace add valency-oss/valency-bond")
+      [ ! -f "$MOCK_STATE/fail-copilot-marketplace-add" ] || exit 1
+      : > "$MOCK_STATE/copilot-marketplace"
+      ;;
+    "plugin marketplace update valency-copilot-plugin")
+      [ ! -f "$MOCK_STATE/fail-copilot-marketplace-update" ] || exit 1
+      [ -f "$MOCK_STATE/copilot-marketplace" ] || exit 1
+      ;;
+    "plugin install valency@valency-copilot-plugin")
+      [ ! -f "$MOCK_STATE/fail-copilot-plugin-install" ] || exit 1
+      : > "$MOCK_STATE/copilot-plugin"
+      ;;
+    "plugin update valency")
+      [ ! -f "$MOCK_STATE/fail-copilot-plugin-update" ] || exit 1
+      ;;
+    *)
+      printf 'Unexpected mock Copilot command: %s\n' "$*" >&2
+      exit 64
+      ;;
+  esac
+  exit 0
+fi
+
+if [ "$provider" = grok ]; then
+  case "$*" in
+    "plugin marketplace list --json")
+      [ ! -f "$MOCK_STATE/fail-grok-marketplace-list" ] || exit 1
+      if [ -f "$MOCK_STATE/grok-marketplace" ]; then
+        printf '[{"name":"valency-bond","kind":"git","source":{"url":"https://github.com/valency-oss/valency-bond.git","branch":null}}]\n'
+      else
+        printf '[]\n'
+      fi
+      ;;
+    "plugin list --json")
+      [ ! -f "$MOCK_STATE/fail-grok-plugin-list" ] || exit 1
+      if [ -f "$MOCK_STATE/grok-plugin" ] && [ ! -f "$MOCK_STATE/fail-grok-verification" ]; then
+        printf '[{"status":"installed","name":"valency","repo_key":"valency-bond","version":"0.1.0","source":"https://github.com/valency-oss/valency-bond.git","marketplace":"valency-bond"}]\n'
+      else
+        printf '[]\n'
+      fi
+      ;;
+    "plugin marketplace add valency-oss/valency-bond")
+      [ ! -f "$MOCK_STATE/fail-grok-marketplace-add" ] || exit 1
+      : > "$MOCK_STATE/grok-marketplace"
+      ;;
+    "plugin marketplace update valency-bond")
+      [ ! -f "$MOCK_STATE/fail-grok-marketplace-update" ] || exit 1
+      [ -f "$MOCK_STATE/grok-marketplace" ] || exit 1
+      ;;
+    "plugin install valency --trust")
+      [ ! -f "$MOCK_STATE/fail-grok-plugin-install" ] || exit 1
+      : > "$MOCK_STATE/grok-plugin"
+      ;;
+    "plugin update valency")
+      [ ! -f "$MOCK_STATE/fail-grok-plugin-update" ] || exit 1
+      ;;
+    *)
+      printf 'Unexpected mock Grok command: %s\n' "$*" >&2
+      exit 64
+      ;;
+  esac
+  exit 0
+fi
+
 if [ "$provider" = claude ]; then
   case "$*" in
     "plugin marketplace list --json")

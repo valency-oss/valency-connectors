@@ -942,7 +942,7 @@ test("Cursor documentation keeps installation interactive and profile-free", () 
   );
 });
 
-test("Grok documentation uses the private marketplace lifecycle", () => {
+test("Grok documentation uses the public marketplace lifecycle", () => {
   const readme = readFileSync("README.md", "utf8");
   const development = readFileSync("docs/development.md", "utf8");
   const layout = readFileSync("docs/repository-layout.md", "utf8");
@@ -960,10 +960,12 @@ test("Grok documentation uses the private marketplace lifecycle", () => {
     /grok plugin marketplace add valency-oss\/valency-bond/,
   );
   assert.match(grokSection, /grok plugin install valency --trust/);
-  assert.match(grokSection, /private during development/i);
-  assert.match(grokSection, /authorized Git access/i);
+  assert.doesNotMatch(
+    grokSection,
+    /private during development|authorized Git access/i,
+  );
   assert.match(grokSection, /`\/mcps`/);
-  assert.match(grokSection, /grok plugin marketplace update valency/);
+  assert.match(grokSection, /grok plugin marketplace update valency-bond/);
   assert.match(grokSection, /grok plugin update valency/);
   assert.match(grokSection, /grok plugin uninstall valency/);
   assert.match(
