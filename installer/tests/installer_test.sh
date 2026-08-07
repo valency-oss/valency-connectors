@@ -911,6 +911,17 @@ test_requested_provider_missing_from_path_is_reported() {
   pass "$TEST_NAME"
 }
 
+test_only_missing_explicit_target_is_reported_precisely() {
+  new_case only-explicit-target-not-installed
+  run_without_terminal --target gemini --yes --no-auth
+  assert_status 1 || return
+  assert_output_contains "Gemini CLI was requested but its CLI is not on PATH" || return
+  assert_output_contains "Gemini CLI installation: failed (not installed)" || return
+  assert_output_not_contains "No supported provider CLIs were found" || return
+  assert_no_mutations || return
+  pass "$TEST_NAME"
+}
+
 test_only_unsupported_provider_is_reported_precisely() {
   # When the only installed provider lacks capabilities, the error must name
   # that condition rather than claim no CLI was found on PATH.
@@ -1532,6 +1543,7 @@ test_provider_failure_does_not_block_other_provider
 test_selected_provider_requires_plugin_capabilities
 test_one_unavailable_explicit_target_does_not_block_the_other
 test_requested_provider_missing_from_path_is_reported
+test_only_missing_explicit_target_is_reported_precisely
 test_only_unsupported_provider_is_reported_precisely
 test_target_all_reports_unsupported_provider
 test_invalid_unattended_invocations_are_non_destructive

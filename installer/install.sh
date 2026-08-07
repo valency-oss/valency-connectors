@@ -2169,10 +2169,12 @@ main() {
   initialize_terminal
   detect_provider_executables
   if ! any_provider_state_equals AVAILABLE 1; then
-    # Present-but-unsupported CLIs get a precise message; claiming nothing
-    # was found on PATH would misdirect the user away from the real fix.
-    report_no_supported_providers
-    return 1
+    if [ "$TARGETS_SPECIFIED" -eq 0 ] || [ "$TARGET_ALL" -eq 1 ]; then
+      # Interactive and all-provider runs need a global diagnostic. Explicit
+      # targets continue into selection so each missing CLI is named directly.
+      report_no_supported_providers
+      return 1
+    fi
   fi
 
   select_requested_targets || return $?
