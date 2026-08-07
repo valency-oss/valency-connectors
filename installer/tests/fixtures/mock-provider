@@ -32,6 +32,26 @@ if has_arg --help "$@"; then
   case "$*" in
     mcp*) [ ! -f "$MOCK_STATE/$provider-auth-capability-missing" ] || exit 1 ;;
   esac
+  case "$provider:$*" in
+    "gemini:extensions install --help")
+      if [ -f "$MOCK_STATE/gemini-missing-option" ]; then
+        printf 'Options: --auto-update\n'
+      else
+        printf 'Options: --auto-update --consent\n'
+      fi
+      ;;
+    "gemini:extensions list --help") printf 'Options: --output-format\n' ;;
+    "gemini:extensions enable --help") printf 'Options: --scope\n' ;;
+    "grok:plugin marketplace list --help") printf 'Options: --json\n' ;;
+    "grok:plugin list --help") printf 'Options: --json\n' ;;
+    "grok:plugin install --help")
+      if [ -f "$MOCK_STATE/grok-missing-option" ]; then
+        printf 'Options: --debug\n'
+      else
+        printf 'Options: --trust\n'
+      fi
+      ;;
+  esac
   exit 0
 fi
 
@@ -54,7 +74,11 @@ if [ "$provider" = agy ]; then
     "plugin list")
       [ ! -f "$MOCK_STATE/fail-agy-plugin-list" ] || exit 1
       if [ -f "$MOCK_STATE/agy-plugin" ] && [ ! -f "$MOCK_STATE/fail-agy-verification" ]; then
-        printf '{"imports":[{"name":"valency","source":"antigravity","components":["skills","commands","mcpServers"]}]}\n'
+        if [ -f "$MOCK_STATE/agy-partial-import" ]; then
+          printf '{"imports":[{"name":"valency","source":"antigravity","components":["mcpServers"]}]}\n'
+        else
+          printf '{"imports":[{"name":"valency","source":"antigravity","components":["skills","commands","mcpServers"]}]}\n'
+        fi
       else
         printf 'No imported plugins.\n'
       fi

@@ -242,6 +242,17 @@ test_antigravity_capability_probe_requires_exact_commands() {
   pass "$TEST_NAME"
 }
 
+test_antigravity_partial_import_fails_verification() {
+  new_case antigravity-partial-import
+  enable_antigravity
+  : > "$MOCK_STATE/agy-partial-import"
+  run_without_terminal --target antigravity --yes --no-auth
+  assert_status 1 || return
+  assert_output_contains "Antigravity CLI installation: failed verification" || return
+  assert_output_not_contains "In Antigravity CLI: open /mcp" || return
+  pass "$TEST_NAME"
+}
+
 test_gemini_fresh_install() {
   new_case gemini-fresh-install
   enable_gemini
@@ -423,6 +434,28 @@ test_new_provider_capability_failure_is_isolated() {
   assert_output_contains "Gemini CLI installation: failed (unsupported CLI)" || return
   assert_output_contains "Grok Build installation: installed" || return
   assert_log_contains "grok plugin install valency --trust" || return
+  pass "$TEST_NAME"
+}
+
+test_gemini_required_options_are_capabilities() {
+  new_case gemini-required-options
+  enable_gemini
+  : > "$MOCK_STATE/gemini-missing-option"
+  run_without_terminal --target gemini --yes --no-auth
+  assert_status 1 || return
+  assert_output_contains "Gemini CLI is installed but lacks required extension commands; upgrade it." || return
+  assert_no_mutations || return
+  pass "$TEST_NAME"
+}
+
+test_grok_required_options_are_capabilities() {
+  new_case grok-required-options
+  enable_grok
+  : > "$MOCK_STATE/grok-missing-option"
+  run_without_terminal --target grok --yes --no-auth
+  assert_status 1 || return
+  assert_output_contains "Grok Build is installed but lacks required plugin commands; upgrade it." || return
+  assert_no_mutations || return
   pass "$TEST_NAME"
 }
 
@@ -1523,6 +1556,7 @@ test_codex_fresh_install
 test_antigravity_fresh_install
 test_antigravity_capability_order_is_irrelevant
 test_antigravity_capability_probe_requires_exact_commands
+test_antigravity_partial_import_fails_verification
 test_gemini_fresh_install
 test_copilot_fresh_install
 test_copilot_json_inventory_ignores_same_named_wrong_id
@@ -1536,6 +1570,8 @@ test_grok_foreign_source_fails_closed
 test_new_provider_rerun_updates
 test_new_provider_verification_failure_is_isolated
 test_new_provider_capability_failure_is_isolated
+test_gemini_required_options_are_capabilities
+test_grok_required_options_are_capabilities
 test_all_providers_dry_run_is_non_destructive
 test_in_host_authentication_is_planned_during_dry_run
 test_standalone_dry_run_preserves_inspected_auth_states

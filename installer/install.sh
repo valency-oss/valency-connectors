@@ -358,6 +358,19 @@ codex_has_auth_commands() {
     codex mcp login --help >/dev/null 2>&1
 }
 
+help_has_option() {
+  printf '%s\n' "$1" | awk -v option="$2" '
+    {
+      for (i = 1; i <= NF; i++) {
+        token = $i
+        sub(/[=,].*$/, "", token)
+        if (token == option) found = 1
+      }
+    }
+    END { exit !found }
+  '
+}
+
 antigravity_has_required_commands() {
   # Antigravity's plugin subcommands do not accept --help individually. Its
   # side-effect-free `plugin help` output is therefore the capability probe.
@@ -370,10 +383,14 @@ antigravity_has_required_commands() {
 }
 
 gemini_has_required_commands() {
-  gemini extensions install --help >/dev/null 2>&1 &&
-    gemini extensions list --help >/dev/null 2>&1 &&
-    gemini extensions update --help >/dev/null 2>&1 &&
-    gemini extensions enable --help >/dev/null 2>&1
+  gemini_install_help=$(gemini extensions install --help 2>/dev/null) || return 1
+  gemini_list_help=$(gemini extensions list --help 2>/dev/null) || return 1
+  gemini_enable_help=$(gemini extensions enable --help 2>/dev/null) || return 1
+  gemini extensions update --help >/dev/null 2>&1 || return 1
+  help_has_option "$gemini_install_help" --auto-update &&
+    help_has_option "$gemini_install_help" --consent &&
+    help_has_option "$gemini_list_help" --output-format &&
+    help_has_option "$gemini_enable_help" --scope
 }
 
 copilot_has_required_commands() {
@@ -386,12 +403,15 @@ copilot_has_required_commands() {
 }
 
 grok_has_required_commands() {
-  grok plugin marketplace add --help >/dev/null 2>&1 &&
-    grok plugin marketplace list --help >/dev/null 2>&1 &&
-    grok plugin marketplace update --help >/dev/null 2>&1 &&
-    grok plugin install --help >/dev/null 2>&1 &&
-    grok plugin update --help >/dev/null 2>&1 &&
-    grok plugin list --help >/dev/null 2>&1
+  grok_marketplace_list_help=$(grok plugin marketplace list --help 2>/dev/null) || return 1
+  grok_plugin_install_help=$(grok plugin install --help 2>/dev/null) || return 1
+  grok_plugin_list_help=$(grok plugin list --help 2>/dev/null) || return 1
+  grok plugin marketplace add --help >/dev/null 2>&1 || return 1
+  grok plugin marketplace update --help >/dev/null 2>&1 || return 1
+  grok plugin update --help >/dev/null 2>&1 || return 1
+  help_has_option "$grok_marketplace_list_help" --json &&
+    help_has_option "$grok_plugin_install_help" --trust &&
+    help_has_option "$grok_plugin_list_help" --json
 }
 
 provider_has_required_commands() {
@@ -1619,7 +1639,7 @@ verify_codex_plugin() {
 verify_antigravity_plugin() {
   plugin_output=$(agy plugin list 2>/dev/null) || return 1
   compact_plugins=$(printf '%s' "$plugin_output" | compact_json)
-  json_entry_contains "$compact_plugins" '"name":"valency"' '"source":"antigravity"' '"mcpServers"'
+  json_entry_contains "$compact_plugins" '"name":"valency"' '"source":"antigravity"' '"skills"' '"commands"' '"mcpServers"'
 }
 
 install_antigravity() {
