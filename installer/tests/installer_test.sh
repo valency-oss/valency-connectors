@@ -472,6 +472,19 @@ test_in_host_authentication_never_launches_new_hosts() {
   pass "$TEST_NAME"
 }
 
+test_in_host_no_auth_reports_skipped_with_manual_guidance() {
+  new_case in-host-no-auth
+  enable_gemini
+  run_without_terminal --target gemini --yes --no-auth
+  assert_status 0 || return
+  assert_output_contains "Gemini CLI installation: installed" || return
+  assert_output_contains "Gemini CLI authentication: skipped" || return
+  assert_output_contains "In Gemini CLI: run /mcp auth valency." || return
+  assert_output_not_contains "authentication: manual action required" || return
+  assert_log_not_contains "mcp auth valency" || return
+  pass "$TEST_NAME"
+}
+
 test_interactive_selector_defaults_to_all_six_providers() {
   new_case interactive-all-six
   enable_claude
@@ -1490,6 +1503,7 @@ test_all_providers_dry_run_is_non_destructive
 test_in_host_authentication_is_planned_during_dry_run
 test_standalone_dry_run_preserves_inspected_auth_states
 test_in_host_authentication_never_launches_new_hosts
+test_in_host_no_auth_reports_skipped_with_manual_guidance
 test_interactive_selector_defaults_to_all_six_providers
 test_rerun_updates_both_providers
 test_installed_plugin_with_missing_marketplace_is_repaired
