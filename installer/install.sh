@@ -1139,6 +1139,11 @@ inspect_copilot_plugin_state() {
       COPILOT_PLUGIN_PRESENT=1
       COPILOT_PLUGIN_ENABLED=1
       ;;
+    "No plugins installed."*|"Installed plugins:"*) ;;
+    *)
+      printf 'Error: GitHub Copilot CLI returned an unrecognized plugin list; no changes were made.\n' >&2
+      return 1
+      ;;
   esac
 }
 
@@ -1150,6 +1155,11 @@ inspect_copilot_state() {
   case $marketplace_output in
     *"valency-copilot-plugin (GitHub: $MARKETPLACE_SOURCE)"*) COPILOT_MARKETPLACE_PRESENT=1 ;;
     *"valency-copilot-plugin"*) COPILOT_MARKETPLACE_CONFLICT=1 ;;
+    "Included with GitHub Copilot:"*) ;;
+    *)
+      printf 'Error: GitHub Copilot CLI returned an unrecognized marketplace list; no changes were made.\n' >&2
+      return 1
+      ;;
   esac
   inspect_copilot_plugin_state
 }

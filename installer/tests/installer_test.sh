@@ -331,6 +331,30 @@ test_copilot_foreign_marketplace_source_fails_closed() {
   pass "$TEST_NAME"
 }
 
+test_copilot_unrecognized_marketplace_output_fails_inspection() {
+  new_case copilot-unrecognized-marketplace
+  enable_copilot
+  : > "$MOCK_STATE/copilot-marketplace-unrecognized"
+  run_without_terminal --target copilot --yes --no-auth
+  assert_status 1 || return
+  assert_output_contains "GitHub Copilot CLI returned an unrecognized marketplace list" || return
+  assert_output_contains "GitHub Copilot CLI installation: failed (state inspection)" || return
+  assert_no_mutations || return
+  pass "$TEST_NAME"
+}
+
+test_copilot_unrecognized_plugin_output_fails_inspection() {
+  new_case copilot-unrecognized-plugin-list
+  enable_copilot
+  : > "$MOCK_STATE/copilot-plugin-list-unrecognized"
+  run_without_terminal --target copilot --yes --no-auth
+  assert_status 1 || return
+  assert_output_contains "GitHub Copilot CLI returned an unrecognized plugin list" || return
+  assert_output_contains "GitHub Copilot CLI installation: failed (state inspection)" || return
+  assert_no_mutations || return
+  pass "$TEST_NAME"
+}
+
 test_grok_foreign_source_fails_closed() {
   new_case grok-foreign-source
   enable_grok
@@ -1506,6 +1530,8 @@ test_copilot_json_verification_rejects_disabled_plugin
 test_grok_fresh_install
 test_gemini_foreign_extension_source_fails_closed
 test_copilot_foreign_marketplace_source_fails_closed
+test_copilot_unrecognized_marketplace_output_fails_inspection
+test_copilot_unrecognized_plugin_output_fails_inspection
 test_grok_foreign_source_fails_closed
 test_new_provider_rerun_updates
 test_new_provider_verification_failure_is_isolated

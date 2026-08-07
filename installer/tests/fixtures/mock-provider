@@ -111,6 +111,10 @@ if [ "$provider" = copilot ]; then
   case "$*" in
     "plugin marketplace list")
       [ ! -f "$MOCK_STATE/fail-copilot-marketplace-list" ] || exit 1
+      if [ -f "$MOCK_STATE/copilot-marketplace-unrecognized" ]; then
+        printf 'Marketplace inventory is temporarily unavailable.\n'
+        exit 0
+      fi
       printf 'Included with GitHub Copilot:\n  ◆ copilot-plugins (GitHub: github/copilot-plugins)\n'
       if [ -f "$MOCK_STATE/copilot-marketplace-foreign" ]; then
         printf '\nRegistered marketplaces:\n  • valency-copilot-plugin (GitHub: imitator/valency-lookalike)\n'
@@ -120,6 +124,10 @@ if [ "$provider" = copilot ]; then
       ;;
     "plugin list")
       [ ! -f "$MOCK_STATE/fail-copilot-plugin-list" ] || exit 1
+      if [ -f "$MOCK_STATE/copilot-plugin-list-unrecognized" ]; then
+        printf 'Plugin inventory is temporarily unavailable.\n'
+        exit 0
+      fi
       if [ -f "$MOCK_STATE/copilot-plugin" ] && [ ! -f "$MOCK_STATE/fail-copilot-verification" ]; then
         printf 'Installed plugins:\n  • valency@valency-copilot-plugin (v0.1.0)\n'
       else
