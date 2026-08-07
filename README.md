@@ -119,7 +119,7 @@ server; the package does not contain a local executable or credentials.
 3. Enter `https://github.com/valency-oss/valency-bond` and install the Power.
 4. Activate Valency and complete Kiro's browser-based authorization flow.
 
-### Skills only
+### Skills-only installation
 
 To install the seven guided workflows without the Valency Bond MCP server:
 

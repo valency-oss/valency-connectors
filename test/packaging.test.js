@@ -716,7 +716,7 @@ test("repository metadata and installation docs point at the monorepo", () => {
     "Antigravity CLI",
     "Grok Build",
     "Kiro",
-    "Skills only",
+    "Skills-only installation",
   ]) {
     assert.match(readme, new RegExp(`^### ${surface}$`, "m"));
   }
@@ -829,6 +829,15 @@ test("uninstall instructions live in the linked guide", () => {
   ]) {
     assert.ok(uninstall.includes(command), `${command} must be documented`);
   }
+
+  assert.match(
+    uninstall,
+    /This repository is registered as `valency`.*source `valency-oss\/valency-bond`/s,
+  );
+  assert.match(
+    uninstall,
+    /`valency-copilot-plugin` is the marketplace name declared by this repository/,
+  );
 });
 
 test("repository layout guide explains every intentional root entry", () => {

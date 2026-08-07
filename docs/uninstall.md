@@ -29,6 +29,10 @@ codex plugin remove valency@valency
 codex plugin marketplace remove valency
 ```
 
+`codex plugin marketplace remove` expects the configured marketplace name.
+This repository is registered as `valency`, even though it was added using the
+source `valency-oss/valency-bond`.
+
 Start a new Codex session after uninstalling.
 
 ## ChatGPT
@@ -56,6 +60,9 @@ Restart Gemini CLI after uninstalling.
 copilot plugin uninstall valency
 copilot plugin marketplace remove valency-copilot-plugin
 ```
+
+`valency-copilot-plugin` is the marketplace name declared by this repository;
+the remove command uses that name rather than the repository source.
 
 ## Antigravity CLI
 
