@@ -362,14 +362,11 @@ antigravity_has_required_commands() {
   # Antigravity's plugin subcommands do not accept --help individually. Its
   # side-effect-free `plugin help` output is therefore the capability probe.
   plugin_help=$(agy plugin help 2>/dev/null) || return 1
-  case $plugin_help in
-    *"list"*) ;;
-    *) return 1 ;;
-  esac
-  case $plugin_help in
-    *"install <target>"*) return 0 ;;
-  esac
-  return 1
+  printf '%s\n' "$plugin_help" | awk '
+    $1 == "list" { has_list = 1 }
+    $1 == "install" && $2 == "<target>" { has_install = 1 }
+    END { exit !(has_list && has_install) }
+  '
 }
 
 gemini_has_required_commands() {
@@ -1916,7 +1913,13 @@ prepare_authentication() {
     provider_selected=$PROVIDER_STATE_VALUE
     read_provider_state "$provider" INSTALL_RESULT
     if [ "$provider_selected" -eq 1 ] && installation_succeeded "$PROVIDER_STATE_VALUE"; then
-      if [ "$PROVIDER_AUTH_METHOD" = in-host ]; then
+      if [ "$DRY_RUN" -eq 1 ]; then
+        if [ "$AUTH_MODE" = no ]; then
+          write_provider_state "$provider" AUTH_RESULT "skipped"
+        else
+          write_provider_state "$provider" AUTH_RESULT "planned"
+        fi
+      elif [ "$PROVIDER_AUTH_METHOD" = in-host ]; then
         # These providers own OAuth inside their TUI. The installer reports the
         # exact action instead of launching a full interactive agent.
         write_provider_state "$provider" AUTH_RESULT "manual action required"

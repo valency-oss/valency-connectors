@@ -231,6 +231,17 @@ test_antigravity_capability_order_is_irrelevant() {
   pass "$TEST_NAME"
 }
 
+test_antigravity_capability_probe_requires_exact_commands() {
+  new_case antigravity-capability-boundaries
+  enable_antigravity
+  : > "$MOCK_STATE/agy-similar-capabilities"
+  run_without_terminal --target antigravity --yes --no-auth
+  assert_status 1 || return
+  assert_output_contains "Antigravity CLI is installed but lacks required plugin commands; upgrade it." || return
+  assert_no_mutations || return
+  pass "$TEST_NAME"
+}
+
 test_gemini_fresh_install() {
   new_case gemini-fresh-install
   enable_gemini
@@ -370,6 +381,23 @@ test_all_providers_dry_run_is_non_destructive() {
   assert_output_contains "Gemini CLI installation: planned" || return
   assert_output_contains "GitHub Copilot CLI installation: planned" || return
   assert_output_contains "Grok Build installation: planned" || return
+  assert_output_contains "Antigravity CLI authentication: skipped" || return
+  assert_output_contains "Gemini CLI authentication: skipped" || return
+  assert_output_contains "GitHub Copilot CLI authentication: skipped" || return
+  assert_output_contains "Grok Build authentication: skipped" || return
+  assert_output_not_contains "authentication: manual action required" || return
+  pass "$TEST_NAME"
+}
+
+test_in_host_authentication_is_planned_during_dry_run() {
+  new_case in-host-auth-dry-run
+  enable_gemini
+  run_with_terminal --target gemini --yes --auth --dry-run
+  assert_status 0 || return
+  assert_output_contains "Gemini CLI installation: planned" || return
+  assert_output_contains "Gemini CLI authentication: planned" || return
+  assert_output_not_contains "authentication: manual action required" || return
+  assert_no_mutations || return
   pass "$TEST_NAME"
 }
 
@@ -1392,6 +1420,7 @@ test_claude_fresh_install
 test_codex_fresh_install
 test_antigravity_fresh_install
 test_antigravity_capability_order_is_irrelevant
+test_antigravity_capability_probe_requires_exact_commands
 test_gemini_fresh_install
 test_copilot_fresh_install
 test_copilot_json_inventory_ignores_same_named_wrong_id
@@ -1401,6 +1430,7 @@ test_new_provider_rerun_updates
 test_new_provider_verification_failure_is_isolated
 test_new_provider_capability_failure_is_isolated
 test_all_providers_dry_run_is_non_destructive
+test_in_host_authentication_is_planned_during_dry_run
 test_in_host_authentication_never_launches_new_hosts
 test_interactive_selector_defaults_to_all_six_providers
 test_rerun_updates_both_providers
