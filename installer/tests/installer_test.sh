@@ -428,6 +428,29 @@ test_grok_foreign_source_fails_closed() {
   pass "$TEST_NAME"
 }
 
+test_grok_mixed_plugin_sources_fail_closed() {
+  new_case grok-mixed-plugin-sources
+  enable_grok
+  : > "$MOCK_STATE/grok-marketplace"
+  : > "$MOCK_STATE/grok-plugin-mixed"
+  run_without_terminal --target grok --yes --no-auth
+  assert_status 1 || return
+  assert_output_contains "Grok Build installation: failed (source conflict)" || return
+  assert_no_mutations || return
+  pass "$TEST_NAME"
+}
+
+test_grok_mixed_marketplace_sources_fail_closed() {
+  new_case grok-mixed-marketplace-sources
+  enable_grok
+  : > "$MOCK_STATE/grok-marketplace-mixed"
+  run_without_terminal --target grok --yes --no-auth
+  assert_status 1 || return
+  assert_output_contains "Grok Build installation: failed (source conflict)" || return
+  assert_no_mutations || return
+  pass "$TEST_NAME"
+}
+
 test_new_provider_rerun_updates() {
   new_case new-provider-rerun-updates
   enable_antigravity
@@ -1620,6 +1643,8 @@ test_copilot_foreign_marketplace_source_fails_closed
 test_copilot_unrecognized_marketplace_output_fails_inspection
 test_copilot_unrecognized_plugin_output_fails_inspection
 test_grok_foreign_source_fails_closed
+test_grok_mixed_plugin_sources_fail_closed
+test_grok_mixed_marketplace_sources_fail_closed
 test_new_provider_rerun_updates
 test_new_provider_verification_failure_is_isolated
 test_new_provider_capability_failure_is_isolated

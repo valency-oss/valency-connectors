@@ -946,6 +946,38 @@ json_entry_contains() {
   done
 }
 
+# Return success only when every entry carrying the identity also carries all
+# required fields in that same entry. This is used before unqualified update
+# commands, where one trusted record must not hide a same-name foreign record.
+json_all_identity_entries_contain() {
+  document=$1
+  identity=$2
+  shift 2
+  remainder=$document
+  entries_found=0
+  while :; do
+    case $remainder in
+      *"$identity"*) ;;
+      *) [ "$entries_found" -eq 1 ]; return ;;
+    esac
+    entry_before=${remainder%%"$identity"*}
+    entry_after=${remainder#*"$identity"}
+    remainder=$entry_after
+    entry_before=${entry_before##*"},{"}
+    entry_before=${entry_before##*"[{"}
+    entry_after=${entry_after%%"},{"*}
+    entry_after=${entry_after%%"}]"*}
+    segment=$entry_before$identity$entry_after
+    entries_found=1
+    for required in "$@"; do
+      case $segment in
+        *"$required"*) ;;
+        *) return 1 ;;
+      esac
+    done
+  done
+}
+
 inspect_claude_state() {
   if ! marketplace_json=$(claude plugin marketplace list --json 2>/dev/null); then
     printf 'Error: could not inspect Claude Code marketplace state; no changes were made.\n' >&2
@@ -1244,7 +1276,7 @@ inspect_grok_state() {
   expected_grok_source=$(grok_source_url)
   case $compact_marketplaces in
     *'"name":"valency-bond"'*)
-      if json_entry_contains "$compact_marketplaces" '"name":"valency-bond"' "\"url\":\"$expected_grok_source\""; then
+      if json_all_identity_entries_contain "$compact_marketplaces" '"name":"valency-bond"' "\"url\":\"$expected_grok_source\""; then
         GROK_MARKETPLACE_PRESENT=1
       else
         GROK_MARKETPLACE_CONFLICT=1
@@ -1253,7 +1285,7 @@ inspect_grok_state() {
   esac
   case $compact_plugins in
     *'"name":"valency"'*)
-      if json_entry_contains "$compact_plugins" '"name":"valency"' '"status":"installed"' "\"source\":\"$expected_grok_source\""; then
+      if json_all_identity_entries_contain "$compact_plugins" '"name":"valency"' '"status":"installed"' "\"source\":\"$expected_grok_source\""; then
         GROK_PLUGIN_PRESENT=1
       else
         GROK_PLUGIN_CONFLICT=1
@@ -1796,7 +1828,7 @@ verify_grok_plugin() {
   plugin_json=$(grok plugin list --json 2>/dev/null) || return 1
   compact_plugins=$(printf '%s' "$plugin_json" | compact_json)
   expected_grok_source=$(grok_source_url)
-  json_entry_contains "$compact_plugins" '"name":"valency"' '"status":"installed"' "\"source\":\"$expected_grok_source\""
+  json_all_identity_entries_contain "$compact_plugins" '"name":"valency"' '"status":"installed"' "\"source\":\"$expected_grok_source\""
 }
 
 verify_provider() {

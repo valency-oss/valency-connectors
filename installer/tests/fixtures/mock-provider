@@ -207,7 +207,9 @@ if [ "$provider" = grok ]; then
   case "$*" in
     "plugin marketplace list --json")
       [ ! -f "$MOCK_STATE/fail-grok-marketplace-list" ] || exit 1
-      if [ -f "$MOCK_STATE/grok-marketplace-foreign" ]; then
+      if [ -f "$MOCK_STATE/grok-marketplace-mixed" ]; then
+        printf '[{"name":"valency-bond","kind":"git","source":{"url":"https://github.com/valency-oss/valency-bond.git","branch":null}},{"name":"valency-bond","kind":"git","source":{"url":"https://github.com/imitator/valency-lookalike.git","branch":null}}]\n'
+      elif [ -f "$MOCK_STATE/grok-marketplace-foreign" ]; then
         printf '[{"name":"valency-bond","kind":"git","source":{"url":"https://github.com/imitator/valency-lookalike.git","branch":null}}]\n'
       elif [ -f "$MOCK_STATE/grok-marketplace" ]; then
         printf '[{"name":"valency-bond","kind":"git","source":{"url":"https://github.com/valency-oss/valency-bond.git","branch":null}}]\n'
@@ -217,7 +219,9 @@ if [ "$provider" = grok ]; then
       ;;
     "plugin list --json")
       [ ! -f "$MOCK_STATE/fail-grok-plugin-list" ] || exit 1
-      if [ -f "$MOCK_STATE/grok-plugin-foreign" ]; then
+      if [ -f "$MOCK_STATE/grok-plugin-mixed" ]; then
+        printf '[{"status":"installed","name":"valency","repo_key":"valency-bond","version":"0.1.0","source":"https://github.com/valency-oss/valency-bond.git","marketplace":"valency-bond"},{"status":"installed","name":"valency","repo_key":"lookalike","version":"9.9.9","source":"https://github.com/imitator/valency-lookalike.git","marketplace":"lookalike"}]\n'
+      elif [ -f "$MOCK_STATE/grok-plugin-foreign" ]; then
         printf '[{"status":"installed","name":"valency","repo_key":"valency-bond","version":"0.1.0","source":"https://github.com/imitator/valency-lookalike.git","marketplace":"valency-bond"}]\n'
       elif [ -f "$MOCK_STATE/grok-plugin" ] && [ ! -f "$MOCK_STATE/fail-grok-verification" ]; then
         printf '[{"status":"installed","name":"valency","repo_key":"valency-bond","version":"0.1.0","source":"https://github.com/valency-oss/valency-bond.git","marketplace":"valency-bond"}]\n'
