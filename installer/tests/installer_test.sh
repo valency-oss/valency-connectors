@@ -522,7 +522,8 @@ test_new_provider_rerun_updates() {
   assert_log_contains "gemini extensions enable valency --scope user" || return
   assert_log_contains "copilot plugin marketplace update valency-copilot-plugin" || return
   assert_log_contains "copilot plugin update valency" || return
-  assert_log_contains "grok plugin marketplace update valency-bond" || return
+  assert_log_contains "grok plugin marketplace update valency" || return
+  assert_log_not_contains "grok plugin marketplace update valency-bond" || return
   assert_log_contains "grok plugin update valency" || return
   assert_output_contains "Antigravity CLI installation: updated" || return
   assert_output_contains "Gemini CLI installation: updated" || return

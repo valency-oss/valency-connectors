@@ -11,6 +11,7 @@ CLAUDE_MARKETPLACE="valency-claude-plugin"
 CLAUDE_PLUGIN="valency@valency-claude-plugin"
 CODEX_MARKETPLACE="valency"
 CODEX_PLUGIN="valency@valency"
+GROK_MARKETPLACE="valency"
 
 TARGETS_SPECIFIED=0
 TARGET_CLAUDE=0
@@ -1311,8 +1312,8 @@ inspect_grok_state() {
 
   expected_grok_source=$(grok_source_url)
   case $compact_marketplaces in
-    *'"name":"valency-bond"'*)
-      if json_all_identity_entries_contain "$compact_marketplaces" '"name":"valency-bond"' "\"url\":\"$expected_grok_source\""; then
+    *"\"name\":\"$GROK_MARKETPLACE\""*)
+      if json_all_identity_entries_contain "$compact_marketplaces" "\"name\":\"$GROK_MARKETPLACE\"" "\"url\":\"$expected_grok_source\""; then
         GROK_MARKETPLACE_PRESENT=1
       else
         GROK_MARKETPLACE_CONFLICT=1
@@ -1526,7 +1527,7 @@ print_provider_plan() {
       ;;
     grok)
     if [ "$GROK_MARKETPLACE_PRESENT" -eq 1 ]; then
-      grok_marketplace_step="refresh the valency-bond marketplace"
+      grok_marketplace_step="refresh the $GROK_MARKETPLACE marketplace"
     else
       grok_marketplace_step="add the $MARKETPLACE_SOURCE marketplace"
     fi
@@ -1888,7 +1889,7 @@ install_grok() {
   fi
 
   if [ "$GROK_MARKETPLACE_PRESENT" -eq 1 ]; then
-    if ! run_quietly grok plugin marketplace update valency-bond; then
+    if ! run_quietly grok plugin marketplace update "$GROK_MARKETPLACE"; then
       GROK_INSTALL_RESULT="failed"
       return 1
     fi
