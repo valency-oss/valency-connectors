@@ -73,8 +73,10 @@ if [ "$provider" = agy ]; then
       ;;
     "plugin list")
       [ ! -f "$MOCK_STATE/fail-agy-plugin-list" ] || exit 1
-      if [ -f "$MOCK_STATE/agy-plugin-foreign" ]; then
-        printf '{"imports":[{"name":"valency","source":"foreign","components":["skills","commands","mcpServers"]}]}\n'
+      if [ -f "$MOCK_STATE/agy-plugin-unverifiable" ]; then
+        # Antigravity normalizes native imports from every repository to the
+        # same source value, so provenance cannot be recovered from inventory.
+        printf '{"imports":[{"name":"valency","source":"antigravity","components":["skills","commands","mcpServers"]}]}\n'
       elif [ -f "$MOCK_STATE/agy-plugin" ] && [ ! -f "$MOCK_STATE/fail-agy-verification" ]; then
         if [ -f "$MOCK_STATE/agy-partial-import" ]; then
           printf '{"imports":[{"name":"valency","source":"antigravity","components":["mcpServers"]}]}\n'
@@ -87,6 +89,7 @@ if [ "$provider" = agy ]; then
       ;;
     "plugin install https://github.com/valency-oss/valency-bond")
       [ ! -f "$MOCK_STATE/fail-agy-plugin-install" ] || exit 1
+      rm -f "$MOCK_STATE/agy-plugin-unverifiable"
       : > "$MOCK_STATE/agy-plugin"
       ;;
     *)

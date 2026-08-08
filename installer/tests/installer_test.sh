@@ -253,14 +253,38 @@ test_antigravity_partial_import_fails_verification() {
   pass "$TEST_NAME"
 }
 
-test_antigravity_foreign_source_fails_closed() {
-  new_case antigravity-foreign-source
+test_antigravity_unverifiable_import_requires_migration() {
+  new_case antigravity-replacement-requires-flag
   enable_antigravity
-  : > "$MOCK_STATE/agy-plugin-foreign"
+  : > "$MOCK_STATE/agy-plugin-unverifiable"
   run_without_terminal --target antigravity --yes --no-auth
-  assert_status 1 || return
-  assert_output_contains "Antigravity CLI installation: failed (source conflict)" || return
-  assert_output_contains "does not have the expected native source" || return
+  assert_status 2 || return
+  assert_output_contains "replacing the existing Antigravity CLI import named valency requires --migrate" || return
+  assert_no_mutations || return
+  pass "$TEST_NAME"
+}
+
+test_antigravity_approved_replacement_updates() {
+  new_case antigravity-replacement-approved
+  enable_antigravity
+  : > "$MOCK_STATE/agy-plugin-unverifiable"
+  run_without_terminal --target antigravity --yes --migrate --no-auth
+  assert_status 0 || return
+  assert_output_contains "replace the existing import named valency whose repository Antigravity CLI does not expose" || return
+  assert_log_contains "agy plugin install https://github.com/valency-oss/valency-bond" || return
+  assert_output_contains "Antigravity CLI installation: updated" || return
+  pass "$TEST_NAME"
+}
+
+test_interactive_declined_antigravity_replacement_skips_provider() {
+  new_case antigravity-replacement-declined
+  enable_antigravity
+  : > "$MOCK_STATE/agy-plugin-unverifiable"
+  printf 'n\n' > "$TTY_INPUT"
+  run_with_terminal --target antigravity --no-auth
+  assert_status 0 || return
+  assert_output_contains "Antigravity CLI skipped; the existing import named valency was left unchanged." || return
+  assert_output_contains "Antigravity CLI installation: skipped (replacement declined)" || return
   assert_no_mutations || return
   pass "$TEST_NAME"
 }
@@ -417,7 +441,7 @@ test_new_provider_rerun_updates() {
   : > "$MOCK_STATE/copilot-json-inventory"
   : > "$MOCK_STATE/grok-marketplace"
   : > "$MOCK_STATE/grok-plugin"
-  run_without_terminal --target antigravity --target gemini --target copilot --target grok --yes --no-auth
+  run_without_terminal --target antigravity --target gemini --target copilot --target grok --yes --migrate --no-auth
   assert_status 0 || return
   assert_log_contains "agy plugin install https://github.com/valency-oss/valency-bond" || return
   assert_log_contains "gemini extensions update valency" || return
@@ -1582,7 +1606,9 @@ test_antigravity_fresh_install
 test_antigravity_capability_order_is_irrelevant
 test_antigravity_capability_probe_requires_exact_commands
 test_antigravity_partial_import_fails_verification
-test_antigravity_foreign_source_fails_closed
+test_antigravity_unverifiable_import_requires_migration
+test_antigravity_approved_replacement_updates
+test_interactive_declined_antigravity_replacement_skips_provider
 test_gemini_fresh_install
 test_copilot_fresh_install
 test_copilot_json_inventory_ignores_same_named_wrong_id

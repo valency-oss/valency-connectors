@@ -57,7 +57,7 @@ ANTIGRAVITY_EXECUTABLE_FOUND=0
 ANTIGRAVITY_AVAILABLE=0
 ANTIGRAVITY_SELECTED=0
 ANTIGRAVITY_PLUGIN_PRESENT=0
-ANTIGRAVITY_PLUGIN_CONFLICT=0
+ANTIGRAVITY_REPLACEMENT_REQUIRED=0
 ANTIGRAVITY_INSTALL_RESULT="not selected"
 ANTIGRAVITY_AUTH_RESULT="not offered"
 ANTIGRAVITY_AUTH_AVAILABLE=0
@@ -216,7 +216,7 @@ Options:
   --target claude|codex|antigravity|gemini|copilot|grok|all
                              Select a provider; may be repeated.
   --yes                      Confirm the displayed plan.
-  --migrate                  Approve legacy marketplace migration.
+  --migrate                  Approve a disclosed migration or replacement.
   --auth                     Offer authentication after installation.
   --no-auth                  Skip authentication.
   --reauthenticate           Include apparently connected providers in authentication.
@@ -946,37 +946,6 @@ json_entry_contains() {
   done
 }
 
-# Require every entry with the given identity to contain the same required
-# fields. This prevents a trusted entry from hiding a same-name foreign entry.
-json_all_identity_entries_contain() {
-  document=$1
-  identity=$2
-  shift 2
-  remainder=$document
-  entries_found=0
-  while :; do
-    case $remainder in
-      *"$identity"*) ;;
-      *) [ "$entries_found" -eq 1 ]; return ;;
-    esac
-    entry_before=${remainder%%"$identity"*}
-    entry_after=${remainder#*"$identity"}
-    remainder=$entry_after
-    entry_before=${entry_before##*"},{"}
-    entry_before=${entry_before##*"[{"}
-    entry_after=${entry_after%%"},{"*}
-    entry_after=${entry_after%%"}]"*}
-    segment=$entry_before$identity$entry_after
-    entries_found=1
-    for required in "$@"; do
-      case $segment in
-        *"$required"*) ;;
-        *) return 1 ;;
-      esac
-    done
-  done
-}
-
 inspect_claude_state() {
   if ! marketplace_json=$(claude plugin marketplace list --json 2>/dev/null); then
     printf 'Error: could not inspect Claude Code marketplace state; no changes were made.\n' >&2
@@ -1064,13 +1033,6 @@ provider_inspection_is_acceptable() {
         return 1
       fi
       ;;
-    antigravity)
-      if [ "$ANTIGRAVITY_PLUGIN_CONFLICT" -eq 1 ]; then
-        printf 'Error: the existing Antigravity CLI import named valency does not have the expected native source; Antigravity CLI was not changed.\n' >&2
-        PROVIDER_INSPECTION_RESULT="failed (source conflict)"
-        return 1
-      fi
-      ;;
     gemini)
       if [ "$GEMINI_EXTENSION_CONFLICT" -eq 1 ]; then
         printf 'Error: the installed Gemini extension named valency does not come from %s; Gemini CLI was not changed.\n' "$MARKETPLACE_SOURCE" >&2
@@ -1131,16 +1093,13 @@ inspect_antigravity_state() {
     *) printf 'Error: Antigravity CLI returned an unrecognized plugin list; no changes were made.\n' >&2; return 1 ;;
   esac
   # Antigravity 1.1.11 normalizes every native install to source
-  # "antigravity" and exposes no repository URL. The adapter therefore never
-  # removes an existing import: it refreshes through the fixed Valency GitHub
-  # URL and verifies the resulting component inventory after installation.
+  # "antigravity" and exposes no repository URL. A same-name import is
+  # therefore present but unverifiable; replacing it from Valency's fixed URL
+  # requires the same explicit approval used by other source replacements.
   case $compact_plugins in
     *'"name":"valency"'*)
-      if json_all_identity_entries_contain "$compact_plugins" '"name":"valency"' '"source":"antigravity"'; then
-        ANTIGRAVITY_PLUGIN_PRESENT=1
-      else
-        ANTIGRAVITY_PLUGIN_CONFLICT=1
-      fi
+      ANTIGRAVITY_PLUGIN_PRESENT=1
+      ANTIGRAVITY_REPLACEMENT_REQUIRED=1
       ;;
   esac
 }
@@ -1471,8 +1430,9 @@ print_provider_plan() {
     fi
       ;;
     antigravity)
-    if [ "$ANTIGRAVITY_PLUGIN_PRESENT" -eq 1 ]; then
-      printf '  Antigravity CLI: reinstall Valency from %s to refresh it, then verify the import.\n' "$MARKETPLACE_SOURCE"
+    if [ "$ANTIGRAVITY_REPLACEMENT_REQUIRED" -eq 1 ]; then
+      printf '  Antigravity CLI: replace the existing import named valency whose repository Antigravity CLI does not expose with Valency from %s, then verify it.\n' "$MARKETPLACE_SOURCE"
+      printf '    The existing import source cannot be verified or restored automatically.\n'
     else
       printf '  Antigravity CLI: install Valency from %s, then verify the import.\n' "$MARKETPLACE_SOURCE"
     fi
@@ -1586,6 +1546,19 @@ authorize_migrations() {
         CODEX_SELECTED=0
         CODEX_INSTALL_RESULT="skipped (replacement declined)"
         printf 'Codex skipped; the existing marketplace named valency was left unchanged.\n'
+      fi
+    fi
+  fi
+  if [ "$ANTIGRAVITY_SELECTED" -eq 1 ] && [ "$ANTIGRAVITY_REPLACEMENT_REQUIRED" -eq 1 ]; then
+    if [ "$ALLOW_MIGRATION" -eq 0 ]; then
+      if [ "$TERMINAL_AVAILABLE" -eq 0 ]; then
+        printf 'Error: replacing the existing Antigravity CLI import named valency requires --migrate for unattended installation.\n' >&2
+        return 2
+      fi
+      if ! read_yes_no 'Allow the disclosed Antigravity CLI import replacement? [y/N] ' 0; then
+        ANTIGRAVITY_SELECTED=0
+        ANTIGRAVITY_INSTALL_RESULT="skipped (replacement declined)"
+        printf 'Antigravity CLI skipped; the existing import named valency was left unchanged.\n'
       fi
     fi
   fi
