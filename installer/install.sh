@@ -57,6 +57,7 @@ ANTIGRAVITY_EXECUTABLE_FOUND=0
 ANTIGRAVITY_AVAILABLE=0
 ANTIGRAVITY_SELECTED=0
 ANTIGRAVITY_PLUGIN_PRESENT=0
+ANTIGRAVITY_PLUGIN_CONFLICT=0
 ANTIGRAVITY_INSTALL_RESULT="not selected"
 ANTIGRAVITY_AUTH_RESULT="not offered"
 ANTIGRAVITY_AUTH_AVAILABLE=0
@@ -945,6 +946,37 @@ json_entry_contains() {
   done
 }
 
+# Require every entry with the given identity to contain the same required
+# fields. This prevents a trusted entry from hiding a same-name foreign entry.
+json_all_identity_entries_contain() {
+  document=$1
+  identity=$2
+  shift 2
+  remainder=$document
+  entries_found=0
+  while :; do
+    case $remainder in
+      *"$identity"*) ;;
+      *) [ "$entries_found" -eq 1 ]; return ;;
+    esac
+    entry_before=${remainder%%"$identity"*}
+    entry_after=${remainder#*"$identity"}
+    remainder=$entry_after
+    entry_before=${entry_before##*"},{"}
+    entry_before=${entry_before##*"[{"}
+    entry_after=${entry_after%%"},{"*}
+    entry_after=${entry_after%%"}]"*}
+    segment=$entry_before$identity$entry_after
+    entries_found=1
+    for required in "$@"; do
+      case $segment in
+        *"$required"*) ;;
+        *) return 1 ;;
+      esac
+    done
+  done
+}
+
 inspect_claude_state() {
   if ! marketplace_json=$(claude plugin marketplace list --json 2>/dev/null); then
     printf 'Error: could not inspect Claude Code marketplace state; no changes were made.\n' >&2
@@ -1032,6 +1064,13 @@ provider_inspection_is_acceptable() {
         return 1
       fi
       ;;
+    antigravity)
+      if [ "$ANTIGRAVITY_PLUGIN_CONFLICT" -eq 1 ]; then
+        printf 'Error: the existing Antigravity CLI import named valency does not have the expected native source; Antigravity CLI was not changed.\n' >&2
+        PROVIDER_INSPECTION_RESULT="failed (source conflict)"
+        return 1
+      fi
+      ;;
     gemini)
       if [ "$GEMINI_EXTENSION_CONFLICT" -eq 1 ]; then
         printf 'Error: the installed Gemini extension named valency does not come from %s; Gemini CLI was not changed.\n' "$MARKETPLACE_SOURCE" >&2
@@ -1095,14 +1134,49 @@ inspect_antigravity_state() {
   # "antigravity" and exposes no repository URL. The adapter therefore never
   # removes an existing import: it refreshes through the fixed Valency GitHub
   # URL and verifies the resulting component inventory after installation.
-  if json_entry_contains "$compact_plugins" '"name":"valency"' '"source":"antigravity"'; then
-    ANTIGRAVITY_PLUGIN_PRESENT=1
-  fi
+  case $compact_plugins in
+    *'"name":"valency"'*)
+      if json_all_identity_entries_contain "$compact_plugins" '"name":"valency"' '"source":"antigravity"'; then
+        ANTIGRAVITY_PLUGIN_PRESENT=1
+      else
+        ANTIGRAVITY_PLUGIN_CONFLICT=1
+      fi
+      ;;
+  esac
 }
 
-gemini_extension_source_trusted() {
-  json_entry_contains "$1" '"name":"valency"' "\"source\":\"https://github.com/$MARKETPLACE_SOURCE\"" ||
-    json_entry_contains "$1" '"name":"valency"' "\"source\":\"https://github.com/$MARKETPLACE_SOURCE.git\""
+gemini_extension_entry_trusted() {
+  document=$1
+  shift
+  json_entry_contains "$document" '"name":"valency"' "\"source\":\"https://github.com/$MARKETPLACE_SOURCE\"" "$@" ||
+    json_entry_contains "$document" '"name":"valency"' "\"source\":\"https://github.com/$MARKETPLACE_SOURCE.git\"" "$@"
+}
+
+gemini_extension_sources_trusted() {
+  document=$1
+  remainder=$document
+  entries_found=0
+  trusted_source="\"source\":\"https://github.com/$MARKETPLACE_SOURCE\""
+  trusted_git_source="\"source\":\"https://github.com/$MARKETPLACE_SOURCE.git\""
+  while :; do
+    case $remainder in
+      *'"name":"valency"'*) ;;
+      *) [ "$entries_found" -eq 1 ]; return ;;
+    esac
+    entry_before=${remainder%%'"name":"valency"'*}
+    entry_after=${remainder#*'"name":"valency"'}
+    remainder=$entry_after
+    entry_before=${entry_before##*"},{"}
+    entry_before=${entry_before##*"[{"}
+    entry_after=${entry_after%%"},{"*}
+    entry_after=${entry_after%%"}]"*}
+    segment=$entry_before'"name":"valency"'$entry_after
+    entries_found=1
+    case $segment in
+      *"$trusted_source"*|*"$trusted_git_source"*) ;;
+      *) return 1 ;;
+    esac
+  done
 }
 
 inspect_gemini_state() {
@@ -1117,7 +1191,7 @@ inspect_gemini_state() {
   esac
   case $compact_extensions in
     *'"name":"valency"'*)
-      if gemini_extension_source_trusted "$compact_extensions"; then
+      if gemini_extension_sources_trusted "$compact_extensions"; then
         GEMINI_EXTENSION_PRESENT=1
       else
         GEMINI_EXTENSION_CONFLICT=1
@@ -1669,8 +1743,8 @@ install_antigravity() {
 verify_gemini_extension() {
   extension_json=$(gemini extensions list --output-format json 2>/dev/null) || return 1
   compact_extensions=$(printf '%s' "$extension_json" | compact_json)
-  gemini_extension_source_trusted "$compact_extensions" &&
-    json_entry_contains "$compact_extensions" '"name":"valency"' '"isActive":true'
+  gemini_extension_sources_trusted "$compact_extensions" &&
+    gemini_extension_entry_trusted "$compact_extensions" '"isActive":true'
 }
 
 install_gemini() {

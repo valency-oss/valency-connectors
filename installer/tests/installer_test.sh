@@ -253,6 +253,18 @@ test_antigravity_partial_import_fails_verification() {
   pass "$TEST_NAME"
 }
 
+test_antigravity_foreign_source_fails_closed() {
+  new_case antigravity-foreign-source
+  enable_antigravity
+  : > "$MOCK_STATE/agy-plugin-foreign"
+  run_without_terminal --target antigravity --yes --no-auth
+  assert_status 1 || return
+  assert_output_contains "Antigravity CLI installation: failed (source conflict)" || return
+  assert_output_contains "does not have the expected native source" || return
+  assert_no_mutations || return
+  pass "$TEST_NAME"
+}
+
 test_gemini_fresh_install() {
   new_case gemini-fresh-install
   enable_gemini
@@ -322,6 +334,19 @@ test_gemini_foreign_extension_source_fails_closed() {
   enable_gemini
   : > "$MOCK_STATE/gemini-extension"
   : > "$MOCK_STATE/gemini-extension-foreign"
+  run_without_terminal --target gemini --yes --no-auth
+  assert_status 1 || return
+  assert_output_contains "Gemini CLI installation: failed (extension conflict)" || return
+  assert_output_contains "does not come from valency-oss/valency-bond" || return
+  assert_no_mutations || return
+  pass "$TEST_NAME"
+}
+
+test_gemini_mixed_extension_sources_fail_closed() {
+  new_case gemini-mixed-sources
+  enable_gemini
+  : > "$MOCK_STATE/gemini-extension"
+  : > "$MOCK_STATE/gemini-extension-mixed"
   run_without_terminal --target gemini --yes --no-auth
   assert_status 1 || return
   assert_output_contains "Gemini CLI installation: failed (extension conflict)" || return
@@ -1557,12 +1582,14 @@ test_antigravity_fresh_install
 test_antigravity_capability_order_is_irrelevant
 test_antigravity_capability_probe_requires_exact_commands
 test_antigravity_partial_import_fails_verification
+test_antigravity_foreign_source_fails_closed
 test_gemini_fresh_install
 test_copilot_fresh_install
 test_copilot_json_inventory_ignores_same_named_wrong_id
 test_copilot_json_verification_rejects_disabled_plugin
 test_grok_fresh_install
 test_gemini_foreign_extension_source_fails_closed
+test_gemini_mixed_extension_sources_fail_closed
 test_copilot_foreign_marketplace_source_fails_closed
 test_copilot_unrecognized_marketplace_output_fails_inspection
 test_copilot_unrecognized_plugin_output_fails_inspection

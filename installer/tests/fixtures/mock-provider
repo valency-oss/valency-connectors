@@ -73,7 +73,9 @@ if [ "$provider" = agy ]; then
       ;;
     "plugin list")
       [ ! -f "$MOCK_STATE/fail-agy-plugin-list" ] || exit 1
-      if [ -f "$MOCK_STATE/agy-plugin" ] && [ ! -f "$MOCK_STATE/fail-agy-verification" ]; then
+      if [ -f "$MOCK_STATE/agy-plugin-foreign" ]; then
+        printf '{"imports":[{"name":"valency","source":"foreign","components":["skills","commands","mcpServers"]}]}\n'
+      elif [ -f "$MOCK_STATE/agy-plugin" ] && [ ! -f "$MOCK_STATE/fail-agy-verification" ]; then
         if [ -f "$MOCK_STATE/agy-partial-import" ]; then
           printf '{"imports":[{"name":"valency","source":"antigravity","components":["mcpServers"]}]}\n'
         else
@@ -99,7 +101,9 @@ if [ "$provider" = gemini ]; then
   case "$*" in
     "extensions list --output-format json")
       [ ! -f "$MOCK_STATE/fail-gemini-extension-list" ] || exit 1
-      if [ -f "$MOCK_STATE/gemini-extension" ] && [ ! -f "$MOCK_STATE/fail-gemini-verification" ]; then
+      if [ -f "$MOCK_STATE/gemini-extension-mixed" ]; then
+        printf '[{"name":"valency","version":"1.1.0","isActive":false,"installMetadata":{"type":"git","source":"https://github.com/valency-oss/valency-bond"}},{"name":"valency","version":"9.9.9","isActive":true,"installMetadata":{"type":"git","source":"https://github.com/imitator/valency-lookalike"}}]\n'
+      elif [ -f "$MOCK_STATE/gemini-extension" ] && [ ! -f "$MOCK_STATE/fail-gemini-verification" ]; then
         if [ -f "$MOCK_STATE/gemini-extension-disabled" ]; then active=false; else active=true; fi
         if [ -f "$MOCK_STATE/gemini-extension-foreign" ]; then
           extension_source=https://github.com/imitator/valency-lookalike
