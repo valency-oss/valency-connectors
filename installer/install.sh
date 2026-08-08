@@ -80,6 +80,7 @@ COPILOT_MARKETPLACE_PRESENT=0
 COPILOT_MARKETPLACE_CONFLICT=0
 COPILOT_PLUGIN_PRESENT=0
 COPILOT_PLUGIN_ENABLED=0
+COPILOT_PLUGIN_CONFLICT=0
 COPILOT_INSTALL_RESULT="not selected"
 COPILOT_AUTH_RESULT="not offered"
 COPILOT_AUTH_AVAILABLE=0
@@ -1078,6 +1079,11 @@ provider_inspection_is_acceptable() {
         PROVIDER_INSPECTION_RESULT="failed (marketplace conflict)"
         return 1
       fi
+      if [ "$COPILOT_PLUGIN_CONFLICT" -eq 1 ]; then
+        printf 'Error: a user-scoped Copilot plugin named valency has an unexpected plugin id; Copilot was not changed.\n' >&2
+        PROVIDER_INSPECTION_RESULT="failed (plugin conflict)"
+        return 1
+      fi
       ;;
     grok)
       if [ "$GROK_MARKETPLACE_CONFLICT" -eq 1 ] || [ "$GROK_PLUGIN_CONFLICT" -eq 1 ]; then
@@ -1194,6 +1200,7 @@ inspect_gemini_state() {
 inspect_copilot_plugin_state() {
   COPILOT_PLUGIN_PRESENT=0
   COPILOT_PLUGIN_ENABLED=0
+  COPILOT_PLUGIN_CONFLICT=0
   # Current Copilot docs define a JSON inventory command, but stable 1.0.78
   # still reports it unavailable. Prefer it when present and otherwise parse
   # only the exact installed-plugin token from the stable text command.
@@ -1203,12 +1210,18 @@ inspect_copilot_plugin_state() {
       \[*\]) ;;
       *) printf 'Error: GitHub Copilot CLI returned an unrecognized JSON plugin list; no changes were made.\n' >&2; return 1 ;;
     esac
-    if json_entry_contains "$compact_plugins" '"id":"valency@valency-copilot-plugin"' '"name":"valency"' '"kind":"plugin"' '"scope":"user"'; then
-      COPILOT_PLUGIN_PRESENT=1
-      if json_entry_contains "$compact_plugins" '"id":"valency@valency-copilot-plugin"' '"name":"valency"' '"kind":"plugin"' '"scope":"user"' '"enabled":true'; then
-        COPILOT_PLUGIN_ENABLED=1
-      fi
-    fi
+    case $compact_plugins in
+      *'"name":"valency"'*)
+        if json_all_identity_entries_contain "$compact_plugins" '"name":"valency"' '"id":"valency@valency-copilot-plugin"' '"kind":"plugin"' '"scope":"user"'; then
+          COPILOT_PLUGIN_PRESENT=1
+          if json_all_identity_entries_contain "$compact_plugins" '"name":"valency"' '"id":"valency@valency-copilot-plugin"' '"kind":"plugin"' '"scope":"user"' '"enabled":true'; then
+            COPILOT_PLUGIN_ENABLED=1
+          fi
+        else
+          COPILOT_PLUGIN_CONFLICT=1
+        fi
+        ;;
+    esac
     return 0
   fi
 
@@ -1217,19 +1230,31 @@ inspect_copilot_plugin_state() {
     return 1
   fi
   case $plugin_output in
-    *"valency@valency-copilot-plugin ("*)
-      # Stable Copilot 1.0.78 has no enable/disable command and exposes no
-      # enabled field in this fallback. Its exact installed-plugin token is
-      # the strongest activation evidence that version provides.
-      COPILOT_PLUGIN_PRESENT=1
-      COPILOT_PLUGIN_ENABLED=1
-      ;;
-    "No plugins installed."*|"Installed plugins:"*) ;;
+    "No plugins installed."*) return 0 ;;
+    "Installed plugins:"*) ;;
     *)
       printf 'Error: GitHub Copilot CLI returned an unrecognized plugin list; no changes were made.\n' >&2
       return 1
       ;;
   esac
+  while IFS= read -r plugin_line; do
+    case $plugin_line in
+      *' valency@'*)
+        case $plugin_line in
+          *' valency@valency-copilot-plugin ('*)
+            # Stable Copilot 1.0.78 has no enable/disable command and exposes
+            # no enabled field. The exact installed token is its strongest
+            # activation evidence.
+            COPILOT_PLUGIN_PRESENT=1
+            COPILOT_PLUGIN_ENABLED=1
+            ;;
+          *) COPILOT_PLUGIN_CONFLICT=1 ;;
+        esac
+        ;;
+    esac
+  done <<EOF
+$plugin_output
+EOF
 }
 
 inspect_copilot_state() {
@@ -1238,14 +1263,25 @@ inspect_copilot_state() {
     return 1
   fi
   case $marketplace_output in
-    *"valency-copilot-plugin (GitHub: $MARKETPLACE_SOURCE)"*) COPILOT_MARKETPLACE_PRESENT=1 ;;
-    *"valency-copilot-plugin"*) COPILOT_MARKETPLACE_CONFLICT=1 ;;
     "Included with GitHub Copilot:"*) ;;
     *)
       printf 'Error: GitHub Copilot CLI returned an unrecognized marketplace list; no changes were made.\n' >&2
       return 1
       ;;
   esac
+  expected_copilot_marketplace="valency-copilot-plugin (GitHub: $MARKETPLACE_SOURCE)"
+  while IFS= read -r marketplace_line; do
+    case $marketplace_line in
+      *"valency-copilot-plugin"*)
+        case $marketplace_line in
+          *"$expected_copilot_marketplace"*) COPILOT_MARKETPLACE_PRESENT=1 ;;
+          *) COPILOT_MARKETPLACE_CONFLICT=1 ;;
+        esac
+        ;;
+    esac
+  done <<EOF
+$marketplace_output
+EOF
   inspect_copilot_plugin_state
 }
 

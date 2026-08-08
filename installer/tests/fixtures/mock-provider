@@ -147,7 +147,9 @@ if [ "$provider" = copilot ]; then
         exit 0
       fi
       printf 'Included with GitHub Copilot:\n  ◆ copilot-plugins (GitHub: github/copilot-plugins)\n'
-      if [ -f "$MOCK_STATE/copilot-marketplace-foreign" ]; then
+      if [ -f "$MOCK_STATE/copilot-marketplace-mixed" ]; then
+        printf '\nRegistered marketplaces:\n  • valency-copilot-plugin (GitHub: valency-oss/valency-bond)\n  • valency-copilot-plugin (GitHub: imitator/valency-lookalike)\n'
+      elif [ -f "$MOCK_STATE/copilot-marketplace-foreign" ]; then
         printf '\nRegistered marketplaces:\n  • valency-copilot-plugin (GitHub: imitator/valency-lookalike)\n'
       elif [ -f "$MOCK_STATE/copilot-marketplace" ]; then
         printf '\nRegistered marketplaces:\n  • valency-copilot-plugin (GitHub: valency-oss/valency-bond)\n'
@@ -159,8 +161,15 @@ if [ "$provider" = copilot ]; then
         printf 'Plugin inventory is temporarily unavailable.\n'
         exit 0
       fi
-      if [ -f "$MOCK_STATE/copilot-plugin" ] && [ ! -f "$MOCK_STATE/fail-copilot-verification" ]; then
-        printf 'Installed plugins:\n  • valency@valency-copilot-plugin (v0.1.0)\n'
+      if { [ -f "$MOCK_STATE/copilot-plugin" ] && [ ! -f "$MOCK_STATE/fail-copilot-verification" ]; } ||
+        [ -f "$MOCK_STATE/copilot-plugin-wrong-id" ]; then
+        printf 'Installed plugins:\n'
+        if [ -f "$MOCK_STATE/copilot-plugin-wrong-id" ]; then
+          printf '  • valency@lookalike-marketplace (v9.9.9)\n'
+        fi
+        if [ -f "$MOCK_STATE/copilot-plugin" ] && [ ! -f "$MOCK_STATE/fail-copilot-verification" ]; then
+          printf '  • valency@valency-copilot-plugin (v0.1.0)\n'
+        fi
       else
         printf 'No plugins installed.\n'
       fi
