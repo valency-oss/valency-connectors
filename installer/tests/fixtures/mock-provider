@@ -203,6 +203,9 @@ if [ "$provider" = copilot ]; then
       ;;
     "plugin update valency")
       [ ! -f "$MOCK_STATE/fail-copilot-plugin-update" ] || exit 1
+      if [ -f "$MOCK_STATE/copilot-plugin-mixed-after-update" ]; then
+        : > "$MOCK_STATE/copilot-plugin-wrong-id"
+      fi
       ;;
     *)
       printf 'Unexpected mock Copilot command: %s\n' "$*" >&2

@@ -1820,7 +1820,9 @@ install_gemini() {
 
 verify_copilot_plugin() {
   inspect_copilot_plugin_state || return 1
-  [ "$COPILOT_PLUGIN_PRESENT" -eq 1 ] && [ "$COPILOT_PLUGIN_ENABLED" -eq 1 ]
+  [ "$COPILOT_PLUGIN_PRESENT" -eq 1 ] &&
+    [ "$COPILOT_PLUGIN_ENABLED" -eq 1 ] &&
+    [ "$COPILOT_PLUGIN_CONFLICT" -eq 0 ]
 }
 
 install_copilot() {

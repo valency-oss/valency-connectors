@@ -378,6 +378,20 @@ test_copilot_json_verification_rejects_disabled_plugin() {
   pass "$TEST_NAME"
 }
 
+test_copilot_text_verification_rejects_mixed_ids_after_update() {
+  new_case copilot-text-post-update-mixed-ids
+  enable_copilot
+  : > "$MOCK_STATE/copilot-marketplace"
+  : > "$MOCK_STATE/copilot-plugin"
+  : > "$MOCK_STATE/copilot-plugin-mixed-after-update"
+  run_without_terminal --target copilot --yes --no-auth
+  assert_status 1 || return
+  assert_log_contains "copilot plugin update valency" || return
+  assert_output_contains "GitHub Copilot CLI installation: failed verification" || return
+  assert_output_not_contains "In GitHub Copilot CLI: run /mcp auth valency." || return
+  pass "$TEST_NAME"
+}
+
 test_grok_fresh_install() {
   new_case grok-fresh-install
   enable_grok
@@ -1676,6 +1690,7 @@ test_copilot_json_inventory_rejects_mixed_ids
 test_copilot_text_inventory_rejects_mixed_ids
 test_copilot_text_inventory_rejects_mixed_marketplaces
 test_copilot_json_verification_rejects_disabled_plugin
+test_copilot_text_verification_rejects_mixed_ids_after_update
 test_grok_fresh_install
 test_gemini_foreign_extension_source_fails_closed
 test_gemini_mixed_extension_sources_fail_closed
