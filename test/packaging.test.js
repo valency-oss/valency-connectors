@@ -508,7 +508,6 @@ test("both packages bundle the production Valency Bond MCP endpoint", () => {
       valency: {
         type: "http",
         url: "https://labs.valency.io/mcp/",
-        oauth: { callbackPort: 33418 },
       },
     },
   });

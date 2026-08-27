@@ -2,10 +2,7 @@
   "mcpServers": {
     "valency": {
       "type": "http",
-      "url": "https://labs.valency.io/mcp/",
-      "oauth": {
-        "callbackPort": 33418
-      }
+      "url": "https://labs.valency.io/mcp/"
     }
   }
 }
