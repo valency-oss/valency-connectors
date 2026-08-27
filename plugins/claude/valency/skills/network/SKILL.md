@@ -1,160 +1,151 @@
 ---
 name: network
-description: "Use when the user asks about a researcher's collaborators, co-authors, research network, wants to map who works with whom, or wants to see how a researcher's focus has diverged from their collaborators. Triggers on questions like 'who does X collaborate with', 'show me X's network', 'find connections between researchers', or 'how has X's work drifted from their coauthors'."
+description: "Use when the user asks about a researcher's collaborators, coauthors, research network, connections between researchers, or how a researcher's focus differs from close collaborators."
 ---
 
 # Collaboration Network
 
-Map the coauthor name-bucket graph associated with a researcher.
+Map the name-bucket collaboration network around a researcher; for person-level comparison requests, resolve the focal identity and compare only resolved collaborators.
 
 ## Input
 
-The user provides an author name (e.g., "Yoshua Bengio").
+The user supplies a focal researcher name or ORCID and may supply a paper ID as identity context.
 
-## Tool Chain
+## Tool discovery and response discipline
 
-Use the Valency Bond MCP tools available in the current host. Tool names may be
-qualified by an MCP server prefix; call the matching exposed tool. If the
-required Valency Bond tools are unavailable, say so and stop.
+Use the Valency Bond MCP tools available in the current host. Tool names may be qualified by an MCP server prefix; discover and call the matching exposed tools. If the required Valency Bond tools are unavailable, say so and stop.
 
-For each call below, distinguish a tool error from a successful empty result
-and surface material top-level and profile `warnings`.
+After every call, surface any warning that changes identity, coverage, or interpretation, and preserve category lists and labels as returned — they are source-specific vocabularies, may be mixed across profiles, and may be null or empty.
 
-### Step 1: Get author baseline
+For local bucket equality only, define one `comparison_key(name)`: Unicode case-fold, transliterate common Latin ligatures, NFKD-fold diacritics, delete apostrophes, trim, and collapse whitespace. Apply it to focal, direct, and second-degree normalized names; preserve returned display names in output.
 
-Call `get_author_profile` with:
-- `author` (string): the author name
+## Workflow
 
-If no profile result is found, tell the user the author was not found and
-suggest checking the spelling. Stop here.
+Route the request before calling anything. A **network-map** request — coauthor lists, second-degree connections, "who does X collaborate with" — runs Steps 2–4 with the user-supplied name and returns the name-bucket graph without identity clarification; if the name looks ambiguous, deliver the graph with an ambiguity note instead of stopping. A **person-level comparison** request — identity-level collaborator profiles, category comparisons, trajectory differences — runs all steps in order, starting with focal identity resolution.
 
-Treat the result as a corpus name-bucket profile, labeling counts with the
-returned `stats_source` (`orcid_keyed` means the server unified fragmented name
-variants). Note its returned source-specific category labels for the comparison
-below. Its first/last values and timeline describe observed
-record/submission-based paper activity, not publication chronology.
+### 1. Resolve the focal researcher (comparison branch only)
 
-### Step 2: Get direct collaborators
+Call `get_author_identity` with `author` (adding `paper_id` when the user supplied a paper as identity context), with both `author` and `orcid` when the user supplied both, or with `orcid` alone when only an ORCID was given.
 
-Call `find_coauthors` with:
-- `author` (string): the author name
-- `limit` (integer): 20
+Inspect `warnings`, `career_metrics`, `orcid`, `resolved_name`, and `candidates`.
 
-This returns top-N coauthor name buckets for the focal normalized-name bucket,
-ranked by `shared_papers`. Note the top 5 returned buckets for the next step.
-Display `coauthor`; retain `coauthor_norm` only as the matching and chaining key.
-A successful empty `coauthors` result is a valid terminal graph result.
+- If `candidates` is nonempty and a single ORCID-collision candidate has `confidence` >= 0.95, select it and re-call with its returned stable author identifier. Otherwise present the returned candidate evidence, ask the user to pick, and re-call with the chosen candidate's returned stable author identifier — or an ORCID or identifying paper when it is null. Do not continue the comparison while candidates remain unresolved.
+- If no usable identity is returned and the response indicates not found or unverifiable, report that the focal researcher could not be resolved and offer the network-map branch instead.
+- Use non-null `career_metrics.display_name` as the focal display name. Retain `resolved_name` only as a corpus matching key.
 
-### Step 3: Get second-degree connections
+This step is complete only when one focal human is selected.
 
-For each of the top 5 direct buckets from Step 2, call `find_coauthors` with:
-- `author` (string): the direct bucket's matching key (`coauthor_norm`)
-- `limit` (integer): 10
+### 2. Get the focal corpus profile
 
-Collect second-degree name-bucket paths. Remove focal and direct buckets by
-their exact returned normalized keys while preserving `coauthor` for display.
+Call `get_author_profile` with `author` set to the identity `resolved_name` (comparison branch) or the user-supplied name (network-map branch), adding `orcid` when resolved.
 
-### Step 4: Compare focal author with top collaborator buckets
+Record `stats_source`, profile warnings, `summary`, `categories`, and `timeline`. `orcid_keyed` aggregates are identity-linked; `name_keyed` aggregates cover a resolved name bucket and can fragment variants. Profile category labels are not a universal ontology.
 
-Call `compare_authors` with:
-- `authors` (array of strings): a JSON array containing the focal author name
-  and up to 4 direct `coauthor_norm` values (max 5 total; the tool requires
-  2–10 names), e.g. `["Yoshua Bengio", "Ian Goodfellow", "Aaron Courville"]`
+Treat `summary.first_paper`, `summary.last_paper`, and timeline `year` buckets as observed paper activity. Their basis can mix first-submission estimates with source record/update dates.
 
-This returns name-keyed corpus profiles with source-specific category counts
-and a `shared_categories` array. Every requested name comes back with a
-profile: unresolved names return placeholder profiles with `resolved_name:
-null`, zero counts, and a warning — exclude those from the comparison and say
-they were not found.
+### 3. Get direct coauthor name buckets
 
-### Step 5: Compare returned corpus profiles (no tool call)
+If the profile has a non-null `resolved_name`, call `find_coauthors`:
 
-For each direct bucket represented in Step 4, compute a descriptive
-characterization of the returned name-keyed corpus profiles:
+```json
+{"author": "<focal profile resolved_name>", "limit": 20}
+```
 
-- **Concentration delta**: divide each exact returned category count by the sum
-  of that profile's returned category counts. Identify the top 1–2 exact labels
-  where either returned share exceeds the other by at least 10 percentage
-  points.
-- **Paper-count ratio**: collaborator-bucket total papers divided by focal total
-  papers; both are name-keyed corpus counts (`compare_authors` reports every
-  profile as `name_keyed`).
-- **Record-activity comparison**: compare only overlapping returned timeline
-  buckets and describe the observed differences; timeline buckets are record
-  activity, not career chronology.
+Otherwise report that the graph cannot be built because no corpus name key was returned and stop.
 
-Synthesize these into a one-sentence, provenance-qualified description of
-differences between the returned corpus profiles. For example:
-- *"The returned collaborator bucket is more concentrated on astro-ph.GA (57%
-  vs 41%) and has 2× the corpus paper count; its overlapping record-activity
-  buckets contain more records in the latest returned periods."*
+Each row is a coauthor name bucket linked to one focal normalized-name bucket, ranked by `shared_papers`. The response is top-N data, not a complete identity-resolved graph. Display `coauthor`. Use `coauthor_norm` only for matching, set membership, within-response deduplication, and exact name-bucket chaining.
 
-## Output Format
+If `coauthors` is empty, output the focal summary, state that no collaborator buckets were returned, skip second-degree and comparison calls, and stop.
+
+### 4. Get second-degree name buckets
+
+For each of the up to five leading Step 3 rows, call `find_coauthors` using the server-returned matching key:
+
+```json
+{"author": "<coauthor_norm>", "limit": 10}
+```
+
+Create a direct-bucket set by applying `comparison_key` to every Step 3 `coauthor_norm`; apply the same key to the focal `resolved_name` and every second-degree `coauthor_norm`. Exclude keys already direct or equal to the focal key. Combine paths only when these comparison keys are identical; display the associated `coauthor` form. Label all such nodes as second-degree name buckets.
+
+If every second-degree call is empty after exclusions, state that no second-degree buckets were returned. This ends the network-map branch.
+
+### 5. Resolve collaborators for comparison (comparison branch only)
+
+Budget about 10 `get_author_identity` calls per task — the server's recommended per-task limit at the default tier — including the focal lookup and any candidate re-call. From the leading Step 3 rows, resolve at most five collaborators while budget remains. Call separately for each displayed `coauthor`:
+
+```json
+{"author": "<coauthor display name>"}
+```
+
+If a known shared versioned paper ID came from user context, prefer the same call with `paper_id` added (`find_coauthors` supplies a count, not shared paper IDs, so there is no returned paper hint to reuse). Stop resolving collaborators when no call remains; keep each unattempted or unresolved name-bucket edge in the graph and label it unresolved rather than exceeding the budget or forcing clarification unrelated to the requested comparison.
+
+Deduplicate substantive collaborator profiles by ORCID or the returned stable author identifier; keep resolutions with neither separate unless the tool unambiguously returns the same researcher. If two graph buckets resolve to one person, retain both graph rows and report the fragmentation; compare that person once.
+
+### 6. Obtain comparison profiles
+
+`compare_authors` accepts names only. Use it only for a comparison set whose focal and collaborator name buckets are unambiguous: identity resolution selected one stable researcher, no candidate or collision/fragmentation warning remains, and the resolved normalized name aligns with the graph bucket.
+
+When at least two such buckets are available, call:
+
+```json
+{"authors": ["<focal resolved name>", "<unambiguous collaborator coauthor_norm>", "<another unambiguous collaborator coauthor_norm>"]}
+```
+
+The array may contain 2–10 names. Every requested name comes back with a profile: names that could not be resolved return placeholders with `resolved_name: null`, zero counts, and a warning — exclude placeholders from the comparison and say those names were not found. Every found profile is a name-keyed aggregate (`stats_source` is always `name_keyed` here).
+
+For every collaborator not safe for a name-only compare call—but successfully identity-resolved—call `get_author_profile` individually with `author` set to the collaborator's canonical display name, adding `orcid` when resolved. Qualify a no-ORCID profile by its returned `stats_source`; a paper-scoped identity resolution does not turn a name-keyed aggregate into an identity-keyed one. `compare_authors` returns profiles and `shared_categories`; source every displayed shared-paper count from the focal `find_coauthors` row in Step 3.
+
+### 7. Characterize differences
+
+For each resolved collaborator with a usable profile:
+
+1. **Category concentration:** Retain non-null category labels. If both profiles have nonempty labels from the same source vocabulary and positive category-count sums, compute each label's share of the returned category assignments as `count / sum(category counts)`. Report the largest differences of at least 10 percentage points, comparing only exact labels. If labels are missing or the vocabularies come from different source namespaces, show each profile's returned labels separately and state that concentration was not compared.
+2. **Corpus paper-count ratio:** Use each profile's `summary.total_papers` and name both `stats_source` values. Divide collaborator by focal only when the focal total is greater than zero; report the ratio as unavailable otherwise.
+3. **Record-activity trajectory:** Compare the latest up to three overlapping timeline years available. Call these record-activity buckets, not publications. With fewer than three comparable years, missing timelines, or sparse nonoverlapping data, give only a descriptive sparse-data note.
+
+Lead with the strongest supported difference. If none is supported, say the available profiles are insufficiently comparable rather than asserting similarity.
+
+## Output
 
 ### Network Summary
 
-A brief paragraph:
-- Author name and the count of direct collaborators returned in Step 2 (a
-  capped top-N result, not the total)
-- The Step 1 `unique_coauthors` total only as a separate corpus-wide name count
-- Primary source-specific corpus category labels returned in Step 1
+- focal canonical display name and stable identifier when present
+- corpus paper count and profile-reported unique coauthor-name count, each labeled with `stats_source`
+- returned direct-collaborator count (a capped top-N result, not the total)
+- focal category labels as returned, or “unavailable”
+- material identity and fragmentation warnings
 
 ### Direct Collaborators
 
-A table of entries from Step 2 (up to 10 of the returned top-N). These are
-name-matched coauthor entries, not identity-resolved people:
+| Coauthor display name | Shared papers in name-bucket edge | Resolution | Leading category label |
+|---|---:|---|---|
 
-| Coauthor display name | Shared papers | Leading returned category |
-|-----------------------|---------------|---------------------------|
-| Name                  | 15            | cs.LG                     |
-| ...                   | ...           | ...                       |
-
-Take every `shared_papers` value from the focal Step 2 edge. The category column
-comes from the name-keyed Step 4 comparison profile and must be qualified as
-such. For entries not compared, omit the category or mark it as "—".
+Use `coauthor` and the Step 3 `shared_papers` value. Fill the Resolution and category columns only from the comparison branch's resolved profiles; otherwise show “—”.
 
 ### Second-Degree Connections
 
-A list of up to 10 notable second-degree name-bucket paths from Step 3. These
-are buckets not returned as direct buckets and not the focal bucket; they are
-not confirmed people or proof of no person-level direct relationship. Preserve
-returned display names and prioritize buckets with multiple paths:
+Show up to ten buckets, prioritizing exact `coauthor_norm` buckets reached through multiple direct buckets:
 
-- **Coauthor display name** (paths through: Collaborator A, Collaborator B)
-  — leading returned category if known
+- **displayed `coauthor`** — connected through: direct coauthor display names
 
-### Cross-Category Comparison
+State that these are name-bucket paths, not confirmed person-level edges.
 
-Highlight direct collaborators in the compared subset whose returned leading
-category label differs from the focal profile's returned leading label:
+### Cross-Category Connections
 
-- **Coauthor display name** (leading label: q-bio.BM)
+Assess this section only when focal and collaborator categories are nonempty and use comparable vocabularies. Describe differing leading labels as a possible cross-category connection, not proof of interdisciplinarity. For missing or mixed vocabularies, state that cross-category connections could not be assessed. If comparable profiles have no differing leading labels, say none were identified in the compared subset; do not generalize to the full network.
 
-These are differences between source-specific labels in name-keyed corpus
-profiles, scoped to the compared subset. If none are found, report only that no
-such difference appeared in the compared subset.
+### Collaborator Differences
 
-### Returned Profile Differences
+For each compared collaborator show:
 
-For each direct bucket compared in Step 4, present the characterization computed
-in Step 5. Use this format:
+**Collaborator display name** (`shared_papers` from Step 3)
 
-**Coauthor display name** (N `shared_papers` from the focal Step 2 edge)
-- *Characterization*: the one-sentence, provenance-qualified description
-- *Concentration delta*: differences between exact returned category labels,
-  in percentage points of each profile's returned category-count total
-- *Paper-count ratio*: corpus paper-count ratio with each profile's provenance
-- *Record activity*: descriptive differences across overlapping returned
-  timeline buckets
+- **Category concentration:** supported percentage-point differences, or why unavailable
+- **Corpus paper-count ratio:** value and both `stats_source` labels, or “unavailable”
+- **Record-activity trajectory:** comparison over the available overlapping buckets, explicitly labeled as record activity
 
-If the compared profiles have nearly identical returned category distributions
-and timeline buckets, report that no material difference appeared in this
-subset — a statement about the compared subset, not the whole network. Lead
-with the strongest supported profile difference.
+Order by strongest supported difference, not by an invented divergence score. If no collaborators resolved or no profiles are comparable, say so and omit numerical characterizations.
 
-### Suggested Follow-ups
+### Completion
 
-- Ask for a profile of `<returned coauthor name>` for an interesting
-  collaborator.
-- Ask for `<returned coauthor name>`'s network to explore that neighborhood.
-- Ask for papers similar to `<paper_id>` for co-authored papers of interest.
+The output is complete when every section of the requested branch is populated from its stated source or explicitly marked unavailable.
