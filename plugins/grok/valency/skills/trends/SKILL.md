@@ -1,18 +1,19 @@
 ---
 name: trends
-description: "Use when the user asks how a research topic has changed over time, wants publication volume trends, asks 'is X growing', 'when did X take off', or wants to compare the trajectories of two fields. Triggers on trend, growth, or timeline questions about research areas."
+description: "Use when the user asks how research record activity for a topic has changed over time, asks 'is X growing', 'when did X take off', or wants to compare the trajectories of two fields. Triggers on trend, growth, or timeline questions about research areas."
 ---
 
-# Publication Trends
+# Record Activity Trends
 
-Show how a topic or category has evolved over time.
+Show how matching research records for a topic or category have changed over time.
 
 ## Input
 
 The user provides one of:
-- An arXiv category code (e.g., `cs.LG`) — recognized by the short-prefix-dot-suffix pattern
+- An arXiv category code (e.g., `cs.LG`) — recognized by the short-prefix-dot-suffix pattern. Treat dotted codes as arXiv-scoped and pass `source: "arxiv"` on category calls.
 - A keyword or phrase (e.g., "transformer", "CRISPR")
 - Multiple categories or keywords separated by commas or "vs" (e.g., "cs.LG, cs.CL" or "transformers vs RNNs") — for comparison
+
 
 ## Tool Chain
 
@@ -26,71 +27,84 @@ required Valency Bond tools are unavailable, say so and stop.
 
 Call `get_publication_trends` with:
 - `category` (string): the category code
+- `source` (string): "arxiv"
 - `granularity` (string): "year"
-- `format` (string): "compact"
+- `format` (string): "standard"
 
 **If the input is a single keyword/phrase:**
 
 Call `get_keyword_trends` with:
 - `query` (string): the keyword
 - `granularity` (string): "year"
-- `format` (string): "compact"
+- `format` (string): "standard"
 
 **If the input contains multiple categories** (comma-separated or "vs"):
 
-Call `get_publication_trends` individually for each category with:
-- `category` (string): each category code
+Call `get_publication_trends_batch` once with:
+- `categories` (array of strings): the category codes
+- `source` (string): "arxiv"
 - `granularity` (string): "year"
-- `format` (string): "compact"
+- `format` (string): "standard"
 
-Note: `get_publication_trends_batch` exists but is unreliable and frequently times out. Use individual calls instead and combine the results into a comparison table.
+The batch call accepts 2–20 same-source categories and deduplicates them while preserving order.
 
 **If the input contains multiple keywords** (comma-separated or "vs"):
 
 Call `get_keyword_trends` once per keyword with:
 - `query` (string): each keyword
 - `granularity` (string): "year"
-- `format` (string): "compact"
+- `format` (string): "standard"
 
-### Step 2: Get recent representative papers
+For a successful single-category or keyword response, read `periods` rows as `{period, paper_count}`; `count` is the number of periods. In a batch response, read category series from `data`; `category_count`, not `count`, is the number of categories.
+
+Category series count latest records in the resolved hierarchical category. Keyword series count lexical abstract-index matches. Both group records by source-record `datestamp`, so they show matching record activity rather than publication history.
+
+Inspect `too_broad_categories` and every batch entry's `status`. For `CATEGORY_TOO_BROAD`, show the direct-subcategory drill-down in place of that series while retaining successful siblings. For `UNKNOWN_CATEGORY`, surface its warnings and suggestions without substitution. A successful empty series is not an error, and a true group or input error does not erase independent successful results.
+
+### Step 2: Get representative matches
 
 Call `search_by_abstract` with:
 - `query` (string): the keyword or category name (use the human-readable name for categories, e.g., "machine learning" for cs.LG)
 - `limit` (integer): 5
 - `sort_by` (string): "relevance"
 
+These are representative abstract-text matches, not necessarily recent papers. Relevance ranks abstract-text match strength; surface returned fallback or ranking warnings and effective limit clamping.
+
 ## Output Format
 
-### Trend Data
+### Record Activity
 
 **For single input:** a year-by-year table:
 
-| Year | Papers |
-|------|--------|
-| 2018 | 500    |
-| ...  | ...    |
+| Year | Matching records |
+|------|------------------|
+| 2018 | 500              |
+| ...  | ...              |
 
-**For comparisons:** a side-by-side table:
+**For comparisons:** a side-by-side table of matching records:
 
-| Year | cs.LG  | cs.CL  |
-|------|--------|--------|
-| 2018 | 500    | 300    |
-| ...  | ...    | ...    |
+| Year | cs.LG | cs.CL |
+|------|-------|-------|
+| 2018 | 500   | 300   |
+| ...  | ...   | ...   |
 
 ### Narrative Summary
 
 A 3-5 sentence narrative covering:
-- When the field or topic first appeared in the corpus
-- Key inflection points (years where volume jumped or dropped significantly)
-- Current trajectory (accelerating, plateauing, declining)
-- For comparisons: which topic is growing faster and when they diverged
+- The first observed matching record in this corpus
+- Key inflection points (years where matching record activity jumped or dropped significantly)
+- Current record-activity trajectory (accelerating, plateauing, declining)
+- For comparisons: which scoped series is growing faster and when their matching-record activity diverged
 
-### Representative Recent Papers
+Retain each series' category or keyword inclusion scope when describing growth or divergence.
+
+### Representative Matches
 
 A numbered list of 3-5 papers from Step 2. For each:
 - Title (with paper ID)
 - Authors (first 3, then "et al.")
-- Year
+- Source record/update date (`datestamp`)
+- `first_submitted`, when present: a first-submission estimate for supported preprint sources; otherwise a record-derived month estimate
 
 ### Suggested Follow-ups
 

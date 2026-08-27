@@ -10,7 +10,7 @@ Generate a landscape overview of a research field or topic.
 ## Input
 
 The user provides either:
-- An arXiv category code (e.g., `cs.LG`, `q-bio.BM`, `astro-ph.CO`) — recognized by the pattern of a short prefix, a dot, and a short suffix
+- An arXiv category code (e.g., `cs.LG`, `q-bio.BM`, `astro-ph.CO`) — recognized by the pattern of a short prefix, a dot, and a short suffix. Treat dotted codes as arXiv-scoped and pass `source: "arxiv"` on category calls.
 - Free text describing a research area (e.g., "protein folding", "large language models")
 
 ## Tool Chain
@@ -25,6 +25,7 @@ required Valency Bond tools are unavailable, say so and stop.
 
 Call `search_by_category` with:
 - `category` (string): the category code
+- `source` (string): "arxiv"
 - `limit` (integer): 10
 - `sort_by` (string): "citations"
 
@@ -35,89 +36,105 @@ Call `semantic_search_papers` with:
 - `limit` (integer): 10
 - `sort_by` (string): "citations"
 
-If no results are found, tell the user and suggest trying different terms or checking category codes with a broader search. Stop here.
+Use the returned papers as anchors. Surface returned `ranking` and `warnings`, including effective limit clamping, whenever they qualify the ordering or count. For free text, citation ordering applies only within the capped semantic candidate set. Do not use the Step 1 `count` as a field total; it is the capped number of returned candidates.
 
-### Step 2: Get publication trends
+A successful empty result means no anchors; say so and continue with independent analytics.
+
+### Step 2: Get record activity
 
 **If the input is a category code:**
 
 Call `get_publication_trends` with:
 - `category` (string): the category code
+- `source` (string): "arxiv"
 - `granularity` (string): "year"
-- `format` (string): "compact"
+- `format` (string): "standard"
 
 **If the input is free text:**
 
 Call `get_keyword_trends` with:
 - `query` (string): the user's input
 - `granularity` (string): "year"
-- `format` (string): "compact"
+- `format` (string): "standard"
 
-### Step 3: Identify top authors
+In a successful standard response, read `periods` rows as `{period, paper_count}`; `count` is the number of periods, not the number of records. Category counts are latest records in the resolved hierarchical category, while keyword counts are lexical abstract-index matches. Both are grouped by source-record `datestamp`.
 
-Call `identify_prolific_authors` with:
-- `category` (string): the category code (if input was a category), otherwise omit
+A successful empty `periods` array is not an error. `CATEGORY_TOO_BROAD` returns direct-subcategory drill-downs but no series for the requested category. `UNKNOWN_CATEGORY` returns warnings and suggestions; surface them without silently substituting another category.
+
+### Step 3: Identify top author-name aggregates
+
+If the input is an arXiv category code, call `identify_prolific_authors` with:
+- `category` (string): the category code
 - `limit` (integer): 10
 
-Note: if the input was free text and no category was identified, skip this step and note that top-author ranking requires a category code.
+If the input was free text, skip this step and note that author-name aggregation requires a category code.
 
-This tool can time out for very large categories (e.g., cs.LG). If it times out, skip this section in the output and note that author ranking was unavailable due to the size of the category.
+Treat returned names as author-name aggregates, not resolved people. Inspect each entry's `disambiguation_status`: retain `unambiguous`; qualify `mostly_single`, `ambiguous`, and `unresolved` with the returned evidence or warnings; exclude `likely_aggregation` and `severe_aggregation` from person rankings.
 
-### Step 4: Identify subdomains
+### Step 4: Identify corpus category context
 
 Call `identify_research_domains` with:
 - `limit` (integer): 10
+- `source` (string): "arxiv" if the input was a category code; otherwise omit
 
-Note: this returns corpus-wide domain rankings. If the input was a category, the results contextualize where this category sits within the broader landscape.
+This returns the highest-volume categories in the selected source or corpus, not topic subdomains. Without a source it is heterogeneous corpus context.
 
-### Step 5: Get corpus metrics
+### Step 5: Get scoped totals
 
-Call `analyze_corpus_metrics` with:
-- `category` (string): the category code (if input was a category), otherwise omit
+**If the input is a category code**, call `analyze_corpus_metrics` with:
+- `category` (string): the category code
+- `source` (string): "arxiv"
+- `include_versions` (boolean): false
+
+
+**If the input is free text**, do not call `analyze_corpus_metrics`: its unfiltered total is a whole-corpus total, not a field total. Sum Step 2's `paper_count` values and label the result as abstract-keyword matches.
 
 ## Output Format
 
 ### Field Summary
 
 A brief paragraph covering:
-- Total papers found (from Step 5 or Step 1 result count)
-- Date range of publications
-- Growth trajectory (from Step 2 — is volume increasing, stable, or declining?)
+- Category-scoped `total_papers`, or summed abstract-keyword matches for free text
+- Source record/update date range
+- Record-activity trajectory (from Step 2 — are matching records increasing, stable, or declining?)
 
-### Publication Trends
+### Record Activity
 
 A year-by-year table from Step 2:
 
-| Year | Papers |
-|------|--------|
-| 2020 | 1,234  |
-| ...  | ...    |
+| Year | Matching records |
+|------|------------------|
+| 2020 | 1,234            |
+| ...  | ...              |
 
-### Top Authors
+### Author-Name Aggregates
 
-A numbered list of the top 10 authors from Step 3 with their paper counts.
+A numbered list of up to 10 retained author-name aggregates from Step 3 with their record counts and any required disambiguation qualification.
 
-### Subdomain Breakdown
+### Corpus Category Context
 
-A table of the top research domains from Step 4, giving context for how this field relates to the broader corpus.
+A table of the highest-volume corpus or source categories from Step 4, giving context for the field without describing them as topic subdomains.
 
-### Notable Recent Papers
+### Representative Matches
 
-List 5 papers from Step 1 (the most-cited papers found). For each:
+List up to 5 papers from Step 1. For category input, these are citation-ranked category results; for free text, they are citation-ranked semantic candidates within the capped candidate set. For each:
 - Title (with paper ID)
 - Authors (first 3, then "et al." if more)
-- Year
+- Source record/update date (`datestamp`)
+- `first_submitted`, when present: a first-submission estimate for supported preprint sources; otherwise a record-derived month estimate
 - Category
+
+Null citation counts mean citation data is unavailable. Surface citation-coverage and ranking warnings that qualify the ordering.
 
 ### Observations
 
 2-3 brief observations drawn from the data. Examples:
-- "Publication volume has doubled since 2021"
-- "The field is concentrated in 2-3 subdomain categories"
-- "Author X dominates with 3x more papers than the next most prolific"
+- "Matching record activity has doubled since 2021"
+- "The selected corpus is concentrated in 2-3 high-volume categories"
+- "One retained author-name aggregate has 3x more matching records than the next"
 
 ### Suggested Follow-ups
 
-- Ask for a profile of `<author>` for any top author listed.
+- Ask for a profile of `<author>` for any retained author name listed.
 - Ask for trends in `<category>` for deeper trend analysis.
-- Ask for papers similar to `<paper_id>` for any notable paper listed.
+- Ask for papers similar to `<paper_id>` for any representative match listed.

@@ -5,7 +5,7 @@ description: "Use when the user asks about a researcher's collaborators, co-auth
 
 # Collaboration Network
 
-Map a researcher's collaboration network.
+Map the coauthor name-bucket graph associated with a researcher.
 
 ## Input
 
@@ -17,99 +17,153 @@ Use the Valency Bond MCP tools available in the current host. Tool names may be
 qualified by an MCP server prefix; call the matching exposed tool. If the
 required Valency Bond tools are unavailable, say so and stop.
 
+For each call below, distinguish a tool error from a successful empty result,
+read and report material top-level and profile `warnings`, and, when
+`_meta.limit_clamped` is present, report its `requested`, `effective`, and `max`
+values rather than claiming the requested limit was searched.
+
 ### Step 1: Get author baseline
 
-Call `get_author_profile` with:
-- `author` (string): the author name
+First call `get_author_identity` with:
+- `author` (string): the focal author name provided by the user
 
-If no results are found, tell the user the author was not found and suggest checking the spelling. Stop here.
+If `candidates` are returned, ask the user to select one before continuing. Do
+not proceed while candidates remain unresolved. If the identity is
+unverifiable or not found, say so and stop.
 
-Note the author's top categories from this result — you'll need them to identify cross-domain bridges.
+Then call `get_author_profile` with:
+- `author` (string): the selected canonical display name
+- `orcid` (string, when returned by identity resolution): the resolved ORCID
+
+Use the profile's `resolved_name` for corpus chaining. Read its `categories`,
+`summary`, `timeline`, and `stats_source`: `orcid_keyed` statistics are
+identity-linked, while `name_keyed` statistics are aggregates for a
+resolved-name bucket. Categories are source-specific corpus labels. The
+first/last values and timeline are observed record/submission-based paper
+activity, not publication chronology.
 
 ### Step 2: Get direct collaborators
 
 Call `find_coauthors` with:
-- `author` (string): the author name
+- `author` (string): the focal profile's `resolved_name`
 - `limit` (integer): 20
 
-This returns collaborators ranked by co-publication count. Note the top 5 collaborators for the next step. Use the `coauthor_norm` field (normalized name) when passing names to subsequent tool calls.
+This returns top-N coauthor name buckets for the focal normalized-name bucket,
+ranked by `shared_papers`. Display `coauthor` and retain `coauthor_norm` as the
+server matching and chaining key. Note the top 5 returned buckets for the next
+step. A successful empty `coauthors` array is a valid terminal graph result.
 
 ### Step 3: Get second-degree connections
 
-For each of the top 5 collaborators from Step 2, call `find_coauthors` with:
-- `author` (string): the collaborator's normalized name (`coauthor_norm`)
+For each of the top 5 direct buckets from Step 2, call `find_coauthors` with:
+- `author` (string): the direct bucket's `coauthor_norm`
 - `limit` (integer): 10
 
-Collect all second-degree collaborators. Remove any that are already direct collaborators of the focal author (from Step 2) or the focal author themselves.
+Collect second-degree name-bucket paths. Exclude focal and direct buckets by
+their exact returned normalized keys while preserving returned display names.
+These paths do not establish person-level identity or confirmed person-level
+edges. A successful empty result is valid.
 
-### Step 4: Compare focal author with top collaborators
+### Step 4: Compare focal author with top collaborator buckets
 
 Call `compare_authors` with:
-- `authors` (array of strings): a JSON array containing the focal author name and up to 4 of their top collaborators (max 5 total, tool requires 2-10), e.g. `["Yoshua Bengio", "Ian Goodfellow", "Aaron Courville"]`
+- `authors` (array of strings): the focal profile's `resolved_name` and up to 4
+  direct `coauthor_norm` values (max 5 total; the tool accepts 2–10 names)
 
-This returns side-by-side profiles with category overlap information. The result also gives you everything you need to compute divergence: each author's category distribution as a list of `{category, count}` pairs, plus a `shared_categories` array.
+The tool accepts names only and returns name-keyed corpus profiles plus
+`shared_categories`; it does not return collaboration-edge counts or
+identity-safe profiles of people. Read each profile's `categories`, `summary`,
+`timeline`, `stats_source`, and warnings. The shared-paper count for every
+direct edge must come from Step 2's `shared_papers`.
 
-### Step 5: Compute divergence (no tool call)
+### Step 5: Compare returned corpus profiles (no tool call)
 
-For each top collaborator from Step 4, compute a **divergence characterization** from the `compare_authors` result. For each collaborator, determine:
+For each compared direct bucket, compute a descriptive characterization from
+the `compare_authors` result:
 
-- **Concentration delta**: convert each author's category counts to percentages of their total, then identify the top 1–2 categories where the collaborator's percentage exceeds the focal author's by ≥ 10 percentage points (collaborator is *more concentrated* there) and the top 1–2 categories where the focal author's percentage exceeds the collaborator's by ≥ 10 points (focal author is *more concentrated* there).
-- **Productivity ratio**: collaborator's total papers ÷ focal author's total papers. Note when this is dramatically above (>2x) or below (<0.5x) parity.
-- **Career-phase signal**: compare the publication timelines. Note when the collaborator's output has accelerated, decelerated, or shifted (pivoted to a new dominant category) relative to the focal author over the last 3 years.
+- **Concentration delta**: divide each exact returned category count by the sum
+  of that profile's returned category counts. Identify the top 1–2 exact labels
+  where either returned share exceeds the other by at least 10 percentage
+  points.
+- **Paper-count ratio**: collaborator-bucket `summary.total_papers` divided by
+  focal `summary.total_papers`, stating both profiles' `stats_source`.
+- **Record-activity comparison**: compare only overlapping returned `timeline`
+  buckets and describe the observed differences. Do not infer publication
+  chronology, career phase, pivots, acceleration, cooling, or collaboration
+  change.
 
-Synthesize these into a one-sentence characterization per collaborator. Examples:
-- *"More concentrated on astro-ph.GA (57% vs 41%); 2× the productivity; output accelerating in the Gaia era while focal author's has held steady."*
-- *"Pivoted toward cs.CL after 2022; less methodological output than focal author; collaboration appears to have cooled since the pivot."*
+Synthesize these into a one-sentence description of differences between the
+returned corpus profiles, qualified by their provenance.
 
 ## Output Format
 
 ### Network Summary
 
 A brief paragraph:
-- Author name and total direct collaborators count
-- Primary research domains (from Step 1)
+- Selected canonical author name and the count of direct name buckets returned
+  by Step 2, together with its effective cap
+- Profile `summary.unique_coauthors` only as a separate, provenance-qualified
+  corpus name count with `stats_source`
+- Primary source-specific corpus category labels returned in Step 1
 
-### Direct Collaborators
+### Direct Coauthor Name Buckets
 
-A table of collaborators from Step 2 (top 10):
+A table of name buckets from Step 2 (up to 10 of the returned top-N):
 
-| Collaborator | Co-authored papers | Primary domain |
-|--------------|-------------------|----------------|
-| Name         | 15                | cs.LG          |
-| ...          | ...               | ...            |
+| Coauthor name bucket | Shared papers | Leading returned category |
+|----------------------|---------------|---------------------------|
+| Name                 | 15            | cs.LG                     |
+| ...                  | ...           | ...                       |
 
-The "Primary domain" column comes from Step 4 comparison data for the top collaborators. For collaborators not included in the comparison, omit the domain or mark as "—".
+Take `shared_papers` from the focal Step 2 edge. The category column comes from
+the name-keyed Step 4 comparison profile and must be qualified as such. For
+buckets not compared, omit the category or mark it as "—".
 
 ### Second-Degree Connections
 
-A list of notable second-degree connections from Step 3 — people who collaborate with the focal author's collaborators but not directly with the focal author. Show up to 10, prioritizing those who appear via multiple collaborators:
+A list of up to 10 notable second-degree name-bucket paths from Step 3, drawn
+from the up-to-10 result for each queried direct bucket. These are buckets not
+returned as direct buckets and not the focal bucket:
 
-- **Name** (connected through: Collaborator A, Collaborator B) — primary domain if known
+- **Returned display name** (paths through: Direct bucket A, Direct bucket B)
+  — leading returned category if known
 
-### Cross-Domain Bridges
+Prioritizing buckets with multiple paths is allowed, but multiple paths do not
+prove that the bucket represents one person.
 
-Highlight collaborators from Step 2 whose primary domain (from Step 4) differs from the focal author's primary domain. These represent interdisciplinary connections:
+### Cross-Category Comparison
 
-- **Name** (domain: q-bio.BM) — bridges to computational biology
+Highlight direct buckets in the compared subset whose returned leading category
+label differs from the focal profile's returned leading label:
 
-If no cross-domain collaborators are found, note that the author's network is concentrated within their primary domain.
+- **Returned display name** (leading label: q-bio.BM)
 
-### Divergence Analysis
+These are differences between source-specific labels in the compared
+name-bucket profiles; they do not establish interdisciplinarity or describe the
+whole network. If none are found, report only that no such difference appeared
+in the compared subset.
 
-For each top collaborator compared in Step 4, present the divergence characterization computed in Step 5. Use this format:
+### Returned Profile Differences
 
-**Collaborator Name** (N shared papers)
-- *Characterization*: the one-sentence synthesis from Step 5
-- *Concentration delta*: which categories each is more concentrated in (numbers in percentage points)
-- *Productivity*: papers ratio vs focal author
-- *Trajectory*: career-phase signal over the last ~3 years
+For each direct bucket compared in Step 4, present the characterization computed
+in Step 5. Use this format:
 
-If all top collaborators have nearly-identical category distributions and timelines, note that the network is intellectually homogeneous and divergence analysis is uninformative — but still show the table for completeness.
+**Coauthor name bucket** (N shared papers from the focal Step 2 edge)
+- *Characterization*: the one-sentence, provenance-qualified description
+- *Concentration delta*: differences between exact returned category labels,
+  in percentage points of each profile's returned category-count total
+- *Paper-count ratio*: `summary.total_papers` ratio with both `stats_source`
+  values
+- *Record activity*: descriptive differences across overlapping returned
+  `timeline` buckets
 
-The point of this section is to make visible *how the focal author's intellectual position has drifted relative to their closest collaborators*. Lead with the most divergent collaborator, not the most-collaborated-with one.
+Do not call these identity-resolved people, closest collaborators, publication
+trajectories, or intellectual drift. Do not infer collaboration change or
+whole-network homogeneity. Order the displayed subset by the strongest
+supported profile difference.
 
 ### Suggested Follow-ups
 
-- Ask for a profile of `<collaborator>` for any interesting collaborator.
-- Ask for `<collaborator>`'s network to explore their connections.
-- Ask for papers similar to `<paper_id>` for co-authored papers of interest.
+- Ask for a profile of `<returned coauthor name>` for an interesting bucket.
+- Ask for `<returned coauthor name>`'s network to resolve and explore it.
+- Ask for papers similar to `<paper_id>` for a paper of interest.
