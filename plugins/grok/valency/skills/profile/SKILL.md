@@ -1,123 +1,115 @@
 ---
 name: profile
-description: "Use when the user asks about a researcher's work, publications, research areas, collaborators, or academic profile. Triggers on questions like 'who is X', 'what does X work on', 'show me X's papers', or 'tell me about X' in a research context."
+description: "Use when the user asks about a researcher's work, papers, research areas, or academic profile. Triggers on requests such as 'who is X', 'what does X work on', 'show me X's papers', or 'tell me about X' in a research context."
 ---
 
 # Researcher Profile
 
-Build a corpus-grounded profile for the supplied author name.
+Build a corpus-grounded profile of one resolved researcher.
 
 ## Input
 
-The user provides an author name (e.g., "Yoshua Bengio", "Y. LeCun", "Sara Walker").
+The user supplies a researcher name or ORCID and may supply a paper ID as identity context.
 
-## Tool Chain
+## Tool discovery and response discipline
 
-Use the Valency Bond MCP tools available in the current host. Tool names may be
-qualified by an MCP server prefix; call the matching exposed tool. If the
-required Valency Bond tools are unavailable, say so and stop.
+Use the Valency Bond MCP tools available in the current host. Tool names may be qualified by an MCP server prefix; discover and call the matching exposed tools. If the required Valency Bond tools are unavailable, say so and stop.
+
+After every call, surface any warning that changes identity, coverage, ranking, or interpretation, and preserve each paper's `categories` list as returned — category labels are source-specific vocabularies. Date fields carry the **source-aware date label**: `datestamp` is the source record/update date; non-null `first_submitted` is a first-submission estimate for arXiv, bioRxiv, and medRxiv records and a record-derived month estimate for other sources. None is a publication date.
+
+## Workflow
 
 Execute these steps in order.
 
-For each call below, distinguish a tool error from a successful empty result
-and surface material `warnings`.
+### 1. Resolve the researcher
 
-### Step 1: Get author profile
+Call `get_author_identity` with `author` (adding `paper_id` when the user supplied a paper as identity context). When the user supplied an ORCID, pass it together with the name so the server cross-validates that the ORCID belongs to the named researcher; pass `orcid` alone only when no name was given. Inspect `warnings`, `career_metrics`, `orcid`, `resolved_name`, and `candidates`.
 
-Call `get_author_profile` with:
-- `author` (string): the author name provided by the user
+- If `candidates` is nonempty and a single ORCID-collision candidate has `confidence` >= 0.95, select it and re-call with its returned stable author identifier. Otherwise present the returned candidate evidence (display name, current institution, sample recent titles), ask the user to pick, and re-call with the chosen candidate's returned stable author identifier — or an ORCID or identifying paper when it is null. Do not continue while candidates remain unresolved.
+- If `resolved_name` is null and `candidates` is empty, the researcher is not in the corpus; say so and stop. If a name resolves without a unique identity, continue with the name-keyed path below and label the whole profile with the returned disambiguation qualification.
+- Use `career_metrics.display_name` as the canonical display name when non-null. Otherwise retain the user's display name; `resolved_name` is a corpus matching key, not preferred display text.
+- For `find_papers_by_researcher` and any `get_author_identity` re-call, use the strongest resolved key: ORCID, then the stable author identifier returned in `career_metrics`, then the canonical name plus a paper hint when available. `get_author_profile` accepts only `author` and `orcid`.
 
-This returns corpus summary statistics, source-specific category labels, an
-observed paper-activity timeline, and coauthor counts for the matched author-name
-bucket. Label the counts with the returned `stats_source` (`orcid_keyed` means
-the server unified fragmented name variants, explained in `warnings`); they are
-corpus aggregates, not an identity-resolved researcher profile, and the
-timeline is not publication chronology.
+Identity resolution is complete only when one researcher has been selected and no unresolved candidate list remains.
 
-If no profile result is found, tell the user the author was not found and
-suggest checking the spelling or trying a partial name. Stop here.
+### 2. Get the corpus profile
 
-### Step 2: Get citation-ranked paper result
+Call `get_author_profile` with `orcid` when one was resolved and `author` set to the canonical display name. Without an ORCID, set `author` to the identity `resolved_name` so the profile keys the same corpus bucket.
 
-Call `search_by_author` with:
-- `author` (string): the author name
-- `limit` (integer): 10
-- `sort_by` (string): "citations"
-- `strict_mode` (string): "fuzzy"
+Use `get_author_profile.categories` directly instead of a separate single-author category aggregation. Record `stats_source` with every summary, category, and timeline claim:
 
-This returns up to 10 corpus papers matched by the fuzzy author-name search,
-ordered by the available citation data. It is not a full publication list.
-Note how many returned papers have a non-null `citation_count` rather than
-implying the returned order is a complete citation ranking.
+- `orcid_keyed` is an identity-linked corpus aggregate.
+- `name_keyed` is a resolved-name-bucket aggregate and can miss or split name variants.
 
-### Step 3: Get research domain distribution
+The profile's `summary.total_papers` is a corpus count. Career metrics such as `works_count`, `cited_by_count`, and `h_index` come from the identity profile, not the corpus summary; label their source separately and omit unavailable metrics.
 
-Call `batch_author_categories` with:
-- `authors` (array of strings): a JSON array containing the author name, e.g. `["David W. Hogg"]`
-- `max_categories` (integer): 10
+Treat `summary.first_paper`, `summary.last_paper`, and `timeline` as observed paper-activity dates/buckets; their basis can mix first-submission estimates with source record/update dates.
 
-This returns source-specific corpus category counts for the supplied author-name
-bucket, not an identity-resolved researcher's complete publication distribution.
+### 3. Retrieve citation-ranked papers for that identity
 
-### Step 4: Get top collaborators
+Call `find_papers_by_researcher`:
 
-Call `find_coauthors` with:
-- `author` (string): the author name
-- `limit` (integer): 10
+```json
+{"orcid": "<resolved ORCID>", "limit": 10, "sort_by": "citations"}
+```
 
-This returns top-N coauthor name buckets for the focal normalized-name bucket,
-ranked by `shared_papers`. Display `coauthor`; use `coauthor_norm` only for
-matching.
+Without an ORCID, keep `limit` and `sort_by` and identify the researcher by the strongest available key instead: the stable author identifier returned in `career_metrics` when present, otherwise `author` (the canonical display name) plus the user-supplied versioned `paper_id` when available. Inspect `candidates`, `disambiguation_status`, `warnings`, `returned_count`, each paper's `match_type`, and citation fields. If `candidates` reappear (an ORCID collision), resolve them with the chosen candidate's stable author identifier as in step 1.
 
-## Output Format
+This is an identity-attributed, citation-ranked result capped at 10, not a full publication list. Citation enrichment is nullable upstream data. Report citation coverage as “citation counts available for X of Y returned papers,” preserve null counts as unavailable, and qualify the ranking with any coverage warning. If no papers are returned, say that no identity-attributed corpus papers were returned.
 
-Present the results in this structure:
+### 4. Get top coauthor name buckets
+
+If the profile returned a non-null `resolved_name`, call `find_coauthors` with:
+
+```json
+{"author": "<profile resolved_name>", "limit": 10}
+```
+
+Otherwise skip this step and state that no corpus name key was available.
+
+`find_coauthors` ranks coauthor name buckets for one focal normalized-name bucket. It is not an identity-resolved or necessarily complete collaboration graph, and the returned list is top-N. Display `coauthor`; use `coauthor_norm` only for local matching or a later exact name-bucket chain. Use `shared_papers` as the count for that returned edge. If no coauthors are returned, state that none were found for the focal name bucket.
+
+## Output
 
 ### Summary
 
-A brief block with:
-- **Name**: returned author-name bucket
-- **Total papers**: corpus count from Step 1, labeled with its returned
-  `stats_source`
-- **Observed paper activity**: first to last returned activity date from Step 1
-  (source-aware record dates, not publication years)
-- **Primary domains**: top 3 returned source-specific corpus category labels
-  from the name-bucket aggregation in Step 3
+- **Name:** canonical display name
+- **Identity:** ORCID when present; otherwise the returned disambiguation status
+- **Corpus papers:** `summary.total_papers`, labeled with `stats_source`
+- **Observed paper activity:** `summary.first_paper` to `summary.last_paper`, with the mixed first-submission/record-date caveat
+- **Corpus coauthor names:** `summary.unique_coauthors` when present, qualified by `stats_source`
+- **Identity-provider career metrics:** only non-null returned metrics, clearly separated from corpus statistics
 
-### Research Domains
+Include material warnings beside the claims they qualify.
 
-A table of up to 5 source-specific corpus categories from the name-bucket
-aggregation in Step 3:
+### Research Categories
 
-| Category | Papers |
-|----------|--------|
-| cs.LG    | 42     |
-| ...      | ...    |
+Show up to five non-null entries from `get_author_profile.categories` as returned:
 
-### Top Papers
+| Category label | Corpus paper count |
+|---|---:|
 
-A numbered list of up to 10 papers from Step 2. For each paper show:
-- Title (with paper ID)
-- The source-aware date: label a non-null `first_submitted` as a
-  **First-submission estimate** for arXiv, bioRxiv, or medRxiv records and a
-  **Record-derived month estimate** for other sources; absent that, use
-  `datestamp` labeled **Source record/update date**. Neither is a publication
-  date.
-- Categories
+If categories are empty or null, say category metadata is unavailable. Describe these as source-specific category labels, not a universal ontology.
 
-### Top Collaborators
+### Citation-Ranked Corpus Papers (up to 10 returned)
 
-A table of up to 5 returned coauthor name buckets from Step 4. These are the
-displayed portion of a capped name-bucket result, not identity-resolved people
-or a complete collaboration network:
+For each returned paper show:
 
-| Coauthor display name (`coauthor`) | Shared papers (`shared_papers`) |
-|------------------------------------|---------------------------------|
-| Name                               | 15                              |
-| ...                                | ...                             |
+- linked title using `url`, or title plus `id` when no URL is available
+- `citation_count`, or “unavailable”
+- full `categories` list, or “unavailable”
+- the source-aware date label
+- identity `match_type` when it materially qualifies attribution
 
-### Suggested Follow-ups
+State `returned_count`, `disambiguation_status`, and citation coverage.
 
-- Ask for `<author_name>`'s network to map their collaborators.
-- Ask for papers similar to `<paper_id>` to explore a returned paper (use the
-  ID of the first citation-ranked result).
+### Top Coauthor Name Buckets (up to 10 returned)
+
+| Coauthor display name | Shared papers in returned name-bucket edge |
+|---|---:|
+
+Use `coauthor` for display and `shared_papers` for the count. State that name variants can fragment buckets and that these collaborators have not been identity-resolved.
+
+### Completion
+
+The profile is complete when one researcher is selected with no unresolved candidates and every section above is populated from its stated source or explicitly marked unavailable.
