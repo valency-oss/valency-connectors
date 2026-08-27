@@ -74,6 +74,21 @@ grok plugin marketplace remove https://github.com/valency-oss/valency-bond.git
 Open **Powers → Installed Powers → Valency** and use the Power detail controls
 to remove it. Do not edit Kiro's generated MCP configuration directly.
 
+## OpenClaw
+
+Remove the OAuth session before removing the plugin, then restart the Gateway:
+
+```bash
+openclaw mcp logout valency
+openclaw plugins uninstall valency
+openclaw gateway restart
+```
+
+OAuth credentials are managed separately from the package, so do not treat
+plugin removal alone as evidence that the saved OAuth session was cleared. A
+managed Gateway may restart automatically after uninstall; the explicit
+restart ensures the running Gateway drops the package's skills and MCP server.
+
 ## Skills-only installation
 
 Run the interactive remover and select the Valency skills you installed:

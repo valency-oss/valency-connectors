@@ -106,6 +106,27 @@ server; the package does not contain a local executable or credentials.
 3. Enter `https://github.com/valency-oss/valency-bond` and install the Power.
 4. Activate Valency and complete Kiro's browser-based authorization flow.
 
+### OpenClaw
+
+OpenClaw 2026.8.1 or newer can install the native
+`@valency-oss/openclaw-valency` package from a local checkout:
+
+```bash
+git clone https://github.com/valency-oss/valency-bond.git
+openclaw plugins install ./valency-bond/plugins/openclaw/valency
+openclaw plugins enable valency
+openclaw gateway restart
+openclaw mcp login valency
+```
+
+The final command starts a separate browser OAuth flow; installing the package
+does not authorize an account. A managed Gateway may restart automatically,
+but an explicit restart is safe and ensures the running Gateway sees the new
+package.
+
+Valency has not yet been published on ClawHub. ClawHub will be an optional
+distribution path, not a prerequisite for installing from this checkout.
+
 ### Skills-only installation
 
 To install the seven guided workflows without the Valency Bond MCP server:
@@ -122,6 +143,7 @@ individual skills. This does not configure or authenticate the MCP server.
 - [Uninstall Valency Bond](./docs/uninstall.md)
 - [Development and validation](./docs/development.md)
 - [Repository layout](./docs/repository-layout.md)
+- [OpenClaw package and design](./docs/openclaw.md)
 - [MIT license](./LICENSE)
 
 Organization-wide contribution, trademark, and security policies are

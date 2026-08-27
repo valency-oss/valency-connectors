@@ -172,6 +172,141 @@ test("native Grok package is credential-free and contains only expected componen
   }
 });
 
+test("native OpenClaw package pins its managed MCP runtime contract", async () => {
+  const packageRoot = "plugins/openclaw/valency";
+  const packagePath = `${packageRoot}/package.json`;
+  const manifestPath = `${packageRoot}/openclaw.plugin.json`;
+  const runtimePath = `${packageRoot}/index.js`;
+  const runtimeContents = readFileSync(runtimePath, "utf8");
+  const description = "Connect OpenClaw to the hosted Valency MCP server.";
+
+  assert.deepEqual(readJson(packagePath), {
+    name: "@valency-oss/openclaw-valency",
+    version: "0.1.0",
+    description,
+    license: "MIT",
+    type: "module",
+    files: ["index.js", "openclaw.plugin.json", "skills", "LICENSE"],
+    peerDependencies: {
+      openclaw: ">=2026.8.1",
+    },
+    peerDependenciesMeta: {
+      openclaw: {
+        optional: true,
+      },
+    },
+    openclaw: {
+      extensions: ["./index.js"],
+      compat: {
+        pluginApi: ">=2026.8.1",
+        minGatewayVersion: "2026.8.1",
+      },
+      build: {
+        openclawVersion: "2026.8.1",
+        pluginSdkVersion: "2026.8.1",
+      },
+    },
+  });
+
+  assert.deepEqual(readJson(manifestPath), {
+    id: "valency",
+    name: "Valency",
+    version: "0.1.0",
+    description,
+    skills: ["./skills"],
+    mcpServers: {
+      valency: {
+        url: "https://labs.valency.io/mcp/",
+        transport: "streamable-http",
+        auth: "oauth",
+      },
+    },
+    configSchema: {
+      type: "object",
+      properties: {},
+      additionalProperties: false,
+    },
+  });
+
+  assert.deepEqual(readdirSync(packageRoot).sort(), [
+    "LICENSE",
+    "index.js",
+    "openclaw.plugin.json",
+    "package.json",
+    "skills",
+  ]);
+  const skills = [
+    "fresh-collaborators",
+    "landscape",
+    "network",
+    "profile",
+    "reading-list",
+    "similar",
+    "trends",
+  ];
+  assert.deepEqual(readdirSync(`${packageRoot}/skills`).sort(), skills);
+  for (const skill of skills) {
+    assert.deepEqual(readdirSync(`${packageRoot}/skills/${skill}`).sort(), [
+      "SKILL.md",
+    ]);
+  }
+
+  const runtimeModule = await import("../plugins/openclaw/valency/index.js");
+  assert.deepEqual(Object.keys(runtimeModule), ["default"]);
+  const { default: runtime } = runtimeModule;
+  assert.deepEqual(
+    { ...runtime, register: typeof runtime.register },
+    {
+      id: "valency",
+      name: "Valency",
+      description,
+      register: "function",
+    },
+  );
+  const apiAccesses = [];
+  const api = new Proxy(
+    {},
+    {
+      get(_target, property) {
+        apiAccesses.push(`get ${String(property)}`);
+        return () => {};
+      },
+      has(_target, property) {
+        apiAccesses.push(`has ${String(property)}`);
+        return false;
+      },
+      ownKeys() {
+        apiAccesses.push("enumerate");
+        return [];
+      },
+      set(_target, property) {
+        apiAccesses.push(`set ${String(property)}`);
+        return true;
+      },
+    },
+  );
+  assert.equal(runtime.register(api), undefined);
+  assert.deepEqual(
+    apiAccesses,
+    [],
+    "OpenClaw runtime must not register tools or other capabilities",
+  );
+
+  assert.doesNotMatch(
+    [
+      readFileSync(packagePath, "utf8"),
+      readFileSync(manifestPath, "utf8"),
+      runtimeContents,
+    ].join("\n"),
+    /clientId|clientSecret|accessToken|refreshToken|apiKey|\btoken\b|bearer|authorization|headers|process\.env|localhost|127\.0\.0\.1|\/mcp\/authoring|valency-authoring|"command"|"args"/i,
+  );
+  assert.doesNotMatch(
+    runtimeContents,
+    /\b(?:import|require|fetch|spawn|exec|execFile|createServer|serve)\b|https?:\/\//,
+    "OpenClaw runtime must not embed or wrap an MCP server",
+  );
+});
+
 test("repository root is a native Valency Power with host-managed OAuth", () => {
   assert.equal(existsSync("plugins/kiro/valency"), false);
   const power = readFileSync(`${kiroPowerRoot}/POWER.md`, "utf8");
@@ -386,10 +521,24 @@ test("all providers ship byte-identical unprefixed skills", () => {
     "similar",
     "trends",
   ]);
+  assert.deepEqual(skillDirectories("plugins/openclaw/valency/skills"), [
+    "fresh-collaborators",
+    "landscape",
+    "network",
+    "profile",
+    "reading-list",
+    "similar",
+    "trends",
+  ]);
   assert.equal(
     readFileSync("plugins/grok/valency/LICENSE", "utf8"),
     readFileSync("LICENSE", "utf8"),
     "Grok package license must match the repository MIT license",
+  );
+  assert.equal(
+    readFileSync("plugins/openclaw/valency/LICENSE", "utf8"),
+    readFileSync("LICENSE", "utf8"),
+    "OpenClaw package license must match the repository MIT license",
   );
 
   for (const skill of [
@@ -441,6 +590,14 @@ test("all providers ship byte-identical unprefixed skills", () => {
       ),
       canonical,
       `Grok ${skill} must match the shared skill`,
+    );
+    assert.equal(
+      readFileSync(
+        `plugins/openclaw/valency/skills/${skill}/SKILL.md`,
+        "utf8",
+      ),
+      canonical,
+      `OpenClaw ${skill} must match the shared skill`,
     );
   }
 });
@@ -642,6 +799,7 @@ test("repository metadata and installation docs point at the monorepo", () => {
     "Antigravity CLI",
     "Grok Build",
     "Kiro",
+    "OpenClaw",
     "Skills-only installation",
   ]) {
     assert.match(readme, new RegExp(`^### ${surface}$`, "m"));
@@ -712,6 +870,54 @@ test("Kiro documentation uses the supported root GitHub lifecycle", () => {
   assert.match(development, /dynamic client registration/);
 });
 
+test("OpenClaw documentation keeps the unpublished local lifecycle honest", () => {
+  const readme = readFileSync("README.md", "utf8");
+  const development = readFileSync("docs/development.md", "utf8");
+  const layout = readFileSync("docs/repository-layout.md", "utf8");
+  const openclaw = readFileSync("docs/openclaw.md", "utf8");
+  const uninstall = readFileSync("docs/uninstall.md", "utf8");
+  const openclawSection = readme.match(
+    /^### OpenClaw$([\s\S]*?)(?=^### |^## )/m,
+  )?.[1];
+
+  assert.ok(openclawSection, "README must contain an OpenClaw install section");
+  assert.match(openclawSection, /OpenClaw 2026\.8\.1 or newer/);
+  assert.match(
+    openclawSection,
+    /openclaw plugins install \.\/valency-bond\/plugins\/openclaw\/valency/,
+  );
+  assert.match(openclawSection, /openclaw plugins enable valency/);
+  assert.match(openclawSection, /openclaw gateway restart/);
+  assert.match(openclawSection, /openclaw mcp login valency/);
+  assert.match(openclawSection, /separate browser OAuth flow/);
+  assert.match(openclawSection, /has not yet been published on ClawHub/);
+  assert.doesNotMatch(openclawSection, /plugins install clawhub:/);
+
+  assert.match(uninstall, /^## OpenClaw$/m);
+  assert.match(uninstall, /openclaw mcp logout valency/);
+  assert.match(uninstall, /openclaw plugins uninstall valency/);
+  assert.match(uninstall, /openclaw gateway restart/);
+  assert.match(uninstall, /plugin removal alone.*saved OAuth session/s);
+
+  assert.match(development, /^## OpenClaw package$/m);
+  assert.match(
+    development,
+    /npm pack --dry-run --json \.\/plugins\/openclaw\/valency/,
+  );
+  assert.match(development, /openclaw plugins install --link/);
+  assert.match(development, /openclaw plugins install npm-pack:<tarball\.tgz>/);
+  assert.match(development, /Those checks do not execute an OpenClaw install/);
+  assert.match(
+    development,
+    /do\s+not prove that an already-running Gateway loaded the package/,
+  );
+  assert.match(development, /not part of this\s+initial validation path/);
+
+  assert.match(openclaw, /has\s+not been published on ClawHub/);
+  assert.match(openclaw, /does not claim a completed\s+live OpenClaw install/);
+  assert.match(layout, /`plugins\/openclaw\/valency` \| OpenClaw/);
+});
+
 test("uninstall instructions live in the linked guide", () => {
   const readme = readFileSync("README.md", "utf8");
   const uninstall = readFileSync("docs/uninstall.md", "utf8");
@@ -728,6 +934,7 @@ test("uninstall instructions live in the linked guide", () => {
     "Antigravity CLI",
     "Grok Build",
     "Kiro",
+    "OpenClaw",
     "Skills-only installation",
   ]) {
     assert.match(uninstall, new RegExp(`^## ${surface}$`, "m"));
@@ -739,6 +946,7 @@ test("uninstall instructions live in the linked guide", () => {
     "copilot plugin uninstall valency",
     "agy plugin uninstall valency",
     "grok plugin uninstall valency",
+    "openclaw plugins uninstall valency",
     "npx skills@latest remove",
   ]) {
     assert.ok(uninstall.includes(command), `${command} must be documented`);

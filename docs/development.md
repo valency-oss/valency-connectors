@@ -6,12 +6,14 @@ Run the cross-provider packaging checks:
 npm test
 ```
 
-These tests include static checks for the native Antigravity plugin, the
-Copilot, Cursor, and Grok marketplaces and provider packages, workflow routing,
-and the Kiro Power. They also enforce byte-for-byte skill synchronization
-across the shared root, Claude, Copilot, Cursor, Grok, OpenAI, and Kiro copies.
-The Antigravity checks pin the exact `plugin.json` and `mcp_config.json`
-contracts and the host-specific rule.
+These tests include static checks for the native Antigravity plugin and native
+OpenClaw plugin, plus the Copilot, Cursor, and Grok marketplaces and provider packages.
+They cover workflow routing and the Kiro Power. They also enforce byte-for-byte skill synchronization
+across the shared root, Claude, Copilot, Cursor, Grok, OpenAI, OpenClaw, and
+Kiro copies. The Antigravity checks pin the exact `plugin.json` and
+`mcp_config.json` contracts and the host-specific rule. The OpenClaw checks pin
+its manifest-owned OAuth MCP server, package and runtime metadata, exact file
+inventory, license, and direct JavaScript entry.
 
 The Kiro checks pin the supported `POWER.md` frontmatter, the credential-free
 remote endpoint in `mcp.json`, and the one-to-one mapping from all seven
@@ -26,7 +28,9 @@ Cursor package checks do not prove that Cursor can install the plugin, complete
 OAuth, or invoke a remote tool. Static validation does not prove that Grok Build
 can install the plugin, complete OAuth, or invoke a remote tool.
 The Kiro static checks do not prove that Kiro can install the Power, complete
-OAuth, or invoke a remote tool.
+OAuth, or invoke a remote tool. The OpenClaw package checks likewise do not
+prove a managed install, a running Gateway reload, browser OAuth, or a Valency
+tool call.
 
 ## Cursor provider package
 
@@ -125,6 +129,67 @@ unrelated personal data; retain only the redirect URI and non-sensitive request
 fields needed for diagnosis. Coordinate any MCP allowlist or upstream OAuth
 application change separately from this provider package.
 
+## OpenClaw package
+
+`plugins/openclaw/valency` is a self-contained native package for OpenClaw
+2026.8.1 and newer. Its checked-in ESM JavaScript entry is the installed
+runtime entry, so there is no TypeScript source or generated `dist/` tree to
+build or synchronize. The entry intentionally registers no tools: the static
+`openclaw.plugin.json` declaration connects OpenClaw to the hosted Valency MCP
+server, which owns the tool implementations.
+
+`npm test` is the repository's static contract check. It verifies the strict
+empty config schema, exact hosted `streamable-http` OAuth server, compatibility
+floor, JavaScript entry, seven byte-identical skills, license, and absence of
+credentials, authorization headers, alternate endpoints, or a local MCP
+wrapper. To inspect the package payload without publishing it, also review:
+
+```bash
+npm pack --dry-run --json ./plugins/openclaw/valency
+```
+
+Those checks do not execute an OpenClaw install. For quick checkout
+development, link the package and restart the Gateway:
+
+```bash
+openclaw plugins install --link ./plugins/openclaw/valency
+openclaw plugins enable valency
+openclaw plugins inspect valency --runtime --json
+openclaw gateway restart
+```
+
+A link smoke test does not prove the managed package path. Before release,
+record the OpenClaw version, create the actual npm tarball, review its contents,
+and install that tarball through `npm-pack:`:
+
+```bash
+npm pack ./plugins/openclaw/valency
+openclaw plugins install npm-pack:<tarball.tgz>
+openclaw plugins enable valency
+openclaw plugins inspect valency --runtime --json
+openclaw gateway restart
+```
+
+Then verify the running Gateway and a fresh OpenClaw session expose all seven
+skills and the `valency` MCP server. Complete authorization separately with
+`openclaw mcp login valency`, confirm the connection with `openclaw mcp doctor
+valency --probe`, and run one representative read-only Valency tool call.
+Record installation, runtime discovery, Gateway restart, OAuth, MCP probing,
+tool use, update, and uninstall as separate results. Static checks, a cold
+manifest inspection, and `plugins inspect --runtime` in a fresh CLI process do
+not prove that an already-running Gateway loaded the package.
+
+If OAuth fails, keep only the non-sensitive callback URI after removing its
+query and fragment. Redact authorization codes, access and refresh tokens,
+cookies, client secrets, PKCE state and verifiers, and personal data. Do not
+add credentials or a callback workaround to the package; coordinate redirect
+allowlisting or upstream OAuth changes separately.
+
+ClawHub is an optional future distribution channel and is not part of this
+initial validation path. Until publication occurs, do not record a ClawHub
+install as available or successful. See [OpenClaw connector design and
+sources](./openclaw.md) for the pinned package rationale.
+
 See [Repository root layout](./repository-layout.md) before adding, moving, or
 consolidating root files. Several similarly named files implement different
 provider schemas and are intentionally kept separate.
@@ -161,5 +226,6 @@ Provider release versions live in their respective manifests when the host
 supports them. Antigravity's `plugin.json` schema has no version field, so its
 package revision follows the repository commit. The Claude and OpenAI package
 versions can advance independently; the Copilot package version lives in
-`plugins/copilot/valency/plugin.json`, and the Grok package version lives in
-`plugins/grok/valency/.grok-plugin/plugin.json`.
+`plugins/copilot/valency/plugin.json`, the Grok package version lives in
+`plugins/grok/valency/.grok-plugin/plugin.json`, and the OpenClaw package and
+manifest both pin version `0.1.0`.

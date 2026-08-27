@@ -1,0 +1,21 @@
+{
+  "id": "valency",
+  "name": "Valency",
+  "version": "0.1.0",
+  "description": "Connect OpenClaw to the hosted Valency MCP server.",
+  "skills": [
+    "./skills"
+  ],
+  "mcpServers": {
+    "valency": {
+      "url": "https://labs.valency.io/mcp/",
+      "transport": "streamable-http",
+      "auth": "oauth"
+    }
+  },
+  "configSchema": {
+    "type": "object",
+    "properties": {},
+    "additionalProperties": false
+  }
+}
