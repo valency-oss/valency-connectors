@@ -1,140 +1,148 @@
 ---
 name: landscape
-description: "Use when the user asks for an overview of a research field, wants to understand a domain's key players, or asks 'what's happening in X' or 'give me a landscape of X'. Triggers on requests for field summaries, top authors in an area, or subdomain breakdowns."
+description: "Use when the user asks for an overview of a research field, wants to understand its corpus activity or key author-name aggregates, or asks 'what's happening in X' or 'give me a landscape of X'. Triggers on field summaries, prolific authors in a category, and corpus category context."
 ---
 
 # Field Landscape
 
-Generate a landscape overview of a research field or topic.
+Build a scoped, evidence-backed overview of a research field or topic.
 
-## Input
+## Input routing
 
-The user provides either:
-- An arXiv category code (e.g., `cs.LG`, `q-bio.BM`, `astro-ph.CO`) — recognized by the pattern of a short prefix, a dot, and a short suffix. Treat dotted codes as arXiv-scoped and pass `source: "arxiv"` on category calls.
-- Free text describing a research area (e.g., "protein folding", "large language models")
+Classify the input before calling tools:
 
-## Tool Chain
+1. A dotted code such as `cs.LG`, `q-bio.BM`, or `astro-ph.CO` takes the arXiv-category route. This syntax recognizes arXiv codes only; pass `source: "arxiv"`.
+2. A category explicitly tied to another source takes the category route with that exact category and source. Other sources use their own vocabularies, including plain-language labels, MeSH terms, and bepress disciplines.
+3. Everything else takes the free-text route. Do not reinterpret free text as a category merely because it resembles one.
 
-Use the Valency Bond MCP tools available in the current host. Tool names may be
-qualified by an MCP server prefix; call the matching exposed tool. If the
-required Valency Bond tools are unavailable, say so and stop.
+Categories remain source-specific lists throughout the report; they are not a shared ontology.
 
-### Step 1: Find papers in the field
+## Tool chain
 
-**If the input matches an arXiv category pattern** (e.g., `cs.LG`):
+Use the Valency Bond MCP tools available in the current host. Tool names may be qualified by an MCP server prefix; discover and call the tools matching the short names below. If the required Valency Bond tools are unavailable, say so and stop.
+In the call templates, replace angle-bracket placeholders and omit `source` when it is unknown.
 
-Call `search_by_category` with:
-- `category` (string): the category code
-- `source` (string): "arxiv"
-- `limit` (integer): 10
-- `sort_by` (string): "citations"
+### 1. Retrieve citation-ranked anchors
 
-**If the input is free text:**
+For a category, call:
 
-Call `semantic_search_papers` with:
-- `query` (string): the user's input
-- `limit` (integer): 10
-- `sort_by` (string): "citations"
+```json
+{"category":"<category>","source":"<source when known>","limit":10,"sort_by":"citations","include_abstract":true}
+```
 
-Use the returned papers as anchors. Surface returned `ranking` and `warnings`, including effective limit clamping, whenever they qualify the ordering or count. For free text, citation ordering applies only within the capped semantic candidate set. Do not use the Step 1 `count` as a field total; it is the capped number of returned candidates.
+with `search_by_category`. Always use `source: "arxiv"` for an arXiv code.
 
-A successful empty result means no anchors; say so and continue with independent analytics.
+For free text, call:
 
-### Step 2: Get record activity
+```json
+{"query":"<user input>","limit":10,"sort_by":"citations","include_abstract":true}
+```
 
-**If the input is a category code:**
+with `semantic_search_papers`. This citation order applies only to the retrieved semantic candidates; it is not a corpus-wide most-cited ranking. Record the response `ranking`, confidence, hints, warnings, returned `count`, and any `_meta.limit_clamped`.
 
-Call `get_publication_trends` with:
-- `category` (string): the category code
-- `source` (string): "arxiv"
-- `granularity` (string): "year"
-- `format` (string): "standard"
+A successful empty result completes this step with no anchors. Continue the independent analytics steps rather than treating it as a tool failure.
 
-**If the input is free text:**
+### 2. Measure record activity
 
-Call `get_keyword_trends` with:
-- `query` (string): the user's input
-- `granularity` (string): "year"
-- `format` (string): "standard"
+For a category, call `get_publication_trends`:
 
-In a successful standard response, read `periods` rows as `{period, paper_count}`; `count` is the number of periods, not the number of records. Category counts are latest records in the resolved hierarchical category, while keyword counts are lexical abstract-index matches. Both are grouped by source-record `datestamp`.
+```json
+{"category":"<category>","source":"<source when known>","granularity":"year","format":"standard"}
+```
 
-A successful empty `periods` array is not an error. `CATEGORY_TOO_BROAD` returns direct-subcategory drill-downs but no series for the requested category. `UNKNOWN_CATEGORY` returns warnings and suggestions; surface them without silently substituting another category.
+For free text, call `get_keyword_trends`:
 
-### Step 3: Identify top author-name aggregates
+```json
+{"query":"<user input>","granularity":"year","format":"standard"}
+```
 
-If the input is an arXiv category code, call `identify_prolific_authors` with:
-- `category` (string): the category code
-- `limit` (integer): 10
+Category trends count latest records in the resolved hierarchical category. Keyword trends count records whose abstract full-text index lexically matches the query. Both group by `datestamp`, so label them **record activity**, not publication counts. Standard responses return `{period, paper_count}` rows; `count` is the number of periods. Sum `paper_count` only when reporting scoped volume.
 
-If the input was free text, skip this step and note that author-name aggregation requires a category code.
+If a category response is `CATEGORY_TOO_BROAD`, show its direct-subcategory drill-downs and leave that series unavailable. For `UNKNOWN_CATEGORY`, show the warning and suggestions. Never silently substitute another category.
 
-Treat returned names as author-name aggregates, not resolved people. Inspect each entry's `disambiguation_status`: retain `unambiguous`; qualify `mostly_single`, `ambiguous`, and `unresolved` with the returned evidence or warnings; exclude `likely_aggregation` and `severe_aggregation` from person rankings.
+### 3. Measure the correct field scope
 
-### Step 4: Identify corpus category context
+For a category, call `analyze_corpus_metrics`:
 
-Call `identify_research_domains` with:
-- `limit` (integer): 10
-- `source` (string): "arxiv" if the input was a category code; otherwise omit
+```json
+{"category":"<category>","source":"<source when known>","include_versions":false}
+```
 
-This returns the highest-volume categories in the selected source or corpus, not topic subdomains. Without a source it is heterogeneous corpus context.
+Use `total_papers` and `date_range` only as category-scoped corpus metrics, confirming the echoed `category_filter`. Label the range as source record/update dates.
 
-### Step 5: Get scoped totals
+For free text, do not call unfiltered corpus metrics a field total. Use only the sum of Step 2's annual `paper_count` values and label it **abstract-keyword matches in the corpus**. Step 1's `count` is returned top-N candidates, never a field total.
 
-**If the input is a category code**, call `analyze_corpus_metrics` with:
-- `category` (string): the category code
-- `source` (string): "arxiv"
-- `include_versions` (boolean): false
+### 4. Identify prolific author-name aggregates
 
+Run this step only for an arXiv category:
 
-**If the input is free text**, do not call `analyze_corpus_metrics`: its unfiltered total is a whole-corpus total, not a field total. Sum Step 2's `paper_count` values and label the result as abstract-keyword matches.
+```json
+{"category":"<category>","limit":10}
+```
 
-## Output Format
+with `identify_prolific_authors`. Do not pass `source` with `category`: category takes precedence and the tool cannot enforce both filters. For a category explicitly tied to another source, omit this section and state that source-isolated category author ranking is unavailable.
+
+These rows aggregate by author name, not resolved human identity. Apply `disambiguation_status` to every row:
+
+- Present `unambiguous` normally.
+- Present `mostly_single` with its candidate/fragmentation context.
+- Label `ambiguous` and `unresolved` as unverified name aggregates, including the row warning and candidate evidence.
+- Omit `likely_aggregation` and `severe_aggregation` from person rankings; state how many rows were excluded.
+
+For free text, omit this section because the tool cannot produce a free-text-topic author ranking.
+
+### 5. Add corpus category context
+
+Call `identify_research_domains`:
+
+```json
+{"limit":10,"source":"<source when known>"}
+```
+
+Pass the category source when known. These are highest-volume categories in that source or the whole corpus, not subdomains of the requested topic. If `source` is omitted, label the result as heterogeneous corpus context and preserve each returned vocabulary/source warning.
+
+### 6. Validate responses and finish
+
+After every call:
+
+- Inspect `warnings`, `_meta.limit_clamped`, echoed scope, ranking, and date range. Surface anything that changes interpretation or leaves a section partial.
+- Treat a successful empty list or zero count as an empty scoped result. Treat a true tool error as affecting only that section and continue independent sections.
+- Do not synthesize missing metadata. Prefer a non-null paper `url`; otherwise show the paper ID without constructing a link.
+- Render the full returned `categories` list with its source context; use “unavailable” for an empty list.
+- Show the first three byline authors in order. Add “et al.” whenever more are known or `authors_truncated` is true, and report `total_authors` when supplied.
+- For arXiv, bioRxiv, or medRxiv, label non-null `first_submitted` **first-submission estimate**. For every other or unknown source, label it **record-derived month estimate**. Otherwise label `datestamp` **source record/update date**. None is a publication date.
+- Treat null citation counts as unavailable and qualify citation ordering whenever coverage warnings are present.
+
+The landscape is complete when every requested section is either populated from its stated scope or explicitly marked empty, partial, or unavailable with the relevant warning.
+
+## Output
 
 ### Field Summary
 
-A brief paragraph covering:
-- Category-scoped `total_papers`, or summed abstract-keyword matches for free text
-- Source record/update date range
-- Record-activity trajectory (from Step 2 — are matching records increasing, stable, or declining?)
+State the route and scope first. Give the category corpus total or abstract-keyword-match volume, the record/update date range available for that same scope, and the trajectory supported by Step 2. Use abstracts only when making content claims.
 
-### Record Activity
+### Record Activity by Year
 
-A year-by-year table from Step 2:
+Show `Year | Matching records`. Identify the series as hierarchical-category activity or lexical abstract-keyword activity.
 
-| Year | Matching records |
-|------|------------------|
-| 2020 | 1,234            |
-| ...  | ...              |
+### Prolific Author-Name Aggregates
 
-### Author-Name Aggregates
-
-A numbered list of up to 10 retained author-name aggregates from Step 3 with their record counts and any required disambiguation qualification.
+For category input, list the retained rows with paper count, `disambiguation_status`, candidate evidence, and material warnings. Do not call an aggregate a verified person.
 
 ### Corpus Category Context
 
-A table of the highest-volume corpus or source categories from Step 4, giving context for the field without describing them as topic subdomains.
+List the source-scoped or heterogeneous corpus category ranking, its category vocabulary, paper count, and percentage. Keep it separate from the topic summary.
 
-### Representative Matches
+### Citation-Ranked Papers
 
-List up to 5 papers from Step 1. For category input, these are citation-ranked category results; for free text, they are citation-ranked semantic candidates within the capped candidate set. For each:
-- Title (with paper ID)
-- Authors (first 3, then "et al." if more)
-- Source record/update date (`datestamp`)
-- `first_submitted`, when present: a first-submission estimate for supported preprint sources; otherwise a record-derived month estimate
-- Category
-
-Null citation counts mean citation data is unavailable. Surface citation-coverage and ranking warnings that qualify the ordering.
+Show up to five anchors. Name the panel **Category citation ranking** for category input or **Citation-ranked semantic candidates** for free text. For each paper show linked title or ID, byline head, labeled date, source when present, exact category list, and citation count when available.
 
 ### Observations
 
-2-3 brief observations drawn from the data. Examples:
-- "Matching record activity has doubled since 2021"
-- "The selected corpus is concentrated in 2-3 high-volume categories"
-- "One retained author-name aggregate has 3x more matching records than the next"
+Give two or three concise observations whose wording retains category, keyword-match, semantic-candidate, or corpus-context scope. Avoid topic-subdomain or historical-publication claims.
 
 ### Suggested Follow-ups
 
-- Ask for a profile of `<author>` for any retained author name listed.
-- Ask for trends in `<category>` for deeper trend analysis.
-- Ask for papers similar to `<paper_id>` for any representative match listed.
+- Ask for a profile of a retained author after resolving which human is intended.
+- Ask for a drill-down into one returned category.
+- Ask for papers similar to a listed paper ID.
