@@ -81,8 +81,6 @@ test("Antigravity reuses the root skills and adds host-specific guidance", () =>
     "similar",
     "trends",
   ]);
-  assert.equal(existsSync("gemini-extension.json"), true);
-  assert.equal(existsSync("GEMINI.md"), true);
   assert.equal(existsSync("rules/valency.md"), true);
 
   const rule = readFileSync("rules/valency.md", "utf8");
@@ -378,76 +376,6 @@ test("Cursor package exposes only the complete Valency Bond MCP surface", () => 
   assert.equal(existsSync("plugins/cursor/valency/agents"), false);
 });
 
-test("repository root is an installable Gemini extension", () => {
-  assert.deepEqual(readJson("gemini-extension.json"), {
-    name: "valency",
-    version: "1.1.0",
-    description:
-      "Search, profile, and analyze research papers through the Valency Bond MCP server.",
-    mcpServers: {
-      valency: {
-        httpUrl: "https://labs.valency.io/mcp/",
-        authProviderType: "dynamic_discovery",
-        oauth: {
-          enabled: true,
-          redirectUri: "http://localhost:33418/oauth/callback",
-        },
-      },
-    },
-    contextFileName: "GEMINI.md",
-  });
-
-  assert.doesNotMatch(
-    readFileSync("gemini-extension.json", "utf8"),
-    /clientId|clientSecret/,
-  );
-});
-
-test("Gemini extension bundles seven skills, seven commands, and context", () => {
-  assert.deepEqual(skillDirectories("skills"), [
-    "fresh-collaborators",
-    "landscape",
-    "network",
-    "profile",
-    "reading-list",
-    "similar",
-    "trends",
-  ]);
-  assert.deepEqual(
-    readdirSync("commands/valency")
-      .filter((name) => name.endsWith(".toml"))
-      .sort(),
-    [
-      "fresh-collaborators.toml",
-      "landscape.toml",
-      "network.toml",
-      "profile.toml",
-      "reading-list.toml",
-      "similar.toml",
-      "trends.toml",
-    ],
-  );
-  assert.equal(existsSync("GEMINI.md"), true);
-});
-
-test("Gemini commands route arguments to the matching shared skill", () => {
-  for (const skill of [
-    "fresh-collaborators",
-    "landscape",
-    "network",
-    "profile",
-    "reading-list",
-    "similar",
-    "trends",
-  ]) {
-    const command = readFileSync(`commands/valency/${skill}.toml`, "utf8");
-    assert.match(command, new RegExp("Activate the `" + skill + "` skill"));
-    assert.match(command, /\{\{args\}\}/);
-    assert.match(command, /Valency MCP tools loaded by this extension/);
-    assert.doesNotMatch(command, /companion extension|install .*connector/i);
-  }
-});
-
 test("all providers ship byte-identical unprefixed skills", () => {
   assert.deepEqual(skillDirectories("plugins/grok/valency/skills"), [
     "fresh-collaborators",
@@ -711,7 +639,6 @@ test("repository metadata and installation docs point at the monorepo", () => {
     "Codex",
     "ChatGPT",
     "Cursor",
-    "Gemini CLI",
     "GitHub Copilot CLI",
     "Antigravity CLI",
     "Grok Build",
@@ -738,16 +665,11 @@ test("repository metadata and installation docs point at the monorepo", () => {
   );
   assert.match(readme, /Toggle \*\*Valency Skills\*\* to select or clear all seven/);
   assert.match(readme, /does not configure or authenticate the MCP server/);
-  assert.match(
-    readme,
-    /gemini extensions install https:\/\/github\.com\/valency-oss\/valency-bond --auto-update/,
-  );
   assert.match(readme, /\/mcp auth valency/);
   assert.match(readme, /ChatGPT web/);
   assert.match(readme, /Valency Bond MCP server/);
   assert.match(readme, /\.\/docs\/uninstall\.md/);
   assert.match(readme, /\.\/docs\/development\.md/);
-  assert.doesNotMatch(readme, /valency-gemini/);
   assert.doesNotMatch(readme, /^## Permissions$/m);
   assert.doesNotMatch(readme, /^## Development and validation$/m);
   assert.doesNotMatch(readme, /claude mcp add/);
@@ -757,11 +679,6 @@ test("repository metadata and installation docs point at the monorepo", () => {
   assert.match(development, /npm run validate:openai/);
   assert.match(development, /Cursor provider package/);
   assert.match(development, /plugins\/cursor\/valency/);
-  assert.match(development, /gemini-extension\.json/);
-  assert.match(
-    development,
-    /static checks for the native Antigravity plugin, the Gemini\s+extension/,
-  );
   assert.match(uninstall, /^# Uninstall Valency Bond$/m);
 });
 
@@ -789,7 +706,7 @@ test("Kiro documentation uses the supported root GitHub lifecycle", () => {
   assert.match(development, /byte-for-byte skill\s+synchronization/);
   assert.match(
     development,
-    /do not\s+prove\s+that Kiro can\s+install the Power,\s+complete OAuth, or invoke a remote tool/,
+    /do not\s+prove\s+that Kiro can\s+install the Power,\s+complete\s+OAuth, or invoke a remote tool/,
   );
   assert.match(development, /Import power from\s+GitHub/);
   assert.match(development, /select the repository root/);
@@ -808,7 +725,6 @@ test("uninstall instructions live in the linked guide", () => {
     "Codex",
     "ChatGPT",
     "Cursor",
-    "Gemini CLI",
     "GitHub Copilot CLI",
     "Antigravity CLI",
     "Grok Build",
@@ -821,7 +737,6 @@ test("uninstall instructions live in the linked guide", () => {
   for (const command of [
     "claude plugin uninstall valency@valency-claude-plugin --scope user",
     "codex plugin remove valency@valency",
-    "gemini extensions uninstall valency",
     "copilot plugin uninstall valency",
     "agy plugin uninstall valency",
     "grok plugin uninstall valency",
@@ -864,7 +779,6 @@ test("repository layout guide explains every intentional root entry", () => {
     ".claude-plugin/plugin.json",
     ".cursor-plugin/",
     ".github/",
-    "commands/",
     "docs/",
     "plugins/",
     "rules/",
@@ -872,11 +786,9 @@ test("repository layout guide explains every intentional root entry", () => {
     "skills/",
     "steering/",
     "test/",
-    "GEMINI.md",
     "LICENSE",
     "POWER.md",
     "README.md",
-    "gemini-extension.json",
     "mcp.json",
     "mcp_config.json",
     "package.json",
@@ -886,7 +798,7 @@ test("repository layout guide explains every intentional root entry", () => {
   }
 });
 
-test("Antigravity and Gemini documentation keep separate lifecycle contracts", () => {
+test("Antigravity documentation keeps its native lifecycle contract", () => {
   const readme = readFileSync("README.md", "utf8");
   const development = readFileSync("docs/development.md", "utf8");
   const uninstall = readFileSync("docs/uninstall.md", "utf8");
@@ -943,7 +855,7 @@ test("Copilot documentation uses marketplace-first CLI-only support", () => {
   );
   assert.match(
     development,
-    /do not prove that GitHub\s+Copilot CLI can install its\s+plugin, complete OAuth, or invoke a remote tool/,
+    /do not\s+prove that GitHub\s+Copilot CLI can install its\s+plugin, complete OAuth, or invoke a\s+remote tool/,
   );
 });
 
@@ -976,7 +888,7 @@ test("Cursor documentation keeps installation interactive and profile-free", () 
   assert.match(development, /npm test/);
   assert.match(
     development,
-    /Cursor package checks do not\s+prove\s+that Cursor can\s+install the plugin,\s+complete OAuth, or invoke a remote\s+tool/,
+    /Cursor package checks do not\s+prove\s+that Cursor can\s+install the plugin,\s+complete\s+OAuth, or invoke a remote\s+tool/,
   );
 });
 
@@ -1011,7 +923,7 @@ test("Grok documentation uses the private marketplace lifecycle", () => {
   assert.match(development, /grok plugin validate plugins\/grok\/valency/);
   assert.match(
     development,
-    /does not\s+prove that Grok Build can install the plugin,\s+complete OAuth, or invoke a\s+remote tool/,
+    /does not\s+prove that Grok Build\s+can install the plugin,\s+complete OAuth, or invoke a\s+remote tool/,
   );
   assert.match(layout, /`\.grok-plugin\/` \| Grok Build/);
   assert.match(layout, /`plugins\/grok\/valency`/);

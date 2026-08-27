@@ -1,6 +1,0 @@
-description = "Find papers semantically similar to a given paper (arXiv ID, DOI, PMID, or title)."
-prompt = """
-Activate the `similar` skill and find papers similar to: {{args}}
-
-Follow the skill's identifier-detection rules and tool chain exactly. Use the Valency MCP tools loaded by this extension.
-"""

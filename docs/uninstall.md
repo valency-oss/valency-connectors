@@ -46,14 +46,6 @@ Open `/plugin` in Cursor Agent or **Customize → Plugins** in the Cursor IDE,
 then disable or uninstall **Valency**. Use Cursor's controls instead of editing
 its generated plugin or MCP files directly.
 
-## Gemini CLI
-
-```bash
-gemini extensions uninstall valency
-```
-
-Restart Gemini CLI after uninstalling.
-
 ## GitHub Copilot CLI
 
 ```bash

@@ -21,9 +21,6 @@ unless every affected provider contract and packaging test is updated.
 | `plugin.json` | Antigravity CLI | Declares the repository-root Antigravity plugin. |
 | `mcp_config.json` | Antigravity CLI | Connects Antigravity to Valency Bond using Antigravity's MCP schema. It is not interchangeable with Kiro's `mcp.json`. |
 | `rules/` | Antigravity CLI | Provides host-specific setup and interaction guidance. |
-| `gemini-extension.json` | Gemini CLI | Declares the repository-root Gemini extension and its MCP connection. |
-| `GEMINI.md` | Gemini CLI | Supplies extension context that Gemini loads with Valency. |
-| `commands/` | Gemini CLI | Defines the seven `/valency:*` commands and routes each command to its matching workflow. |
 
 ## Shared workflow source
 

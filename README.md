@@ -67,19 +67,6 @@ Then open `/plugin` in Cursor Agent, select the **Marketplace** tab, and install
 complete the Cursor-managed authentication flow when the `valency` MCP server
 prompts you to connect.
 
-### Gemini CLI
-
-```bash
-gemini extensions install https://github.com/valency-oss/valency-bond --auto-update
-```
-
-Restart Gemini CLI, then authenticate and verify the connection:
-
-```text
-/mcp auth valency
-/mcp list
-```
-
 ### GitHub Copilot CLI
 
 ```bash
