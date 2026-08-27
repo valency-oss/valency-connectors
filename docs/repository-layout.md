@@ -66,7 +66,6 @@ marketplace package.
 | --- | --- |
 | `README.md` | Short product overview and installation path for every supported provider. |
 | `docs/` | Uninstall, maintainer validation, and repository layout documentation. |
-| `installer/` | Source and isolated tests for the interactive multi-provider installer. Provider support is added here only when the host exposes a supported install flow. |
 | `scripts/` | Repository validation helpers, including the OpenAI package validator wrapper. |
 | `test/` | Cross-provider packaging tests that pin manifests, endpoints, workflow mappings, and synchronization. |
 | `package.json` | Defines the repository's Node-based validation commands. This repository is not published as an npm package. |

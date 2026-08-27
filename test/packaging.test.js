@@ -866,7 +866,6 @@ test("repository layout guide explains every intentional root entry", () => {
     ".github/",
     "commands/",
     "docs/",
-    "installer/",
     "plugins/",
     "rules/",
     "scripts/",
