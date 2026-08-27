@@ -1,11 +1,11 @@
 ---
 name: fresh-collaborators
-description: "Use when the user asks who a researcher should be talking to that they aren't already, wants to find new potential collaborators outside an existing network, asks 'who else is doing this work', 'who should X meet', 'who are the new faces in this field', or wants to expand a researcher's collaboration network beyond their current circle. Triggers on requests to find recent, relevant researchers who are NOT in an author's existing coauthor list."
+description: "Use when the user asks who a researcher should be talking to that they aren't already, wants to find new potential collaborators outside an existing network, asks 'who else is doing this work', 'who should X meet', 'who are the new faces in this field', or wants to expand a researcher's collaboration network beyond their current circle. Triggers on requests to find recent, relevant researchers who are not among an author's top coauthor matches."
 ---
 
 # Fresh Collaborators
 
-Find researchers doing recent (last 12–18 months), thematically relevant work who are **not** in the focal author's existing coauthor network. Useful for expanding a researcher's collaborator pool, suggesting first-author candidates for new projects, or surfacing people for an upcoming conference / visit.
+Find researchers doing thematically relevant work in records updated in the last 12–18 months whose complete returned bylines do **not** match the focal author's name bucket or the strongest returned top-100 coauthor name buckets. This does not prove that the researchers have never collaborated. Useful for expanding a researcher's collaborator pool, suggesting first-author candidates for new projects, or surfacing people for an upcoming conference / visit.
 
 ## Input
 
@@ -19,7 +19,10 @@ Use the Valency Bond MCP tools available in the current host. Tool names may be
 qualified by an MCP server prefix; call the matching exposed tool. If the
 required Valency Bond tools are unavailable, say so and stop.
 
-**Date discipline:** Compute the cutoff date as `today - <window_months>`, formatted as `YYYY-MM-DD`. Use this cutoff string consistently in Step 5.
+For each call, distinguish a tool error from a successful empty result and
+surface material `warnings`.
+
+**Date discipline:** Compute the cutoff date as `today - <window_months>`, formatted as `YYYY-MM-DD`. Use this cutoff string consistently as the source record/update-date filter in Steps 3 and 5.
 
 ### Step 1: Verify the author exists
 
@@ -29,35 +32,36 @@ Call `get_author_profile` with:
 If no results are found, tell the user the author was not found. Stop here.
 
 Note from this result:
-- The `resolved_name`
+- The `resolved_name`, treated as a normalized corpus name bucket rather than proof of a unique identity
 - The top 5 categories (you'll use these in Step 4 to select themes)
-- The total paper count (sets context for the network size)
+- The total paper count (sets context for the author summary)
 
-### Step 2: Build the exclusion set (existing coauthor network)
+### Step 2: Build the exclusion set (returned coauthor name buckets)
 
 Call `find_coauthors` with:
 - `author` (string): the resolved name from Step 1
 - `limit` (integer): 100
 
-Build the **exclusion set**: a set of normalized names containing every `coauthor_norm` from this result, plus the focal author's `resolved_name` itself.
+Build the **exclusion set** from every returned `coauthor_norm` matching key, plus the normalized focal `resolved_name`. Use `coauthor` only as the display value; use `coauthor_norm` for matching.
 
-Note: 100 is the maximum the tool accepts and represents the focal author's strongest collaborators. People who have co-authored only one or two papers may still slip through as "fresh" — that is acceptable, since one-paper coauthors are weak ties and reconnecting with them is also useful.
+This call returns at most 100 of the strongest coauthor name buckets and has no pagination. Name variants may split across buckets, and weaker coauthors may be absent — acceptable, since reconnecting with a weak tie is also useful. Describe the exclusion only as the returned top-100 name buckets.
 
-### Step 3: Pull the focal author's recent papers (current themes)
+### Step 3: Pull the focal author's record-window papers (current themes)
 
 Call `search_by_author` with:
 - `author` (string): the resolved name
 - `limit` (integer): 10
 - `sort_by` (string): "relevance"
 - `strict_mode` (string): "fuzzy"
+- `start_date` (string): the cutoff date computed in the Date discipline section, `YYYY-MM-DD`
 
-The default `relevance` sort orders by recency. These 10 papers represent the author's *current* intellectual direction.
+These are up to 10 relevance-ranked author matches from the source record/update-date window, not a definitive list of the author's most recently published papers. Use them as evidence of the author's *current* intellectual direction with that qualification.
 
 ### Step 4: Identify 2–4 current themes
 
-From the Step 3 papers, identify **2 to 4 distinct themes** that characterize the author's recent work. A theme is a short natural-language phrase (5–12 words) suitable as a semantic search query — not a category code.
+From the Step 3 papers, identify **2 to 4 distinct themes** that characterize the author's work in the record-date window. A theme is a short natural-language phrase (5–12 words) suitable as a semantic search query — not a category code.
 
-Construct themes by reading the recent paper titles and abstracts. For each theme, you should be able to point to at least two of the recent papers as evidence. If the recent papers cluster tightly, 2 themes is fine; if they span disparate topics, use up to 4.
+Construct themes by reading the record-window paper titles and abstracts. For each theme, you should be able to point to at least two of those papers as evidence. If the papers cluster tightly, 2 themes is fine; if they span disparate topics, use up to 4.
 
 Examples of well-formed themes:
 - "Bayesian experimental design for cosmological survey forecasting"
@@ -68,7 +72,7 @@ Bad themes (too narrow or too broad):
 - "stars" (too broad)
 - "Section 4 of the 2025 paper on REACH 21cm calibration" (too narrow / not a search query)
 
-### Step 5: Search for recent work in each theme
+### Step 5: Search for record-window work in each theme
 
 For each theme from Step 4, call `semantic_search_papers` with:
 - `query` (string): the theme phrase
@@ -76,26 +80,27 @@ For each theme from Step 4, call `semantic_search_papers` with:
 - `limit` (integer): 25
 - `sort_by` (string): "relevance"
 - `include_abstract` (boolean): false
+- `max_authors` (integer): 500
 
-Passing `start_date` restricts the server-side similarity search to papers published on or after the cutoff, so every result is recent by construction — no in-memory date filtering needed.
+`start_date` is a server-side `datestamp` prefilter: it restricts semantic search by source record/update date, not publication date, and does not establish that every result was recently first-submitted.
 
-If a theme returns fewer than 5 papers, that theme is too narrow or the corpus is too sparse for the recency window. Note this in the output but do not stop.
+If a theme returns fewer than 5 papers, that theme is too narrow or the corpus is too sparse for this query and record-date window. Note this in the output but do not stop.
 
 ### Step 6: Filter against the exclusion set
 
-For each surviving paper, inspect its `authors` list. **Drop any paper** for which **any author** in the list (after normalization — lowercase, strip extra whitespace) appears in the exclusion set built in Step 2.
+For each surviving paper, compare every returned `authors` name (after normalization — lowercase, strip accents/diacritics, collapse whitespace) with the focal-name and top-100 `coauthor_norm` matching keys built in Step 2. **Drop any paper** for which any returned author name matches.
 
-This removes papers by the focal author themselves, by their direct collaborators, and by anyone in the top-100 coauthor network. What remains is, by construction, "fresh."
+Also drop papers with an empty byline or `authors_truncated: true` after requesting 500 authors: an incomplete returned byline cannot substantiate that the focal or excluded coauthor name buckets are absent. The retained papers therefore establish only that their complete returned bylines contained no matching focal or top-100 bucket name.
 
 ### Step 7: Rank and categorize the fresh faces
 
-For each remaining paper, identify the **first author** as the primary "fresh face" candidate (other authors are noted but secondary). For each unique first author across all surviving papers:
+For each remaining paper, identify the **first-author name bucket** as the primary "fresh face" candidate (other returned authors are noted but secondary). Treat each candidate as a name bucket attached to paper occurrences rather than proof of a unique person. For each first-author name bucket across all surviving papers:
 
 1. **Junior/senior heuristic.** Without making additional tool calls, infer junior vs senior from signals available in the paper records: number of papers in the result set (1 = likely junior; many = likely established), position of the focal-author-adjacent name in the author list, and seniority cues from coauthors. Tag each candidate `[junior]`, `[senior]`, or `[unclear]`.
 
 2. **Theme attribution.** Tag each candidate with which theme(s) surfaced them. Candidates surfaced by multiple themes are stronger matches and should be ranked higher.
 
-3. **Deduplicate.** If the same first author appears via multiple papers, merge into a single entry and list all surfacing papers.
+3. **Deduplicate paper occurrences.** Group matching first-author display strings as a name bucket and list all surfacing papers, without claiming that the grouped records prove a unique person.
 
 ## Output Format
 
@@ -103,28 +108,28 @@ For each remaining paper, identify the **first author** as the primary "fresh fa
 
 A short block:
 - **Focal author**: name (resolved), total papers, primary domains
-- **Existing coauthor network size**: total from Step 2 (note that only the top 100 are in the exclusion set)
-- **Recency window**: e.g. "Last 18 months (cutoff: 2024-10-07)"
+- **Returned coauthor name-bucket count**: count from Step 2 (at most 100; weaker coauthors may be absent)
+- **Record-date window**: e.g. "Last 18 months by source record/update date (cutoff: 2024-10-07)"
 - **Themes searched**: bullet list of the 2–4 themes from Step 4
 
 ### Fresh Faces
 
-A ranked list of fresh-face candidates. Rank by: (a) number of distinct themes that surfaced them, then (b) similarity scores of their surfacing papers.
+A ranked list of fresh-face name-bucket candidates. Rank by: (a) number of distinct themes that surfaced them, then (b) the semantic-search `final_score` values of their surfacing papers.
 
 For each candidate:
 
 #### N. Author Name `[junior|senior|unclear]`
 
 - **Surfaced by themes**: theme A; theme B (if multiple)
-- **Surfacing paper(s)**: Title (paper ID), year, category
-- **Why fresh**: explicit confirmation that this person is **not** in the focal author's top-100 coauthor list
+- **Surfacing paper(s)**: Title (paper ID), available `first_submitted` estimate or source record/update `datestamp`, source-specific categories as returned
+- **Why fresh**: explicit confirmation that no name in the complete returned byline matched the focal name or a returned top-100 coauthor name bucket
 - **Why interesting**: one sentence on the connection to the focal author's current work
 
-Show the top 10 candidates. If fewer than 10 survived, show all of them.
+Show the top 10 candidates. If fewer than 10 survived, show all of them. Date fields are source-aware: `first_submitted` is a first-submission estimate for supported preprint sources and a record-derived month estimate otherwise; `datestamp` is a source record/update date. Neither is a publication date.
 
 ### Theme Coverage Notes
 
-For each theme from Step 4, report the number of papers returned by the date-restricted search and the number that survived exclusion filtering. This helps the user see which themes are crowded (lots of fresh activity) vs sparse (no one is doing this).
+For each theme from Step 4, report the number of papers returned by the record-date-prefiltered search and the number that survived exclusion filtering. Sparse results characterize only this query and record-date window; they do not show that no one is working on the theme.
 
 ### Suggested Follow-ups
 
