@@ -6,13 +6,12 @@ Run the cross-provider packaging checks:
 npm test
 ```
 
-These tests include static checks for the native Antigravity plugin, the Gemini
-extension, the Copilot, Cursor, and Grok marketplaces and provider packages,
-command routing, and the Kiro Power. They also enforce byte-for-byte skill
-synchronization across the shared root, Claude, Copilot, Cursor, Grok, OpenAI,
-and Kiro copies. The Antigravity checks pin the exact `plugin.json` and
-`mcp_config.json` contracts, the host-specific rule, and separation from the
-legacy Gemini payload.
+These tests include static checks for the native Antigravity plugin, the
+Copilot, Cursor, and Grok marketplaces and provider packages, workflow routing,
+and the Kiro Power. They also enforce byte-for-byte skill synchronization
+across the shared root, Claude, Copilot, Cursor, Grok, OpenAI, and Kiro copies.
+The Antigravity checks pin the exact `plugin.json` and `mcp_config.json`
+contracts and the host-specific rule.
 
 The Kiro checks pin the supported `POWER.md` frontmatter, the credential-free
 remote endpoint in `mcp.json`, and the one-to-one mapping from all seven
@@ -20,14 +19,14 @@ workflows to `steering/*.md`. Each Kiro steering file must remain byte-identical
 to its canonical `skills/*/SKILL.md` source.
 
 Static checks catch repository drift, but do not prove that Antigravity CLI can
-install the plugin, complete OAuth, or invoke a remote tool. They likewise do
-not prove that a particular Gemini CLI release can complete OAuth or invoke the
-remote tools. They also do not prove that GitHub Copilot CLI can install its
-plugin, complete OAuth, or invoke a remote tool. Cursor package checks do not
-prove that Cursor can install the plugin, complete OAuth, or invoke a remote
-tool. Static validation does not prove that Grok Build can install the plugin,
-complete OAuth, or invoke a remote tool. The Kiro static checks do not prove
-that Kiro can install the Power, complete OAuth, or invoke a remote tool.
+install the plugin, complete OAuth, or invoke a remote tool. They also do not
+prove that GitHub Copilot CLI can install its plugin, complete OAuth, or invoke a
+remote tool.
+Cursor package checks do not prove that Cursor can install the plugin, complete
+OAuth, or invoke a remote tool. Static validation does not prove that Grok Build
+can install the plugin, complete OAuth, or invoke a remote tool.
+The Kiro static checks do not prove that Kiro can install the Power, complete
+OAuth, or invoke a remote tool.
 
 ## Cursor provider package
 
@@ -102,8 +101,8 @@ application change separately.
 
 Kiro requires `POWER.md` at a repository root for repository-URL imports. The
 root `POWER.md`, `mcp.json`, and `steering/` directory therefore form one
-self-contained Kiro Power alongside the independent Antigravity and Gemini
-contracts. Kiro does not currently document a standalone Power validator.
+self-contained Kiro Power alongside the independent Antigravity contract. Kiro
+does not currently document a standalone Power validator.
 
 For live validation, record the Kiro IDE version, then:
 
@@ -172,12 +171,6 @@ allowlist and upstream OAuth application, coordinate that MCP/auth change and
 deployment separately; do not add credentials or a callback workaround to the
 plugin package.
 
-With Gemini CLI installed, validate the root extension and complete a live
-install, `/mcp auth valency`, `/mcp list`, and representative tool call before
-release. Record the Gemini CLI version with those results. The root extension
-installed from GitHub follows this repository's default branch; `--auto-update`
-keeps that checkout current.
-
 With Claude Code installed, run both strict Claude validators:
 
 ```bash
@@ -201,6 +194,5 @@ Provider release versions live in their respective manifests when the host
 supports them. Antigravity's `plugin.json` schema has no version field, so its
 package revision follows the repository commit. The Claude and OpenAI package
 versions can advance independently; the Copilot package version lives in
-`plugins/copilot/valency/plugin.json`, the Grok package version lives in
-`plugins/grok/valency/.grok-plugin/plugin.json`, and the root Gemini extension
-version lives in `gemini-extension.json`.
+`plugins/copilot/valency/plugin.json`, and the Grok package version lives in
+`plugins/grok/valency/.grok-plugin/plugin.json`.

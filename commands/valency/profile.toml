@@ -1,6 +1,0 @@
-description = "Build a comprehensive researcher profile (top papers, domains, collaborators)."
-prompt = """
-Activate the `profile` skill and build a comprehensive researcher profile for: {{args}}
-
-Follow the skill's tool chain exactly. Use the Valency MCP tools loaded by this extension.
-"""
