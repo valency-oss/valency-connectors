@@ -656,9 +656,8 @@ test("repository metadata and installation docs point at the monorepo", () => {
   assert.match(readme, /codex plugin marketplace add valency-oss\/valency-bond/);
   assert.match(readme, /codex plugin add valency@valency/);
   assert.match(readme, /bash installer\/install\.sh/);
-  assert.match(readme, /--target gemini/);
   assert.match(readme, /--dry-run/);
-  assert.match(readme, /Cursor and Kiro remain in their host-owned installation flows/);
+  assert.match(readme, /Cursor\s+and Kiro remain in their host-owned installation flows/);
   assert.match(
     readme,
     /cursor-agent plugin marketplace add https:\/\/github\.com\/valency-oss\/valency-bond/,

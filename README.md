@@ -31,15 +31,14 @@ bash installer/install.sh
 ```
 
 The interactive checklist detects and preselects Claude Code, Codex,
-Antigravity CLI, Gemini CLI, GitHub Copilot CLI, and Grok Build. It shows one
-complete plan before changing provider state and verifies each provider
-independently. Cursor and Kiro remain in their host-owned installation flows.
+Antigravity CLI, GitHub Copilot CLI, and Grok Build. It shows one complete plan
+before changing provider state and verifies each provider independently. Cursor
+and Kiro remain in their host-owned installation flows.
 
 For unattended use, select targets explicitly and skip authentication:
 
 ```bash
 bash installer/install.sh \
-  --target gemini \
   --target grok \
   --yes \
   --no-auth
@@ -47,9 +46,9 @@ bash installer/install.sh \
 
 Use `--target all` for every detected supported CLI and `--dry-run` to inspect
 the plan without changing provider state. Claude Code and Codex can run their
-standalone MCP login commands after installation. Antigravity, Gemini,
-Copilot, and Grok print the exact in-host OAuth action without launching their
-full interactive agents.
+standalone MCP login commands after installation. Antigravity, Copilot, and Grok
+print the exact in-host OAuth action without launching their full interactive
+agents.
 
 ### Claude Code
 

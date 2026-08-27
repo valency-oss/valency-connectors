@@ -17,7 +17,6 @@ TARGETS_SPECIFIED=0
 TARGET_CLAUDE=0
 TARGET_CODEX=0
 TARGET_ANTIGRAVITY=0
-TARGET_GEMINI=0
 TARGET_COPILOT=0
 TARGET_GROK=0
 TARGET_ALL=0
@@ -64,16 +63,6 @@ ANTIGRAVITY_AUTH_RESULT="not offered"
 ANTIGRAVITY_AUTH_AVAILABLE=0
 ANTIGRAVITY_AUTH_STATE="in-host"
 ANTIGRAVITY_AUTH_SELECTED=0
-GEMINI_EXECUTABLE_FOUND=0
-GEMINI_AVAILABLE=0
-GEMINI_SELECTED=0
-GEMINI_EXTENSION_PRESENT=0
-GEMINI_EXTENSION_CONFLICT=0
-GEMINI_INSTALL_RESULT="not selected"
-GEMINI_AUTH_RESULT="not offered"
-GEMINI_AUTH_AVAILABLE=0
-GEMINI_AUTH_STATE="in-host"
-GEMINI_AUTH_SELECTED=0
 COPILOT_EXECUTABLE_FOUND=0
 COPILOT_AVAILABLE=0
 COPILOT_SELECTED=0
@@ -103,7 +92,7 @@ GROK_AUTH_SELECTED=0
 # Provider order is user-visible in the checklist, plan, execution, and
 # summary. Indexed arrays are supported by Bash 3.2; provider-specific state
 # remains named so each adapter is easy to inspect in this single-file script.
-PROVIDER_IDS=(claude codex antigravity gemini copilot grok)
+PROVIDER_IDS=(claude codex antigravity copilot grok)
 
 # The interactive checklist is deliberately generic so harness installation
 # and optional authentication share one keyboard model. Parallel indexed
@@ -143,12 +132,6 @@ load_provider_metadata() {
       PROVIDER_COMPONENT=plugin
       PROVIDER_AUTH_METHOD=in-host
       ;;
-    gemini)
-      PROVIDER_LABEL="Gemini CLI"
-      PROVIDER_EXECUTABLE=gemini
-      PROVIDER_COMPONENT=extension
-      PROVIDER_AUTH_METHOD=in-host
-      ;;
     copilot)
       PROVIDER_LABEL="GitHub Copilot CLI"
       PROVIDER_EXECUTABLE=copilot
@@ -170,7 +153,6 @@ load_provider_prefix() {
     claude) PROVIDER_PREFIX=CLAUDE ;;
     codex) PROVIDER_PREFIX=CODEX ;;
     antigravity) PROVIDER_PREFIX=ANTIGRAVITY ;;
-    gemini) PROVIDER_PREFIX=GEMINI ;;
     copilot) PROVIDER_PREFIX=COPILOT ;;
     grok) PROVIDER_PREFIX=GROK ;;
     *) return 1 ;;
@@ -200,7 +182,6 @@ read_provider_target() {
     claude) PROVIDER_STATE_VALUE=$TARGET_CLAUDE ;;
     codex) PROVIDER_STATE_VALUE=$TARGET_CODEX ;;
     antigravity) PROVIDER_STATE_VALUE=$TARGET_ANTIGRAVITY ;;
-    gemini) PROVIDER_STATE_VALUE=$TARGET_GEMINI ;;
     copilot) PROVIDER_STATE_VALUE=$TARGET_COPILOT ;;
     grok) PROVIDER_STATE_VALUE=$TARGET_GROK ;;
     *) return 1 ;;
@@ -215,7 +196,7 @@ Usage:
   install.sh [options]
 
 Options:
-  --target claude|codex|antigravity|gemini|copilot|grok|all
+  --target claude|codex|antigravity|copilot|grok|all
                              Select a provider; may be repeated.
   --yes                      Confirm the displayed plan.
   --migrate                  Approve a disclosed migration or replacement.
@@ -297,7 +278,6 @@ add_target() {
     claude) TARGET_CLAUDE=1 ;;
     codex) TARGET_CODEX=1 ;;
     antigravity) TARGET_ANTIGRAVITY=1 ;;
-    gemini) TARGET_GEMINI=1 ;;
     copilot) TARGET_COPILOT=1 ;;
     grok) TARGET_GROK=1 ;;
     all) TARGET_ALL=1 ;;
@@ -385,17 +365,6 @@ antigravity_has_required_commands() {
   '
 }
 
-gemini_has_required_commands() {
-  gemini_install_help=$(gemini extensions install --help 2>/dev/null) || return 1
-  gemini_list_help=$(gemini extensions list --help 2>/dev/null) || return 1
-  gemini_enable_help=$(gemini extensions enable --help 2>/dev/null) || return 1
-  gemini extensions update --help >/dev/null 2>&1 || return 1
-  help_has_option "$gemini_install_help" --auto-update &&
-    help_has_option "$gemini_install_help" --consent &&
-    help_has_option "$gemini_list_help" --output-format &&
-    help_has_option "$gemini_enable_help" --scope
-}
-
 copilot_has_required_commands() {
   copilot plugin marketplace add --help >/dev/null 2>&1 &&
     copilot plugin marketplace list --help >/dev/null 2>&1 &&
@@ -422,7 +391,6 @@ provider_has_required_commands() {
     claude) claude_has_required_commands ;;
     codex) codex_has_required_commands ;;
     antigravity) antigravity_has_required_commands ;;
-    gemini) gemini_has_required_commands ;;
     copilot) copilot_has_required_commands ;;
     grok) grok_has_required_commands ;;
     *) return 1 ;;
@@ -472,7 +440,7 @@ report_missing_provider() {
   provider=$1
   load_provider_metadata "$provider"
   case $provider in
-    claude|codex|gemini)
+    claude|codex)
       printf 'Error: %s was requested but its CLI is not on PATH.\n' "$PROVIDER_LABEL" >&2
       ;;
     *)
@@ -1049,7 +1017,6 @@ provider_inspect_state() {
     claude) inspect_claude_state ;;
     codex) inspect_codex_state ;;
     antigravity) inspect_antigravity_state ;;
-    gemini) inspect_gemini_state ;;
     copilot) inspect_copilot_state ;;
     grok) inspect_grok_state ;;
     *) return 1 ;;
@@ -1064,13 +1031,6 @@ provider_inspection_is_acceptable() {
         printf 'Error: an existing Claude Code marketplace named %s does not come from %s; Claude Code was not changed.\n' "$CLAUDE_MARKETPLACE" "$MARKETPLACE_SOURCE" >&2
         printf 'Review where it came from, then remove it and rerun this installer: claude plugin marketplace remove %s --scope user\n' "$CLAUDE_MARKETPLACE" >&2
         PROVIDER_INSPECTION_RESULT="failed (marketplace conflict)"
-        return 1
-      fi
-      ;;
-    gemini)
-      if [ "$GEMINI_EXTENSION_CONFLICT" -eq 1 ]; then
-        printf 'Error: the installed Gemini extension named valency does not come from %s; Gemini CLI was not changed.\n' "$MARKETPLACE_SOURCE" >&2
-        PROVIDER_INSPECTION_RESULT="failed (extension conflict)"
         return 1
       fi
       ;;
@@ -1139,61 +1099,6 @@ inspect_antigravity_state() {
     *'"name":"valency"'*)
       ANTIGRAVITY_PLUGIN_PRESENT=1
       ANTIGRAVITY_REPLACEMENT_REQUIRED=1
-      ;;
-  esac
-}
-
-gemini_extension_entry_trusted() {
-  document=$1
-  shift
-  json_entry_contains "$document" '"name":"valency"' "\"source\":\"https://github.com/$MARKETPLACE_SOURCE\"" "$@" ||
-    json_entry_contains "$document" '"name":"valency"' "\"source\":\"https://github.com/$MARKETPLACE_SOURCE.git\"" "$@"
-}
-
-gemini_extension_sources_trusted() {
-  document=$1
-  remainder=$document
-  entries_found=0
-  trusted_source="\"source\":\"https://github.com/$MARKETPLACE_SOURCE\""
-  trusted_git_source="\"source\":\"https://github.com/$MARKETPLACE_SOURCE.git\""
-  while :; do
-    case $remainder in
-      *'"name":"valency"'*) ;;
-      *) [ "$entries_found" -eq 1 ]; return ;;
-    esac
-    entry_before=${remainder%%'"name":"valency"'*}
-    entry_after=${remainder#*'"name":"valency"'}
-    remainder=$entry_after
-    entry_before=${entry_before##*"},{"}
-    entry_before=${entry_before##*"[{"}
-    entry_after=${entry_after%%"},{"*}
-    entry_after=${entry_after%%"}]"*}
-    segment=$entry_before'"name":"valency"'$entry_after
-    entries_found=1
-    case $segment in
-      *"$trusted_source"*|*"$trusted_git_source"*) ;;
-      *) return 1 ;;
-    esac
-  done
-}
-
-inspect_gemini_state() {
-  if ! extension_json=$(gemini extensions list --output-format json 2>/dev/null); then
-    printf 'Error: could not inspect Gemini CLI extension state; no changes were made.\n' >&2
-    return 1
-  fi
-  compact_extensions=$(printf '%s' "$extension_json" | compact_json)
-  case $compact_extensions in
-    \[*\]) ;;
-    *) printf 'Error: Gemini CLI returned an unrecognized extension list; no changes were made.\n' >&2; return 1 ;;
-  esac
-  case $compact_extensions in
-    *'"name":"valency"'*)
-      if gemini_extension_sources_trusted "$compact_extensions"; then
-        GEMINI_EXTENSION_PRESENT=1
-      else
-        GEMINI_EXTENSION_CONFLICT=1
-      fi
       ;;
   esac
 }
@@ -1506,13 +1411,6 @@ print_provider_plan() {
       printf '  Antigravity CLI: install Valency from %s, then verify the import.\n' "$MARKETPLACE_SOURCE"
     fi
       ;;
-    gemini)
-    if [ "$GEMINI_EXTENSION_PRESENT" -eq 1 ]; then
-      printf '  Gemini CLI: update and enable the valency extension, then verify it is active.\n'
-    else
-      printf '  Gemini CLI: install valency from %s with automatic updates, then verify it is active.\n' "$MARKETPLACE_SOURCE"
-    fi
-      ;;
     copilot)
     if [ "$COPILOT_MARKETPLACE_PRESENT" -eq 1 ]; then
       copilot_marketplace_step="refresh the valency-copilot-plugin marketplace"
@@ -1782,43 +1680,6 @@ install_antigravity() {
   ANTIGRAVITY_INSTALL_RESULT=$success_result
 }
 
-verify_gemini_extension() {
-  extension_json=$(gemini extensions list --output-format json 2>/dev/null) || return 1
-  compact_extensions=$(printf '%s' "$extension_json" | compact_json)
-  gemini_extension_sources_trusted "$compact_extensions" &&
-    gemini_extension_entry_trusted "$compact_extensions" '"isActive":true'
-}
-
-install_gemini() {
-  if [ "$DRY_RUN" -eq 1 ]; then
-    GEMINI_INSTALL_RESULT="planned"
-    return 0
-  fi
-
-  if [ "$GEMINI_EXTENSION_PRESENT" -eq 1 ]; then
-    if ! run_quietly gemini extensions update valency; then
-      GEMINI_INSTALL_RESULT="failed"
-      return 1
-    fi
-    if ! run_quietly gemini extensions enable valency --scope user; then
-      GEMINI_INSTALL_RESULT="failed"
-      return 1
-    fi
-    success_result="updated"
-  else
-    if ! run_quietly gemini extensions install "https://github.com/$MARKETPLACE_SOURCE" --auto-update --consent; then
-      GEMINI_INSTALL_RESULT="failed"
-      return 1
-    fi
-    success_result="installed"
-  fi
-  if ! verify_provider gemini; then
-    GEMINI_INSTALL_RESULT="failed verification"
-    return 1
-  fi
-  GEMINI_INSTALL_RESULT=$success_result
-}
-
 verify_copilot_plugin() {
   inspect_copilot_plugin_state || return 1
   [ "$COPILOT_PLUGIN_PRESENT" -eq 1 ] &&
@@ -1875,7 +1736,6 @@ verify_provider() {
     claude) verify_claude_plugin ;;
     codex) verify_codex_plugin ;;
     antigravity) verify_antigravity_plugin ;;
-    gemini) verify_gemini_extension ;;
     copilot) verify_copilot_plugin ;;
     grok) verify_grok_plugin ;;
     *) return 1 ;;
@@ -2012,7 +1872,6 @@ install_provider() {
     claude) install_claude ;;
     codex) install_codex ;;
     antigravity) install_antigravity ;;
-    gemini) install_gemini ;;
     copilot) install_copilot ;;
     grok) install_grok ;;
     *) return 1 ;;
@@ -2245,7 +2104,6 @@ print_provider_auth_guidance() {
       fi
       ;;
     antigravity) printf '  In Antigravity CLI: open /mcp, select valency, and complete browser authentication.\n' ;;
-    gemini) printf '  In Gemini CLI: run /mcp auth valency.\n' ;;
     copilot) printf '  In GitHub Copilot CLI: run /mcp auth valency.\n' ;;
     grok) printf '  In Grok Build: open /mcps, select valency, and press i to authenticate.\n' ;;
   esac
@@ -2300,7 +2158,7 @@ report_no_supported_providers() {
     provider_index=$((provider_index + 1))
   done
   if [ "$found_any" -eq 0 ]; then
-    printf 'No supported provider CLIs were found on PATH (expected claude, codex, agy, gemini, copilot, or grok).\n' >&2
+    printf 'No supported provider CLIs were found on PATH (expected claude, codex, agy, copilot, or grok).\n' >&2
   fi
 }
 

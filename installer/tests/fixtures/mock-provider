@@ -33,15 +33,6 @@ if has_arg --help "$@"; then
     mcp*) [ ! -f "$MOCK_STATE/$provider-auth-capability-missing" ] || exit 1 ;;
   esac
   case "$provider:$*" in
-    "gemini:extensions install --help")
-      if [ -f "$MOCK_STATE/gemini-missing-option" ]; then
-        printf 'Options: --auto-update\n'
-      else
-        printf 'Options: --auto-update --consent\n'
-      fi
-      ;;
-    "gemini:extensions list --help") printf 'Options: --output-format\n' ;;
-    "gemini:extensions enable --help") printf 'Options: --scope\n' ;;
     "grok:plugin marketplace list --help") printf 'Options: --json\n' ;;
     "grok:plugin list --help") printf 'Options: --json\n' ;;
     "grok:plugin install --help")
@@ -94,44 +85,6 @@ if [ "$provider" = agy ]; then
       ;;
     *)
       printf 'Unexpected mock Antigravity command: %s\n' "$*" >&2
-      exit 64
-      ;;
-  esac
-  exit 0
-fi
-
-if [ "$provider" = gemini ]; then
-  case "$*" in
-    "extensions list --output-format json")
-      [ ! -f "$MOCK_STATE/fail-gemini-extension-list" ] || exit 1
-      if [ -f "$MOCK_STATE/gemini-extension-mixed" ]; then
-        printf '[{"name":"valency","version":"1.1.0","isActive":false,"installMetadata":{"type":"git","source":"https://github.com/valency-oss/valency-bond"}},{"name":"valency","version":"9.9.9","isActive":true,"installMetadata":{"type":"git","source":"https://github.com/imitator/valency-lookalike"}}]\n'
-      elif [ -f "$MOCK_STATE/gemini-extension" ] && [ ! -f "$MOCK_STATE/fail-gemini-verification" ]; then
-        if [ -f "$MOCK_STATE/gemini-extension-disabled" ]; then active=false; else active=true; fi
-        if [ -f "$MOCK_STATE/gemini-extension-foreign" ]; then
-          extension_source=https://github.com/imitator/valency-lookalike
-        else
-          extension_source=https://github.com/valency-oss/valency-bond
-        fi
-        printf '[{"name":"valency","version":"1.1.0","isActive":%s,"installMetadata":{"type":"git","source":"%s"}}]\n' "$active" "$extension_source"
-      else
-        printf '[]\n'
-      fi
-      ;;
-    "extensions install https://github.com/valency-oss/valency-bond --auto-update --consent")
-      [ ! -f "$MOCK_STATE/fail-gemini-extension-install" ] || exit 1
-      : > "$MOCK_STATE/gemini-extension"
-      rm -f "$MOCK_STATE/gemini-extension-disabled"
-      ;;
-    "extensions update valency")
-      [ ! -f "$MOCK_STATE/fail-gemini-extension-update" ] || exit 1
-      ;;
-    "extensions enable valency --scope user")
-      [ ! -f "$MOCK_STATE/fail-gemini-extension-enable" ] || exit 1
-      rm -f "$MOCK_STATE/gemini-extension-disabled"
-      ;;
-    *)
-      printf 'Unexpected mock Gemini command: %s\n' "$*" >&2
       exit 64
       ;;
   esac

@@ -133,8 +133,8 @@ provider schemas and are intentionally kept separate.
 
 The canonical installer source lives in `installer/install.sh`. Its provider
 adapters detect, inspect, plan, install or update, verify, and report
-authentication for Claude Code, Codex, Antigravity CLI, Gemini CLI, GitHub
-Copilot CLI, and Grok Build. A Bash-3.2-compatible provider registry drives the
+authentication for Claude Code, Codex, Antigravity CLI, GitHub Copilot CLI, and
+Grok Build. A Bash-3.2-compatible provider registry drives the
 shared lifecycle while small host adapters retain the exact native commands
 and output contracts. Cursor and Kiro are intentionally excluded because their
 complete package installation flows remain host-interactive. Hosting the
