@@ -29,9 +29,7 @@ authorization header.
 ### Claude Code
 
 ```bash
-claude plugin marketplace add valency-oss/valency-bond --scope user
-claude plugin install valency@valency-claude-plugin --scope user
-claude mcp login plugin:valency:valency
+claude plugin marketplace add valency-oss/valency-bond --scope user && claude plugin install valency@valency-claude-plugin --scope user && claude mcp login plugin:valency:valency
 ```
 
 Restart Claude Code or run `/reload-plugins` after installation.
@@ -39,9 +37,7 @@ Restart Claude Code or run `/reload-plugins` after installation.
 ### Codex
 
 ```bash
-codex plugin marketplace add valency-oss/valency-bond
-codex plugin add valency@valency
-codex mcp login valency
+codex plugin marketplace add valency-oss/valency-bond && codex plugin add valency@valency && codex mcp login valency
 ```
 
 The plugin installation includes both the seven skills and the Valency Bond MCP
@@ -74,8 +70,7 @@ prompts you to connect.
 ### GitHub Copilot CLI
 
 ```bash
-copilot plugin marketplace add valency-oss/valency-bond
-copilot plugin install valency@valency-copilot-plugin
+copilot plugin marketplace add valency-oss/valency-bond && copilot plugin install valency@valency-copilot-plugin
 ```
 
 Start Copilot CLI and run `/mcp auth valency`. Valency Bond is supported in
@@ -86,7 +81,6 @@ support its remote OAuth MCP server.
 
 ```bash
 agy plugin install https://github.com/valency-oss/valency-bond
-agy plugin list
 ```
 
 Open Antigravity's `/mcp` manager, select `valency`, and complete the browser
@@ -95,8 +89,7 @@ authorization flow.
 ### Grok Build
 
 ```bash
-grok plugin marketplace add valency-oss/valency-bond
-grok plugin install valency --trust
+grok plugin marketplace add valency-oss/valency-bond && grok plugin install valency --trust
 ```
 
 Start a new Grok session, open `/mcps`, select `valency`, and press `i` to
