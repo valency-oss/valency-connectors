@@ -493,7 +493,7 @@ test("root marketplaces route to independent provider packages", () => {
 
   assert.equal(claudePlugin.version, "0.3.0");
   assert.equal(claudeEntry.version, claudePlugin.version);
-  assert.equal(openaiPlugin.version, "1.0.0");
+  assert.equal(openaiPlugin.version, "1.0.1");
 });
 
 test("both packages bundle the production Valency Bond MCP endpoint", () => {
@@ -521,15 +521,9 @@ test("both packages bundle the production Valency Bond MCP endpoint", () => {
   });
 });
 
-test("the OpenAI package preserves the production app mapping", () => {
-  assert.equal(openaiPlugin.apps, "./.app.json");
-  assert.deepEqual(readJson("plugins/openai/valency/.app.json"), {
-    apps: {
-      valency: {
-        id: "plugin_asdk_app_6a691d5e51f08191acd4f3359d6348eb",
-      },
-    },
-  });
+test("the OpenAI package has no registered-app dependency", () => {
+  assert.equal("apps" in openaiPlugin, false);
+  assert.equal(existsSync("plugins/openai/valency/.app.json"), false);
 });
 
 test("each provider package contains its complete runtime payload", () => {

@@ -1,6 +1,6 @@
 {
   "name": "valency",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Use Valency to search, discover, and analyze tens of millions of research papers and preprints through Valency Bond.",
   "author": {
     "name": "Valency Systems Inc",
@@ -19,7 +19,6 @@
   ],
   "skills": "./skills/",
   "mcpServers": "./.mcp.json",
-  "apps": "./.app.json",
   "interface": {
     "displayName": "Valency",
     "shortDescription": "Search and analyze research papers and preprints through the Valency Bond MCP server.",

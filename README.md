@@ -44,6 +44,10 @@ codex plugin add valency@valency
 codex mcp login valency
 ```
 
+The plugin installation includes both the seven skills and the Valency Bond MCP
+connection. `codex mcp login valency` authorizes that bundled connection; users
+do not need to add a separate MCP server or install a separate Valency app.
+
 Start a new Codex session after installation so its skills and MCP tools load.
 
 ### ChatGPT
