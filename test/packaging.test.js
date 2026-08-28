@@ -648,11 +648,12 @@ test("repository metadata and installation docs point at the monorepo", () => {
   }
   assert.match(
     readme,
-    /claude plugin marketplace add valency-oss\/valency-bond --scope user/,
+    /claude plugin marketplace add valency-oss\/valency-bond --scope user && claude plugin install valency@valency-claude-plugin --scope user && claude mcp login plugin:valency:valency/,
   );
-  assert.match(readme, /claude plugin install valency@valency-claude-plugin --scope user/);
-  assert.match(readme, /codex plugin marketplace add valency-oss\/valency-bond/);
-  assert.match(readme, /codex plugin add valency@valency/);
+  assert.match(
+    readme,
+    /codex plugin marketplace add valency-oss\/valency-bond && codex plugin add valency@valency && codex mcp login valency/,
+  );
   assert.match(
     readme,
     /cursor-agent plugin marketplace add https:\/\/github\.com\/valency-oss\/valency-bond/,
@@ -810,7 +811,7 @@ test("Antigravity documentation keeps its native lifecycle contract", () => {
     antigravitySection,
     /agy plugin install https:\/\/github\.com\/valency-oss\/valency-bond/,
   );
-  assert.match(antigravitySection, /agy plugin list/);
+  assert.doesNotMatch(antigravitySection, /agy plugin list/);
   assert.match(antigravitySection, /`\/mcp` manager/);
   assert.match(uninstall, /agy plugin uninstall valency/);
   assert.doesNotMatch(
@@ -833,11 +834,7 @@ test("Copilot documentation uses marketplace-first CLI-only support", () => {
 
   assert.match(
     readme,
-    /copilot plugin marketplace add valency-oss\/valency-bond/,
-  );
-  assert.match(
-    readme,
-    /copilot plugin install valency@valency-copilot-plugin/,
+    /copilot plugin marketplace add valency-oss\/valency-bond && copilot plugin install valency@valency-copilot-plugin/,
   );
   assert.match(readme, /\/mcp auth valency/);
   assert.match(readme, /GitHub Copilot CLI/);
@@ -903,9 +900,8 @@ test("Grok documentation uses the private marketplace lifecycle", () => {
   assert.ok(grokSection, "README must contain a Grok Build install section");
   assert.match(
     grokSection,
-    /grok plugin marketplace add valency-oss\/valency-bond/,
+    /grok plugin marketplace add valency-oss\/valency-bond && grok plugin install valency --trust/,
   );
-  assert.match(grokSection, /grok plugin install valency --trust/);
   assert.match(readme, /repository is private/i);
   assert.match(readme, /GitHub credentials\s+> with access/i);
   assert.match(grokSection, /`\/mcps`/);
