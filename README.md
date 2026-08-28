@@ -20,11 +20,35 @@ Authentication is handled through your agent's browser-based sign-in flow. The
 packages do not require a client secret, bearer token, or manually configured
 authorization header.
 
-> [!NOTE]
-> While this repository is private, installation requires GitHub credentials
-> with access to `valency-oss/valency-bond`.
-
 ## Install
+
+### Universal installer
+
+From a clone of this repository, run:
+
+```bash
+bash installer/install.sh
+```
+
+The interactive checklist detects and preselects Claude Code, Codex,
+Antigravity CLI, GitHub Copilot CLI, and Grok Build. It shows one complete plan
+before changing provider state and verifies each provider independently. Cursor
+and Kiro remain in their host-owned installation flows.
+
+For unattended use, select targets explicitly and skip authentication:
+
+```bash
+bash installer/install.sh \
+  --target grok \
+  --yes \
+  --no-auth
+```
+
+Use `--target all` for every detected supported CLI and `--dry-run` to inspect
+the plan without changing provider state. Claude Code and Codex can run their
+standalone MCP login commands after installation. Antigravity, Copilot, and Grok
+print the exact in-host OAuth action without launching their full interactive
+agents.
 
 ### Claude Code
 

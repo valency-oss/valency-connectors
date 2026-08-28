@@ -84,16 +84,16 @@ With Grok Build installed, record `grok version` and validate the package:
 grok plugin validate plugins/grok/valency
 ```
 
-For a private-release smoke test, use Git credentials authorized to read this
-repository. Add the root marketplace, install `valency --trust`, and confirm
+For a release smoke test, add the public root marketplace, install
+`valency --trust`, and confirm
 `grok plugin details valency` plus `grok inspect` report seven skills and one
 HTTP MCP server. Then authenticate `valency` from `/mcps`, record the actual
 non-sensitive callback URI, and make one representative read-only Valency Bond
 tool call. Exercise update and uninstall separately without changing unrelated
 Grok configuration.
 
-Record static validation, private-repository installation, OAuth, and tool-call
-results as separate evidence. If OAuth fails, do not package credentials or
+Record static validation, repository installation, OAuth, and tool-call results
+as separate evidence. If OAuth fails, do not package credentials or
 guess at a callback workaround; coordinate any broker or upstream OAuth
 application change separately.
 
@@ -128,6 +128,39 @@ application change separately from this provider package.
 See [Repository root layout](./repository-layout.md) before adding, moving, or
 consolidating root files. Several similarly named files implement different
 provider schemas and are intentionally kept separate.
+
+## Universal installer
+
+The canonical installer source lives in `installer/install.sh`. Its provider
+adapters detect, inspect, plan, install or update, verify, and report
+authentication for Claude Code, Codex, Antigravity CLI, GitHub Copilot CLI, and
+Grok Build. A Bash-3.2-compatible provider registry drives the
+shared lifecycle while small host adapters retain the exact native commands
+and output contracts. Cursor and Kiro are intentionally excluded because their
+complete package installation flows remain host-interactive. Hosting the
+script at the public Valency URL is a separate deployment step; this repository
+does not claim that route is available merely because the source has been
+merged.
+
+Only Claude Code and Codex expose standalone Valency MCP login commands. The
+other supported installer targets report `manual action required` and print
+their exact in-host OAuth action without launching an agent TUI. Installation
+and authentication remain separate outcomes.
+
+The installer tests invoke the complete script with isolated home directories,
+controlled terminal input, parseable host-output fixtures, and mocked provider
+executables. Run them through
+the installer test command, or invoke their component checks while iterating:
+
+```bash
+npm run test:installer
+bash -n installer/install.sh
+bash installer/tests/installer_test.sh
+shellcheck installer/install.sh installer/tests/installer_test.sh installer/tests/fixtures/mock-provider
+```
+
+The CI workflow also executes the same installer suite under Bash 3.2, which is
+the Bash version supplied by older macOS releases.
 
 With Antigravity CLI installed, record `agy --version`, install the repository,
 confirm it with `agy plugin list`, then use the interactive `/mcp` manager to

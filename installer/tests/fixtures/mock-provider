@@ -1,0 +1,411 @@
+#!/usr/bin/env bash
+
+set -u
+
+if [ -z "${MOCK_LOG-}" ]; then
+  printf 'MOCK_LOG must name the mock command log.\n' >&2
+  exit 64
+fi
+if [ -z "${MOCK_STATE-}" ]; then
+  printf 'MOCK_STATE must name the mock state directory.\n' >&2
+  exit 64
+fi
+
+provider=$(basename "$0")
+printf '%s %s\n' "$provider" "$*" >> "$MOCK_LOG"
+
+has_arg() {
+  wanted=$1
+  shift
+  for arg in "$@"; do
+    if [ "$arg" = "$wanted" ]; then
+      return 0
+    fi
+  done
+  return 1
+}
+
+if has_arg --help "$@"; then
+  if [ -f "$MOCK_STATE/$provider-missing-capability" ]; then
+    exit 1
+  fi
+  case "$*" in
+    mcp*) [ ! -f "$MOCK_STATE/$provider-auth-capability-missing" ] || exit 1 ;;
+  esac
+  case "$provider:$*" in
+    "grok:plugin marketplace list --help") printf 'Options: --json\n' ;;
+    "grok:plugin list --help") printf 'Options: --json\n' ;;
+    "grok:plugin install --help")
+      if [ -f "$MOCK_STATE/grok-missing-option" ]; then
+        printf 'Options: --debug\n'
+      else
+        printf 'Options: --trust\n'
+      fi
+      ;;
+  esac
+  exit 0
+fi
+
+if [ "$provider" = agy ]; then
+  case "$*" in
+    "plugin help")
+      [ ! -f "$MOCK_STATE/agy-missing-capability" ] || exit 1
+      printf 'Commands:\n'
+      if [ -f "$MOCK_STATE/agy-similar-capabilities" ]; then
+        printf '  shortlist              Show a compact plugin list\n'
+        printf '  uninstall <target>     Uninstall a plugin\n'
+      elif [ -f "$MOCK_STATE/agy-reversed-capabilities" ]; then
+        printf '  install <target>       Install a plugin\n'
+        printf '  list                   List imported plugins\n'
+      else
+        printf '  list                   List imported plugins\n'
+        printf '  install <target>       Install a plugin\n'
+      fi
+      ;;
+    "plugin list")
+      [ ! -f "$MOCK_STATE/fail-agy-plugin-list" ] || exit 1
+      if [ -f "$MOCK_STATE/agy-plugin-unverifiable" ]; then
+        # Antigravity normalizes native imports from every repository to the
+        # same source value, so provenance cannot be recovered from inventory.
+        printf '{"imports":[{"name":"valency","source":"antigravity","components":["skills","commands","mcpServers"]}]}\n'
+      elif [ -f "$MOCK_STATE/agy-plugin" ] && [ ! -f "$MOCK_STATE/fail-agy-verification" ]; then
+        if [ -f "$MOCK_STATE/agy-partial-import" ]; then
+          printf '{"imports":[{"name":"valency","source":"antigravity","components":["mcpServers"]}]}\n'
+        else
+          printf '{"imports":[{"name":"valency","source":"antigravity","components":["skills","commands","mcpServers"]}]}\n'
+        fi
+      else
+        printf 'No imported plugins.\n'
+      fi
+      ;;
+    "plugin install https://github.com/valency-oss/valency-bond")
+      [ ! -f "$MOCK_STATE/fail-agy-plugin-install" ] || exit 1
+      rm -f "$MOCK_STATE/agy-plugin-unverifiable"
+      : > "$MOCK_STATE/agy-plugin"
+      ;;
+    *)
+      printf 'Unexpected mock Antigravity command: %s\n' "$*" >&2
+      exit 64
+      ;;
+  esac
+  exit 0
+fi
+
+if [ "$provider" = copilot ]; then
+  case "$*" in
+    "plugin marketplace list")
+      [ ! -f "$MOCK_STATE/fail-copilot-marketplace-list" ] || exit 1
+      if [ -f "$MOCK_STATE/copilot-marketplace-unrecognized" ]; then
+        printf 'Marketplace inventory is temporarily unavailable.\n'
+        exit 0
+      fi
+      printf 'Included with GitHub Copilot:\n  ◆ copilot-plugins (GitHub: github/copilot-plugins)\n'
+      if [ -f "$MOCK_STATE/copilot-marketplace-mixed" ]; then
+        printf '\nRegistered marketplaces:\n  • valency-copilot-plugin (GitHub: valency-oss/valency-bond)\n  • valency-copilot-plugin (GitHub: imitator/valency-lookalike)\n'
+      elif [ -f "$MOCK_STATE/copilot-marketplace-foreign" ]; then
+        printf '\nRegistered marketplaces:\n  • valency-copilot-plugin (GitHub: imitator/valency-lookalike)\n'
+      elif [ -f "$MOCK_STATE/copilot-marketplace" ]; then
+        printf '\nRegistered marketplaces:\n  • valency-copilot-plugin (GitHub: valency-oss/valency-bond)\n'
+      fi
+      ;;
+    "plugin list")
+      [ ! -f "$MOCK_STATE/fail-copilot-plugin-list" ] || exit 1
+      if [ -f "$MOCK_STATE/copilot-plugin-list-unrecognized" ]; then
+        printf 'Plugin inventory is temporarily unavailable.\n'
+        exit 0
+      fi
+      if { [ -f "$MOCK_STATE/copilot-plugin" ] && [ ! -f "$MOCK_STATE/fail-copilot-verification" ]; } ||
+        [ -f "$MOCK_STATE/copilot-plugin-wrong-id" ]; then
+        printf 'Installed plugins:\n'
+        if [ -f "$MOCK_STATE/copilot-plugin-wrong-id" ]; then
+          printf '  • valency@lookalike-marketplace (v9.9.9)\n'
+        fi
+        if [ -f "$MOCK_STATE/copilot-plugin" ] && [ ! -f "$MOCK_STATE/fail-copilot-verification" ]; then
+          printf '  • valency@valency-copilot-plugin (v0.1.0)\n'
+        fi
+      else
+        printf 'No plugins installed.\n'
+      fi
+      ;;
+    "plugins list --kind plugin --scope user --json")
+      # Copilot 1.0.78 documents this inventory but does not ship it yet.
+      [ -f "$MOCK_STATE/copilot-json-inventory" ] || exit 1
+      printf '['
+      separator=""
+      if [ -f "$MOCK_STATE/copilot-plugin-wrong-id" ]; then
+        printf '%s{"kind":"plugin","name":"valency","id":"valency@lookalike-marketplace","scope":"user","enabled":true}' "$separator"
+        separator=,
+      fi
+      if [ -f "$MOCK_STATE/copilot-plugin" ] && [ ! -f "$MOCK_STATE/fail-copilot-verification" ]; then
+        if [ -f "$MOCK_STATE/copilot-plugin-disabled" ]; then enabled=false; else enabled=true; fi
+        printf '%s{"kind":"plugin","name":"valency","id":"valency@valency-copilot-plugin","scope":"user","enabled":%s}' "$separator" "$enabled"
+      fi
+      printf ']\n'
+      ;;
+    "plugin marketplace add valency-oss/valency-bond")
+      [ ! -f "$MOCK_STATE/fail-copilot-marketplace-add" ] || exit 1
+      : > "$MOCK_STATE/copilot-marketplace"
+      ;;
+    "plugin marketplace update valency-copilot-plugin")
+      [ ! -f "$MOCK_STATE/fail-copilot-marketplace-update" ] || exit 1
+      [ -f "$MOCK_STATE/copilot-marketplace" ] || exit 1
+      ;;
+    "plugin install valency@valency-copilot-plugin")
+      [ ! -f "$MOCK_STATE/fail-copilot-plugin-install" ] || exit 1
+      : > "$MOCK_STATE/copilot-plugin"
+      ;;
+    "plugin update valency")
+      [ ! -f "$MOCK_STATE/fail-copilot-plugin-update" ] || exit 1
+      if [ -f "$MOCK_STATE/copilot-plugin-mixed-after-update" ]; then
+        : > "$MOCK_STATE/copilot-plugin-wrong-id"
+      fi
+      ;;
+    *)
+      printf 'Unexpected mock Copilot command: %s\n' "$*" >&2
+      exit 64
+      ;;
+  esac
+  exit 0
+fi
+
+if [ "$provider" = grok ]; then
+  case "$*" in
+    "plugin marketplace list --json")
+      [ ! -f "$MOCK_STATE/fail-grok-marketplace-list" ] || exit 1
+      if [ -f "$MOCK_STATE/grok-marketplace-mixed" ]; then
+        printf '[{"name":"valency","kind":"git","source":{"url":"https://github.com/valency-oss/valency-bond.git","branch":null}},{"name":"valency","kind":"git","source":{"url":"https://github.com/imitator/valency-lookalike.git","branch":null}}]\n'
+      elif [ -f "$MOCK_STATE/grok-marketplace-foreign" ]; then
+        printf '[{"name":"valency","kind":"git","source":{"url":"https://github.com/imitator/valency-lookalike.git","branch":null}}]\n'
+      elif [ -f "$MOCK_STATE/grok-marketplace" ]; then
+        printf '[{"name":"valency","kind":"git","source":{"url":"https://github.com/valency-oss/valency-bond.git","branch":null}}]\n'
+      else
+        printf '[]\n'
+      fi
+      ;;
+    "plugin list --json")
+      [ ! -f "$MOCK_STATE/fail-grok-plugin-list" ] || exit 1
+      if [ -f "$MOCK_STATE/grok-plugin-mixed" ]; then
+        printf '[{"status":"installed","name":"valency","repo_key":"valency","version":"0.1.0","source":"https://github.com/valency-oss/valency-bond.git","marketplace":"valency"},{"status":"installed","name":"valency","repo_key":"lookalike","version":"9.9.9","source":"https://github.com/imitator/valency-lookalike.git","marketplace":"lookalike"}]\n'
+      elif [ -f "$MOCK_STATE/grok-plugin-foreign" ]; then
+        printf '[{"status":"installed","name":"valency","repo_key":"valency","version":"0.1.0","source":"https://github.com/imitator/valency-lookalike.git","marketplace":"valency"}]\n'
+      elif [ -f "$MOCK_STATE/grok-plugin" ] && [ ! -f "$MOCK_STATE/fail-grok-verification" ]; then
+        printf '[{"status":"installed","name":"valency","repo_key":"valency","version":"0.1.0","source":"https://github.com/valency-oss/valency-bond.git","marketplace":"valency"}]\n'
+      else
+        printf '[]\n'
+      fi
+      ;;
+    "plugin marketplace add valency-oss/valency-bond")
+      [ ! -f "$MOCK_STATE/fail-grok-marketplace-add" ] || exit 1
+      : > "$MOCK_STATE/grok-marketplace"
+      ;;
+    "plugin marketplace update valency")
+      [ ! -f "$MOCK_STATE/fail-grok-marketplace-update" ] || exit 1
+      [ -f "$MOCK_STATE/grok-marketplace" ] || exit 1
+      ;;
+    "plugin install valency --trust")
+      [ ! -f "$MOCK_STATE/fail-grok-plugin-install" ] || exit 1
+      : > "$MOCK_STATE/grok-plugin"
+      ;;
+    "plugin update valency")
+      [ ! -f "$MOCK_STATE/fail-grok-plugin-update" ] || exit 1
+      ;;
+    *)
+      printf 'Unexpected mock Grok command: %s\n' "$*" >&2
+      exit 64
+      ;;
+  esac
+  exit 0
+fi
+
+if [ "$provider" = claude ]; then
+  case "$*" in
+    "plugin marketplace list --json")
+      [ ! -f "$MOCK_STATE/fail-claude-marketplace-list" ] || exit 1
+      printf '['
+      separator=""
+      if [ -f "$MOCK_STATE/claude-foreign-marketplace" ]; then
+        # A look-alike marketplace: expected name, unexpected repository.
+        printf '%s{"name":"valency-claude-plugin","source":"github","repo":"imitator/valency-bond-lookalike"}' "$separator"
+        separator=,
+      elif [ -f "$MOCK_STATE/claude-whitespace-marketplace" ]; then
+        # A repo value that only equals the trusted repo if whitespace inside
+        # the string were stripped; it must stay untrusted.
+        printf '%s{"name":"valency-claude-plugin","source":"github","repo":" valency-oss/valency-bond"}' "$separator"
+        separator=,
+      elif [ -f "$MOCK_STATE/claude-marketplace" ]; then
+        # "repo" precedes the identity to exercise key-order independence.
+        printf '%s{"source":"github","repo":"valency-oss/valency-bond","name":"valency-claude-plugin"}' "$separator"
+        separator=,
+      fi
+      if [ -f "$MOCK_STATE/claude-foreign-legacy-marketplace" ]; then
+        # An unrelated marketplace that happens to use the legacy name.
+        printf '%s{"name":"valency-plugin","source":"github","repo":"someone-else/unrelated-plugins"}' "$separator"
+      elif [ -f "$MOCK_STATE/claude-legacy-marketplace" ]; then
+        printf '%s{"name":"valency-plugin","source":"github","repo":"valency-oss/valency-plugin"}' "$separator"
+      fi
+      printf ']\n'
+      ;;
+    "plugin list --json")
+      [ ! -f "$MOCK_STATE/fail-claude-plugin-list" ] || exit 1
+      printf '['
+      separator=""
+      if [ -f "$MOCK_STATE/claude-plugin-project-scoped" ]; then
+        # The same plugin id at project scope, listed before any user-scoped
+        # entry: scope-aware detection must not mistake it for the user one.
+        printf '%s{"scope":"project","enabled":true,"id":"valency@valency-claude-plugin"}' "$separator"
+        separator=,
+      fi
+      if [ -f "$MOCK_STATE/claude-plugin" ] && [ ! -f "$MOCK_STATE/fail-claude-verification" ]; then
+        if [ -f "$MOCK_STATE/claude-plugin-disabled" ]; then enabled=false; else enabled=true; fi
+        # "enabled" precedes the identity: JSON keys are unordered and the
+        # matcher must accept fields on either side of the identity pair.
+        printf '%s{"enabled":%s,"scope":"user","id":"valency@valency-claude-plugin"}' "$separator" "$enabled"
+        separator=,
+      fi
+      if [ -f "$MOCK_STATE/claude-legacy-plugin" ]; then
+        # This entry deliberately leads with "enabled" before its identity:
+        # entry-scoped matching must not attribute it to the previous entry.
+        printf '%s{"enabled":true,"scope":"user","id":"valency@valency-plugin"}' "$separator"
+      fi
+      printf ']\n'
+      ;;
+    "plugin marketplace add valency-oss/valency-bond --scope user")
+      [ ! -f "$MOCK_STATE/fail-claude-marketplace-add" ] || exit 1
+      : > "$MOCK_STATE/claude-marketplace"
+      ;;
+    "plugin install valency@valency-claude-plugin --scope user")
+      [ ! -f "$MOCK_STATE/fail-claude-plugin-install" ] || exit 1
+      : > "$MOCK_STATE/claude-plugin"
+      ;;
+    "plugin marketplace update valency-claude-plugin")
+      [ ! -f "$MOCK_STATE/fail-claude-marketplace-update" ] || exit 1
+      # Updating a marketplace that is not registered fails, as it would live.
+      [ -f "$MOCK_STATE/claude-marketplace" ] || exit 1
+      ;;
+    "plugin update valency@valency-claude-plugin --scope user")
+      [ ! -f "$MOCK_STATE/fail-claude-plugin-update" ] || exit 1
+      ;;
+    "plugin uninstall valency@valency-plugin --scope user")
+      [ ! -f "$MOCK_STATE/fail-claude-legacy-uninstall" ] || exit 1
+      rm -f "$MOCK_STATE/claude-legacy-plugin"
+      ;;
+    "plugin marketplace remove valency-plugin --scope user")
+      [ ! -f "$MOCK_STATE/fail-claude-legacy-remove" ] || exit 1
+      rm -f "$MOCK_STATE/claude-legacy-marketplace"
+      ;;
+    "mcp list")
+      if [ -f "$MOCK_STATE/claude-auth-connected" ]; then
+        printf 'plugin:valency:valency: Connected\n'
+      elif [ -f "$MOCK_STATE/claude-auth-other-connected" ]; then
+        # Another server's Connected line must not mark the plugin connected.
+        printf 'plugin:valency:valency: status unavailable\n'
+        printf 'other-helper: Connected\n'
+      elif [ -f "$MOCK_STATE/claude-auth-prefix-collision" ]; then
+        # A longer identifier sharing the prefix is a different server.
+        printf 'plugin:valency:valency-helper: Connected\n'
+      elif [ -f "$MOCK_STATE/claude-auth-not-connected" ]; then
+        # A negative status containing the word "connected".
+        printf 'plugin:valency:valency: Not connected\n'
+      elif [ -f "$MOCK_STATE/claude-auth-unknown" ]; then
+        printf 'plugin:valency:valency: status unavailable\n'
+      else
+        printf 'No MCP servers configured.\n'
+      fi
+      ;;
+    "mcp login plugin:valency:valency")
+      # Login output must reach the user; the device-code URL proves it.
+      printf 'Open https://auth.example/claude-device to finish signing in.\n'
+      [ ! -f "$MOCK_STATE/fail-claude-auth" ] || exit 1
+      : > "$MOCK_STATE/claude-auth-connected"
+      ;;
+    *)
+      printf 'Unexpected mock Claude command: %s\n' "$*" >&2
+      exit 64
+      ;;
+  esac
+  exit 0
+fi
+
+if [ "$provider" = codex ]; then
+  case "$*" in
+    "plugin marketplace list --json")
+      [ ! -f "$MOCK_STATE/fail-codex-marketplace-list" ] || exit 1
+      if [ -f "$MOCK_STATE/codex-foreign-marketplace" ]; then
+        # A look-alike marketplace: expected name, unexpected source.
+        printf '{"marketplaces":[{"name":"valency","root":"/mock/valency","marketplaceSource":{"sourceType":"git","source":"https://github.com/imitator/valency-bond-lookalike.git"}}]}\n'
+      elif [ -f "$MOCK_STATE/codex-marketplace" ]; then
+        # The source precedes the identity to exercise key-order independence.
+        printf '{"marketplaces":[{"marketplaceSource":{"sourceType":"git","source":"https://github.com/valency-oss/valency-bond.git"},"root":"/mock/valency","name":"valency"}]}\n'
+      else
+        printf '{"marketplaces":[]}\n'
+      fi
+      ;;
+    "plugin list --json")
+      [ ! -f "$MOCK_STATE/fail-codex-plugin-list" ] || exit 1
+      if [ -f "$MOCK_STATE/codex-plugin" ] && [ ! -f "$MOCK_STATE/fail-codex-verification" ]; then
+        if [ -f "$MOCK_STATE/codex-plugin-disabled" ]; then
+          # The disabled entry is followed by an unrelated enabled plugin so a
+          # whole-document match would falsely see "enabled":true.
+          printf '{"installed":[{"pluginId":"valency@valency","name":"valency","marketplaceName":"valency","installed":true,"enabled":false},{"pluginId":"zulu@zulu-tools","name":"zulu","marketplaceName":"zulu-tools","installed":true,"enabled":true}],"available":[]}\n'
+        else
+          # "installed" and "enabled" precede the identity to exercise
+          # key-order independence in verification.
+          printf '{"installed":[{"name":"valency","installed":true,"enabled":true,"pluginId":"valency@valency","marketplaceName":"valency"}],"available":[]}\n'
+        fi
+      else
+        printf '{"installed":[],"available":[]}\n'
+      fi
+      ;;
+    "plugin marketplace add valency-oss/valency-bond")
+      [ ! -f "$MOCK_STATE/fail-codex-marketplace-add" ] || exit 1
+      : > "$MOCK_STATE/codex-marketplace"
+      ;;
+    "plugin marketplace upgrade valency")
+      [ ! -f "$MOCK_STATE/fail-codex-marketplace-upgrade" ] || exit 1
+      # Upgrading a marketplace that is not registered fails, as it would live.
+      if [ ! -f "$MOCK_STATE/codex-marketplace" ] && [ ! -f "$MOCK_STATE/codex-foreign-marketplace" ]; then
+        exit 1
+      fi
+      ;;
+    "plugin marketplace remove valency")
+      [ ! -f "$MOCK_STATE/fail-codex-marketplace-remove" ] || exit 1
+      rm -f "$MOCK_STATE/codex-marketplace" "$MOCK_STATE/codex-foreign-marketplace"
+      ;;
+    "plugin add valency@valency")
+      [ ! -f "$MOCK_STATE/fail-codex-plugin-add" ] || exit 1
+      : > "$MOCK_STATE/codex-plugin"
+      ;;
+    "mcp list --json")
+      if [ -f "$MOCK_STATE/codex-auth-connected" ]; then
+        printf '[{"name":"valency","auth_status":"oauth"}]\n'
+      elif [ -f "$MOCK_STATE/codex-auth-bearer" ]; then
+        printf '[{"name":"valency","auth_status":"bearer_token"}]\n'
+      elif [ -f "$MOCK_STATE/codex-auth-unknown" ]; then
+        printf '[{"name":"valency","auth_status":"unknown"}]\n'
+      else
+        printf '[]\n'
+      fi
+      ;;
+    "mcp login valency")
+      # Login output must reach the user; the device-code URL proves it.
+      printf 'Open https://auth.example/codex-device to finish signing in.\n'
+      [ ! -f "$MOCK_STATE/fail-codex-auth" ] || exit 1
+      : > "$MOCK_STATE/codex-auth-connected"
+      ;;
+    *)
+      printf 'Unexpected mock Codex command: %s\n' "$*" >&2
+      exit 64
+      ;;
+  esac
+  exit 0
+fi
+
+if [ "$provider" = curl ]; then
+  if [ -f "$MOCK_STATE/repository-unreachable" ]; then
+    exit 22
+  fi
+  exit 0
+fi
+
+printf 'Unexpected mock provider: %s\n' "$provider" >&2
+exit 64

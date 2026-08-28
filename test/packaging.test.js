@@ -628,6 +628,7 @@ test("repository metadata and installation docs point at the monorepo", () => {
     true,
   );
   for (const surface of [
+    "Universal installer",
     "Claude Code",
     "Codex",
     "ChatGPT",
@@ -647,6 +648,9 @@ test("repository metadata and installation docs point at the monorepo", () => {
   assert.match(readme, /claude plugin install valency@valency-claude-plugin --scope user/);
   assert.match(readme, /codex plugin marketplace add valency-oss\/valency-bond/);
   assert.match(readme, /codex plugin add valency@valency/);
+  assert.match(readme, /bash installer\/install\.sh/);
+  assert.match(readme, /--dry-run/);
+  assert.match(readme, /Cursor\s+and Kiro remain in their host-owned installation flows/);
   assert.match(
     readme,
     /cursor-agent plugin marketplace add https:\/\/github\.com\/valency-oss\/valency-bond/,
@@ -666,6 +670,7 @@ test("repository metadata and installation docs point at the monorepo", () => {
   assert.doesNotMatch(readme, /^## Permissions$/m);
   assert.doesNotMatch(readme, /^## Development and validation$/m);
   assert.doesNotMatch(readme, /claude mcp add/);
+  assert.doesNotMatch(readme, /repository is private|authorized Git access/i);
   assert.match(development, /^# Development and validation$/m);
   assert.match(development, /npm test/);
   assert.match(development, /npm run validate:claude/);
@@ -773,6 +778,7 @@ test("repository layout guide explains every intentional root entry", () => {
     ".cursor-plugin/",
     ".github/",
     "docs/",
+    "installer/",
     "plugins/",
     "rules/",
     "scripts/",
@@ -885,7 +891,7 @@ test("Cursor documentation keeps installation interactive and profile-free", () 
   );
 });
 
-test("Grok documentation uses the private marketplace lifecycle", () => {
+test("Grok documentation uses the public marketplace lifecycle", () => {
   const readme = readFileSync("README.md", "utf8");
   const development = readFileSync("docs/development.md", "utf8");
   const layout = readFileSync("docs/repository-layout.md", "utf8");
@@ -900,8 +906,10 @@ test("Grok documentation uses the private marketplace lifecycle", () => {
     /grok plugin marketplace add valency-oss\/valency-bond/,
   );
   assert.match(grokSection, /grok plugin install valency --trust/);
-  assert.match(readme, /repository is private/i);
-  assert.match(readme, /GitHub credentials\s+> with access/i);
+  assert.doesNotMatch(
+    readme,
+    /repository is private|private during development|authorized Git access/i,
+  );
   assert.match(grokSection, /`\/mcps`/);
   assert.match(uninstall, /grok plugin uninstall valency/);
   assert.match(

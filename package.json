@@ -6,6 +6,8 @@
   "license": "MIT",
   "scripts": {
     "test": "node --test",
+    "test:installer": "bash -n installer/install.sh && bash installer/tests/installer_test.sh",
+    "lint:installer": "shellcheck installer/install.sh installer/tests/installer_test.sh installer/tests/fixtures/mock-provider",
     "validate:claude": "claude plugin validate . --strict && claude plugin validate plugins/claude/valency --strict",
     "validate:openai": "node scripts/validate-openai.mjs"
   }
