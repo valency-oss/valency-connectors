@@ -2,7 +2,7 @@
   "mcpServers": {
     "valency": {
       "type": "http",
-      "url": "https://labs.valency.io/mcp/",
+      "url": "https://mcp.valency.io/mcp/",
       "tools": ["*"]
     }
   }

@@ -13,4 +13,4 @@ dependencies:
       value: "valency"
       description: "Use the complete Valency Bond MCP surface"
       transport: "streamable_http"
-      url: "https://labs.valency.io/mcp/"
+      url: "https://mcp.valency.io/mcp/"

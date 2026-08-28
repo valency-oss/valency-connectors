@@ -60,7 +60,7 @@ test("repository root is an installable Antigravity plugin", () => {
   assert.deepEqual(readJson("mcp_config.json"), {
     mcpServers: {
       valency: {
-        serverUrl: "https://labs.valency.io/mcp/",
+        serverUrl: "https://mcp.valency.io/mcp/",
       },
     },
   });
@@ -145,7 +145,7 @@ test("native Grok package is credential-free and contains only expected componen
     mcpServers: {
       valency: {
         type: "http",
-        url: "https://labs.valency.io/mcp/",
+        url: "https://mcp.valency.io/mcp/",
       },
     },
   });
@@ -201,7 +201,7 @@ test("repository root is a native Valency Power with host-managed OAuth", () => 
   assert.deepEqual(readJson(`${kiroPowerRoot}/mcp.json`), {
     mcpServers: {
       valency: {
-        url: "https://labs.valency.io/mcp/",
+        url: "https://mcp.valency.io/mcp/",
       },
     },
   });
@@ -288,7 +288,7 @@ test("Copilot package enables the complete Valency Bond tool surface", () => {
     mcpServers: {
       valency: {
         type: "http",
-        url: "https://labs.valency.io/mcp/",
+        url: "https://mcp.valency.io/mcp/",
         tools: ["*"],
       },
     },
@@ -352,7 +352,7 @@ test("Cursor package exposes only the complete Valency Bond MCP surface", () => 
     mcpServers: {
       valency: {
         type: "http",
-        url: "https://labs.valency.io/mcp/",
+        url: "https://mcp.valency.io/mcp/",
       },
     },
   });
@@ -507,7 +507,7 @@ test("both packages bundle the production Valency Bond MCP endpoint", () => {
     mcpServers: {
       valency: {
         type: "http",
-        url: "https://labs.valency.io/mcp/",
+        url: "https://mcp.valency.io/mcp/",
       },
     },
   });
@@ -515,7 +515,7 @@ test("both packages bundle the production Valency Bond MCP endpoint", () => {
     mcpServers: {
       valency: {
         type: "http",
-        url: "https://labs.valency.io/mcp/",
+        url: "https://mcp.valency.io/mcp/",
       },
     },
   });
