@@ -36,7 +36,7 @@ full-surface `mcp.json`, synchronized skills, and the TeX/BibTeX literature
 rule imported from `valency-oss/valency-cursor-bond`.
 
 The initial package connects only to the canonical full endpoint at
-`https://mcp.valency.io/mcp/`. Profile selection and reduced authoring
+`https://mcp.valency.io/`. Profile selection and reduced authoring
 endpoints are intentionally deferred until those service contracts are ready.
 The package must not contain a profile-specific endpoint or server name,
 credentials, authorization headers, or a local MCP wrapper.
