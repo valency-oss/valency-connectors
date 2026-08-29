@@ -2,7 +2,7 @@
 name: "valency"
 displayName: "Valency"
 description: "Search, profile, and analyze research papers through the Valency Bond MCP server."
-keywords: ["research papers", "researcher profile", "research landscape", "similar papers", "publication trends", "research network", "research reading list", "fresh collaborators"]
+keywords: ["research papers", "researcher profile", "research landscape", "similar papers", "publication trends", "research network", "research reading list", "fresh collaborators", "research onboarding"]
 author: "Valency Systems Inc"
 ---
 
@@ -30,6 +30,7 @@ steering file that matches the user's request before calling Valency Bond
 tools. Keep these workflows distinct rather than replacing them with generic
 research instructions:
 
+- `quickstart` — teach a personalized Valency playbook and offer tailored examples → `steering/quickstart.md`
 - `profile` — build a researcher's publication and collaboration profile → `steering/profile.md`
 - `landscape` — summarize a field, its trajectory, and its key participants → `steering/landscape.md`
 - `similar` — find papers related to a known title or stable identifier → `steering/similar.md`

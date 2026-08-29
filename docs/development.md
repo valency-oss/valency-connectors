@@ -14,7 +14,7 @@ The Antigravity checks pin the exact `plugin.json` and `mcp_config.json`
 contracts and the host-specific rule.
 
 The Kiro checks pin the supported `POWER.md` frontmatter, the credential-free
-remote endpoint in `mcp.json`, and the one-to-one mapping from all seven
+remote endpoint in `mcp.json`, and the one-to-one mapping from all eight
 workflows to `steering/*.md`. Each Kiro steering file must remain byte-identical
 to its canonical `skills/*/SKILL.md` source.
 
@@ -59,7 +59,7 @@ uvx --from check-jsonschema==0.37.4 check-jsonschema \
 For host validation, record the Cursor version and add this repository as a
 marketplace with `cursor-agent plugin marketplace add
 https://github.com/valency-oss/valency-bond`. Open `/plugin`, install Valency
-from the Marketplace tab, and confirm that all seven skills, the literature
+from the Marketplace tab, and confirm that all eight skills, the literature
 rule, and the `valency` MCP connection load. Complete Cursor-managed OAuth and
 run a representative read-only Valency Bond tool call.
 
@@ -74,7 +74,7 @@ workaround to the provider package.
 ## Grok Build plugin
 
 The repository-root `.grok-plugin/marketplace.json` maps `valency` to the
-self-contained `plugins/grok/valency` package. Its seven skills must remain
+self-contained `plugins/grok/valency` package. Its eight skills must remain
 byte-identical to the canonical root skills. Its `.mcp.json` must contain only
 the remote HTTP endpoint; Grok owns OAuth and dynamic client registration.
 
@@ -86,7 +86,7 @@ grok plugin validate plugins/grok/valency
 
 For a private-release smoke test, use Git credentials authorized to read this
 repository. Add the root marketplace, install `valency --trust`, and confirm
-`grok plugin details valency` plus `grok inspect` report seven skills and one
+`grok plugin details valency` plus `grok inspect` report eight skills and one
 HTTP MCP server. Then authenticate `valency` from `/mcps`, record the actual
 non-sensitive callback URI, and make one representative read-only Valency Bond
 tool call. Exercise update and uninstall separately without changing unrelated
@@ -111,7 +111,7 @@ For live validation, record the Kiro IDE version, then:
 2. Enter `https://github.com/valency-oss/valency-bond` and confirm the Power
    installs. To test unpublished local changes, instead choose **Import power
    from a folder** and select the repository root.
-3. Verify that all seven workflows are reachable through their focused
+3. Verify that all eight workflows are reachable through their focused
    steering files.
 4. Confirm that Kiro registers and starts the `valency` server from `mcp.json`.
 5. Complete browser OAuth through dynamic client registration.

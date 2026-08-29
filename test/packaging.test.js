@@ -17,6 +17,7 @@ const openaiMarketplace = readJson(".agents/plugins/marketplace.json");
 const openaiPlugin = readJson("plugins/openai/valency/.codex-plugin/plugin.json");
 const kiroPowerRoot = ".";
 const kiroWorkflows = [
+  "quickstart",
   "profile",
   "landscape",
   "similar",
@@ -43,6 +44,7 @@ test("Agent Skills CLI groups every canonical skill under one select-all row", (
       "./skills/landscape",
       "./skills/network",
       "./skills/profile",
+      "./skills/quickstart",
       "./skills/reading-list",
       "./skills/similar",
       "./skills/trends",
@@ -77,6 +79,7 @@ test("Antigravity reuses the root skills and adds host-specific guidance", () =>
     "landscape",
     "network",
     "profile",
+    "quickstart",
     "reading-list",
     "similar",
     "trends",
@@ -211,7 +214,7 @@ test("repository root is a native Valency Power with host-managed OAuth", () => 
   );
 });
 
-test("Kiro routes all seven workflows to byte-identical canonical guidance", () => {
+test("Kiro routes all eight workflows to byte-identical canonical guidance", () => {
   const power = readFileSync(`${kiroPowerRoot}/POWER.md`, "utf8");
   const mappings = [...power.matchAll(
     /^- `([^`]+)` — .+ → `steering\/([^`]+)\.md`$/gm,
@@ -382,6 +385,7 @@ test("all providers ship byte-identical unprefixed skills", () => {
     "landscape",
     "network",
     "profile",
+    "quickstart",
     "reading-list",
     "similar",
     "trends",
@@ -397,6 +401,7 @@ test("all providers ship byte-identical unprefixed skills", () => {
     "landscape",
     "network",
     "profile",
+    "quickstart",
     "reading-list",
     "similar",
     "trends",
@@ -451,6 +456,7 @@ test("shared skills contain only provider-neutral invocation guidance", () => {
     "landscape",
     "network",
     "profile",
+    "quickstart",
     "reading-list",
     "similar",
     "trends",
@@ -470,6 +476,29 @@ test("shared skills contain only provider-neutral invocation guidance", () => {
       /mcp__|companion Valency connector|install the connector|\/valency:/,
     );
   }
+});
+
+test("quickstart is harness-neutral, standalone, and keeps routing model-facing", () => {
+  const contents = readFileSync("skills/quickstart/SKILL.md", "utf8");
+  const memoryStep = contents.indexOf("Inspect any agent memory");
+  const interviewStep = contents.indexOf("## 2. Ask one compact batch");
+
+  assert.ok(memoryStep >= 0);
+  assert.ok(interviewStep > memoryStep);
+  for (const field of ["Identity", "Current work", "Existing network", "Desired uses"]) {
+    assert.match(contents, new RegExp(`\\*\\*${field}:\\*\\*`));
+  }
+  assert.match(contents, /Keep this workflow read-only/);
+  assert.match(contents, /This file is the complete workflow/);
+  assert.match(contents, /The routing below is model-facing/);
+  assert.match(contents, /describe their research need in natural language rather than choose or name tools/);
+  assert.match(contents, /three paste-ready example prompts, one live Valency demonstration, both, or neither/);
+  assert.match(contents, /semantic_search_papers/);
+  assert.doesNotMatch(contents, /Oh My Pi|memory:\/\/root|`recall`/);
+  assert.doesNotMatch(
+    contents,
+    /`(?:profile|landscape|similar|trends|network|reading-list|fresh-collaborators)`/,
+  );
 });
 
 test("root marketplaces route to independent provider packages", () => {
@@ -532,6 +561,7 @@ test("each provider package contains its complete runtime payload", () => {
     "landscape",
     "network",
     "profile",
+    "quickstart",
     "reading-list",
     "similar",
     "trends",
@@ -541,6 +571,7 @@ test("each provider package contains its complete runtime payload", () => {
     "landscape",
     "network",
     "profile",
+    "quickstart",
     "reading-list",
     "similar",
     "trends",
@@ -550,6 +581,7 @@ test("each provider package contains its complete runtime payload", () => {
     "landscape",
     "network",
     "profile",
+    "quickstart",
     "reading-list",
     "similar",
     "trends",
@@ -559,6 +591,7 @@ test("each provider package contains its complete runtime payload", () => {
     "landscape",
     "network",
     "profile",
+    "quickstart",
     "reading-list",
     "similar",
     "trends",
@@ -587,6 +620,7 @@ test("renamed OpenAI skills preserve their provider-specific metadata", () => {
     "landscape",
     "network",
     "profile",
+    "quickstart",
     "reading-list",
     "similar",
     "trends",
@@ -621,7 +655,7 @@ test("repository metadata and installation docs point at the monorepo", () => {
   const readme = readFileSync("README.md", "utf8");
   const development = readFileSync("docs/development.md", "utf8");
   const uninstall = readFileSync("docs/uninstall.md", "utf8");
-  assert.match(readme, /^# Valency Bond$/m);
+  assert.match(readme, /^# Valency Bond Connectors$/m);
   assert.match(readme, /\.\/docs\/assets\/horizontal_solid_cyan_valency\.svg/);
   assert.equal(
     existsSync("docs/assets/horizontal_solid_cyan_valency.svg"),
@@ -657,7 +691,7 @@ test("repository metadata and installation docs point at the monorepo", () => {
     readme,
     /npx skills@latest add valency-oss\/valency-bond(?=\s|`|$)/,
   );
-  assert.match(readme, /Toggle \*\*Valency Skills\*\* to select or clear all seven/);
+  assert.match(readme, /Toggle \*\*Valency Skills\*\* to select or clear all eight/);
   assert.match(readme, /does not configure or authenticate the MCP server/);
   assert.match(readme, /\/mcp auth valency/);
   assert.match(readme, /ChatGPT web/);
@@ -696,7 +730,7 @@ test("Kiro documentation uses the supported root GitHub lifecycle", () => {
   assert.match(development, /Kiro Power/);
   assert.match(development, /`POWER\.md` frontmatter/);
   assert.match(development, /endpoint in `mcp\.json`/);
-  assert.match(development, /seven\s+workflows to `steering\/\*\.md`/);
+  assert.match(development, /eight\s+workflows to `steering\/\*\.md`/);
   assert.match(development, /byte-for-byte skill\s+synchronization/);
   assert.match(
     development,

@@ -15,9 +15,9 @@ unless every affected provider contract and packaging test is updated.
 
 | Entry | Consumer | Purpose |
 | --- | --- | --- |
-| `POWER.md` | Kiro IDE | Defines the Valency Power metadata, onboarding, and seven workflow routes. Kiro requires this file at the repository root for GitHub imports. |
+| `POWER.md` | Kiro IDE | Defines the Valency Power metadata, onboarding, and eight workflow routes. Kiro requires this file at the repository root for GitHub imports. |
 | `mcp.json` | Kiro IDE | Connects the Power to the remote Valency Bond MCP server using Kiro's schema. |
-| `steering/` | Kiro IDE | Contains Kiro-readable copies of the seven canonical workflows. Packaging tests enforce byte-for-byte parity with `skills/`. |
+| `steering/` | Kiro IDE | Contains Kiro-readable copies of the eight canonical workflows. Packaging tests enforce byte-for-byte parity with `skills/`. |
 | `plugin.json` | Antigravity CLI | Declares the repository-root Antigravity plugin. |
 | `mcp_config.json` | Antigravity CLI | Connects Antigravity to Valency Bond using Antigravity's MCP schema. It is not interchangeable with Kiro's `mcp.json`. |
 | `rules/` | Antigravity CLI | Provides host-specific setup and interaction guidance. |
@@ -26,7 +26,7 @@ unless every affected provider contract and packaging test is updated.
 
 | Entry | Consumer | Purpose |
 | --- | --- | --- |
-| `skills/` | All provider packages | Holds the seven canonical, provider-neutral Valency workflows. Provider packages copy this content into the format their host expects, and tests prevent drift. |
+| `skills/` | All provider packages | Holds the eight canonical, provider-neutral Valency workflows. Provider packages copy this content into the format their host expects, and tests prevent drift. |
 
 ## Provider marketplaces and packages
 
@@ -39,8 +39,8 @@ unless every affected provider contract and packaging test is updated.
 | `.grok-plugin/` | Grok Build | Declares the root Grok marketplace and maps the user-visible `valency` plugin to its dedicated nested package. |
 | `.github/` | GitHub and CI | Contains the GitHub Copilot marketplace plus GitHub Actions workflows. |
 | `plugins/` | Claude, Copilot, Cursor, Grok Build, and OpenAI hosts | Contains self-contained provider packages for hosts that install from a nested marketplace path. Kiro is at the root because its GitHub importer requires root `POWER.md`. |
-| `plugins/cursor/valency` | Cursor | Contains the dedicated Cursor manifest, full-surface remote MCP configuration, MIT license, literature rule, and seven canonical skill copies. |
-| `plugins/grok/valency` | Grok Build | Contains the dedicated Grok manifest, credential-free remote MCP configuration, MIT license, and seven canonical skill copies. The root marketplace hides this internal path from testers. |
+| `plugins/cursor/valency` | Cursor | Contains the dedicated Cursor manifest, full-surface remote MCP configuration, MIT license, literature rule, and eight canonical skill copies. |
+| `plugins/grok/valency` | Grok Build | Contains the dedicated Grok manifest, credential-free remote MCP configuration, MIT license, and eight canonical skill copies. The root marketplace hides this internal path from testers. |
 
 ### Why Agent Skills metadata is under `.claude-plugin/`
 
