@@ -13,6 +13,7 @@
     "./skills/landscape",
     "./skills/network",
     "./skills/profile",
+    "./skills/quickstart",
     "./skills/reading-list",
     "./skills/similar",
     "./skills/trends"

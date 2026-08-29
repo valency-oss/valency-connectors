@@ -12,9 +12,9 @@
 
 Valency Bond connects AI assistants to [Valency](https://valency.io) for
 research discovery and analysis. Each provider package connects to the hosted
-Valency Bond MCP server and includes seven guided workflows for researcher
-profiles, field landscapes, similar papers, publication trends, collaboration
-networks, reading lists, and fresh collaborators.
+Valency Bond MCP server and includes eight guided workflows: a personalized
+quickstart, researcher profiles, field landscapes, similar papers, publication
+trends, collaboration networks, reading lists, and fresh collaborators.
 
 Authentication is handled through your agent's browser-based sign-in flow. The
 packages do not require a client secret, bearer token, or manually configured
@@ -111,13 +111,13 @@ server; the package does not contain a local executable or credentials.
 
 ### Skills-only installation
 
-To install the seven guided workflows without the Valency Bond MCP server:
+To install the eight guided workflows without the Valency Bond MCP server:
 
 ```bash
 npx skills@latest add valency-oss/valency-connectors
 ```
 
-Toggle **Valency Skills** to select or clear all seven workflows, or choose
+Toggle **Valency Skills** to select or clear all eight workflows, or choose
 individual skills. This does not configure or authenticate the MCP server.
 
 ## More information
