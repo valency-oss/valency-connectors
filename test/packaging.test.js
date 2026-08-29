@@ -621,7 +621,7 @@ test("repository metadata and installation docs point at the monorepo", () => {
   const readme = readFileSync("README.md", "utf8");
   const development = readFileSync("docs/development.md", "utf8");
   const uninstall = readFileSync("docs/uninstall.md", "utf8");
-  assert.match(readme, /^# Valency Bond$/m);
+  assert.match(readme, /^# Valency Bond Connectors$/m);
   assert.match(readme, /\.\/docs\/assets\/horizontal_solid_cyan_valency\.svg/);
   assert.equal(
     existsSync("docs/assets/horizontal_solid_cyan_valency.svg"),
@@ -642,20 +642,20 @@ test("repository metadata and installation docs point at the monorepo", () => {
   }
   assert.match(
     readme,
-    /claude plugin marketplace add valency-oss\/valency-bond --scope user &&\n  claude plugin install valency@valency-claude-plugin --scope user &&\n  claude mcp login plugin:valency:valency/,
+    /claude plugin marketplace add valency-oss\/valency-connectors --scope user &&\n  claude plugin install valency@valency-claude-plugin --scope user &&\n  claude mcp login plugin:valency:valency/,
   );
   assert.match(
     readme,
-    /codex plugin marketplace add valency-oss\/valency-bond &&\n  codex plugin add valency@valency &&\n  codex mcp login valency/,
+    /codex plugin marketplace add valency-oss\/valency-connectors &&\n  codex plugin add valency@valency &&\n  codex mcp login valency/,
   );
   assert.match(
     readme,
-    /cursor-agent plugin marketplace add https:\/\/github\.com\/valency-oss\/valency-bond/,
+    /cursor-agent plugin marketplace add https:\/\/github\.com\/valency-oss\/valency-connectors/,
   );
   assert.doesNotMatch(readme, /mcp\/authoring|valency-authoring/);
   assert.match(
     readme,
-    /npx skills@latest add valency-oss\/valency-bond(?=\s|`|$)/,
+    /npx skills@latest add valency-oss\/valency-connectors(?=\s|`|$)/,
   );
   assert.match(readme, /Toggle \*\*Valency Skills\*\* to select or clear all seven/);
   assert.match(readme, /does not configure or authenticate the MCP server/);
@@ -688,7 +688,7 @@ test("Kiro documentation uses the supported root GitHub lifecycle", () => {
   assert.match(kiroSection, /Powers/);
   assert.match(kiroSection, /Add Custom Power/);
   assert.match(kiroSection, /Import power from\s+GitHub/);
-  assert.match(kiroSection, /https:\/\/github\.com\/valency-oss\/valency-bond/);
+  assert.match(kiroSection, /https:\/\/github\.com\/valency-oss\/valency-connectors/);
   assert.doesNotMatch(kiroSection, /plugins\/kiro\/valency/);
   assert.match(uninstall, /^## Kiro$/m);
   assert.match(uninstall, /Powers → Installed Powers → Valency/);
@@ -803,7 +803,7 @@ test("Antigravity documentation keeps its native lifecycle contract", () => {
   assert.ok(antigravitySection, "README must contain an Antigravity install section");
   assert.match(
     antigravitySection,
-    /agy plugin install https:\/\/github\.com\/valency-oss\/valency-bond/,
+    /agy plugin install https:\/\/github\.com\/valency-oss\/valency-connectors/,
   );
   assert.doesNotMatch(antigravitySection, /agy plugin list/);
   assert.match(antigravitySection, /`\/mcp` manager/);
@@ -828,7 +828,7 @@ test("Copilot documentation uses marketplace-first CLI-only support", () => {
 
   assert.match(
     readme,
-    /copilot plugin marketplace add valency-oss\/valency-bond &&\n  copilot plugin install valency@valency-copilot-plugin/,
+    /copilot plugin marketplace add valency-oss\/valency-connectors &&\n  copilot plugin install valency@valency-copilot-plugin/,
   );
   assert.match(readme, /\/mcp auth valency/);
   assert.match(readme, /GitHub Copilot CLI/);
@@ -836,7 +836,7 @@ test("Copilot documentation uses marketplace-first CLI-only support", () => {
   assert.match(readme, /Copilot code review/);
   assert.doesNotMatch(
     readme,
-    /copilot plugin install (?:valency-oss\/valency-bond|https:\/\/github\.com\/valency-oss\/valency-bond(?:\.git)?)/,
+    /copilot plugin install (?:valency-oss\/valency-connectors|https:\/\/github\.com\/valency-oss\/valency-connectors(?:\.git)?)/,
   );
 
   assert.match(
@@ -860,7 +860,7 @@ test("Cursor documentation keeps installation interactive and profile-free", () 
   assert.ok(cursorSection, "README must contain a Cursor install section");
   assert.match(
     cursorSection,
-    /cursor-agent plugin marketplace add https:\/\/github\.com\/valency-oss\/valency-bond/,
+    /cursor-agent plugin marketplace add https:\/\/github\.com\/valency-oss\/valency-connectors/,
   );
   assert.match(cursorSection, /`\/plugin`/);
   assert.match(cursorSection, /Marketplace\*\* tab/);
@@ -894,7 +894,7 @@ test("Grok documentation uses the private marketplace lifecycle", () => {
   assert.ok(grokSection, "README must contain a Grok Build install section");
   assert.match(
     grokSection,
-    /grok plugin marketplace add valency-oss\/valency-bond &&\n  grok plugin install valency --trust/,
+    /grok plugin marketplace add valency-oss\/valency-connectors &&\n  grok plugin install valency --trust/,
   );
   assert.match(readme, /repository is private/i);
   assert.match(readme, /GitHub credentials\s+> with access/i);
