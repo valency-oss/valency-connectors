@@ -8,7 +8,7 @@
   </a>
 </p>
 
-# Valency Bond
+# Valency Bond Connectors
 
 Valency Bond connects AI assistants to [Valency](https://valency.io) for
 research discovery and analysis. Each provider package connects to the hosted
