@@ -22,14 +22,14 @@ authorization header.
 
 > [!NOTE]
 > While this repository is private, installation requires GitHub credentials
-> with access to `valency-oss/valency-bond`.
+> with access to `valency-oss/valency-connectors`.
 
 ## Install
 
 ### Claude Code
 
 ```bash
-claude plugin marketplace add valency-oss/valency-bond --scope user &&
+claude plugin marketplace add valency-oss/valency-connectors --scope user &&
   claude plugin install valency@valency-claude-plugin --scope user &&
   claude mcp login plugin:valency:valency
 ```
@@ -39,7 +39,7 @@ Restart Claude Code or run `/reload-plugins` after installation.
 ### Codex
 
 ```bash
-codex plugin marketplace add valency-oss/valency-bond &&
+codex plugin marketplace add valency-oss/valency-connectors &&
   codex plugin add valency@valency &&
   codex mcp login valency
 ```
@@ -52,7 +52,7 @@ Start a new Codex session after installation so its skills and MCP tools load.
 
 ### ChatGPT
 
-In ChatGPT desktop, add `valency-oss/valency-bond` as a plugin marketplace,
+In ChatGPT desktop, add `valency-oss/valency-connectors` as a plugin marketplace,
 install **Valency**, and complete the browser-based authorization flow when
 prompted.
 
@@ -63,7 +63,7 @@ workspace.
 ### Cursor
 
 ```bash
-cursor-agent plugin marketplace add https://github.com/valency-oss/valency-bond
+cursor-agent plugin marketplace add https://github.com/valency-oss/valency-connectors
 ```
 
 Then open `/plugin` in Cursor Agent, select the **Marketplace** tab, and install
@@ -74,7 +74,7 @@ prompts you to connect.
 ### GitHub Copilot CLI
 
 ```bash
-copilot plugin marketplace add valency-oss/valency-bond &&
+copilot plugin marketplace add valency-oss/valency-connectors &&
   copilot plugin install valency@valency-copilot-plugin
 ```
 
@@ -85,7 +85,7 @@ support its remote OAuth MCP server.
 ### Antigravity CLI
 
 ```bash
-agy plugin install https://github.com/valency-oss/valency-bond
+agy plugin install https://github.com/valency-oss/valency-connectors
 ```
 
 Open Antigravity's `/mcp` manager, select `valency`, and complete the browser
@@ -94,7 +94,7 @@ authorization flow.
 ### Grok Build
 
 ```bash
-grok plugin marketplace add valency-oss/valency-bond &&
+grok plugin marketplace add valency-oss/valency-connectors &&
   grok plugin install valency --trust
 ```
 
@@ -106,7 +106,7 @@ server; the package does not contain a local executable or credentials.
 
 1. Open the **Powers** panel and choose **Add Custom Power**.
 2. Select **Import power from GitHub**.
-3. Enter `https://github.com/valency-oss/valency-bond` and install the Power.
+3. Enter `https://github.com/valency-oss/valency-connectors` and install the Power.
 4. Activate Valency and complete Kiro's browser-based authorization flow.
 
 ### Skills-only installation
@@ -114,7 +114,7 @@ server; the package does not contain a local executable or credentials.
 To install the seven guided workflows without the Valency Bond MCP server:
 
 ```bash
-npx skills@latest add valency-oss/valency-bond
+npx skills@latest add valency-oss/valency-connectors
 ```
 
 Toggle **Valency Skills** to select or clear all seven workflows, or choose
