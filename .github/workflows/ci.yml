@@ -1,0 +1,37 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    name: Contract tests and extension package
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install root dependencies
+        run: npm ci
+
+      - name: Run contract tests
+        run: npm test
+
+      - name: Install extension dependencies
+        working-directory: vscode
+        run: npm ci
+
+      - name: Typecheck the extension
+        working-directory: vscode
+        run: npm run typecheck
+
+      - name: Package the extension
+        working-directory: vscode
+        run: >
+          npx vsce package
+          --baseContentUrl https://github.com/valency-oss/valency-connectors/blob/main/vscode/
+          --baseImagesUrl https://github.com/valency-oss/valency-connectors/raw/main/vscode/
