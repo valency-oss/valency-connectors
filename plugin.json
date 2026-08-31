@@ -1,4 +1,20 @@
 {
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "valency",
-  "description": "Search, profile, and analyze research papers through the Valency Bond MCP server."
+  "version": "0.1.0",
+  "description": "Search, profile, and analyze research papers through the Valency Bond MCP server.",
+  "author": {
+    "name": "Valency Systems Inc"
+  },
+  "keywords": [
+    "research papers",
+    "researcher profile",
+    "research landscape",
+    "similar papers",
+    "publication trends",
+    "research network",
+    "research reading list",
+    "fresh collaborators",
+    "research onboarding"
+  ]
 }
