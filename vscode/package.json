@@ -1,0 +1,119 @@
+{
+  "name": "valency",
+  "displayName": "Valency",
+  "publisher": "valency",
+  "version": "0.1.0",
+  "description": "Search, discover, and analyze tens of millions of research papers and preprints.",
+  "author": {
+    "name": "Valency Systems Inc"
+  },
+  "license": "MIT",
+  "homepage": "https://valency.io",
+  "repository": "https://github.com/valency-oss/valency-connectors",
+  "engines": {
+    "vscode": "^1.109.0"
+  },
+  "main": "./dist/extension.js",
+  "activationEvents": [],
+  "icon": "assets/icon.png",
+  "galleryBanner": {
+    "color": "#00E6FF",
+    "theme": "light"
+  },
+  "categories": [
+    "Machine Learning",
+    "Data Science",
+    "Education"
+  ],
+  "keywords": [
+    "research",
+    "papers",
+    "mcp",
+    "skills",
+    "semantic-search"
+  ],
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": true
+    },
+    "virtualWorkspaces": true
+  },
+  "contributes": {
+    "mcpServerDefinitionProviders": [
+      {
+        "id": "valency.mcp",
+        "label": "Valency"
+      }
+    ],
+    "chatSkills": [
+      {
+        "path": "./skills/valency-fresh-collaborators/SKILL.md"
+      },
+      {
+        "path": "./skills/valency-landscape/SKILL.md"
+      },
+      {
+        "path": "./skills/valency-network/SKILL.md"
+      },
+      {
+        "path": "./skills/valency-profile/SKILL.md"
+      },
+      {
+        "path": "./skills/valency-reading-list/SKILL.md"
+      },
+      {
+        "path": "./skills/valency-similar/SKILL.md"
+      },
+      {
+        "path": "./skills/valency-trends/SKILL.md"
+      }
+    ],
+    "walkthroughs": [
+      {
+        "id": "valency.gettingStarted",
+        "title": "Get started with Valency",
+        "description": "Connect your agent to tens of millions of research papers in three steps.",
+        "steps": [
+          {
+            "id": "valency.installed",
+            "title": "See what was installed",
+            "description": "This extension registered the hosted Valency MCP server and added seven research skills to your agent. Nothing runs or is stored on your machine.",
+            "media": {
+              "markdown": "walkthrough/installed.md"
+            }
+          },
+          {
+            "id": "valency.trustAndSignIn",
+            "title": "Trust the server and sign in",
+            "description": "The first time the Valency server starts, VS Code shows a one-time trust prompt, then opens your browser to sign in.\n[Open Chat](command:workbench.action.chat.open)",
+            "media": {
+              "markdown": "walkthrough/trust-and-signin.md"
+            }
+          },
+          {
+            "id": "valency.firstSkill",
+            "title": "Run your first skill",
+            "description": "Ask the agent to profile a researcher, map a field, or build a reading list — it picks the right skill automatically.\n[Open Chat](command:workbench.action.chat.open)",
+            "media": {
+              "markdown": "walkthrough/first-skill.md"
+            },
+            "completionEvents": [
+              "onCommand:workbench.action.chat.open"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "build": "esbuild src/extension.ts --bundle --platform=node --external:vscode --outfile=dist/extension.js",
+    "vscode:prepublish": "npm run build -- --minify"
+  },
+  "devDependencies": {
+    "@types/vscode": "~1.109.0",
+    "@vscode/vsce": "^3.9.2",
+    "esbuild": "^0.28.2",
+    "typescript": "^5.9.3"
+  }
+}

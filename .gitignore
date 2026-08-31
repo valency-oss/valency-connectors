@@ -1,0 +1,10 @@
+
+# Riptide artifacts (cloud-synced)
+.humanlayer/tasks/
+
+# Node dependencies
+node_modules/
+
+# VS Code extension build outputs
+vscode/dist/
+vscode/*.vsix
