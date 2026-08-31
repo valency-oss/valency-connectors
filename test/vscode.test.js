@@ -67,7 +67,7 @@ const marketplaceCategories = [
 test("extension identity matches the Marketplace plan", () => {
   assert.equal(manifest.name, "valency");
   assert.equal(manifest.displayName, "Valency");
-  assert.equal(manifest.publisher, "valency");
+  assert.equal(manifest.publisher, "valencyio");
   assert.equal(manifest.main, "./dist/extension.js");
   assert.match(manifest.version, /^\d+\.\d+\.\d+$/);
   assert.deepEqual(manifest.galleryBanner, {

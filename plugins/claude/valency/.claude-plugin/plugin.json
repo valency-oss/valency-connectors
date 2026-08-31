@@ -9,7 +9,7 @@
     "url": "https://valency.io"
   },
   "homepage": "https://valency.io",
-  "repository": "https://github.com/valency-oss/valency-bond",
+  "repository": "https://github.com/valency-oss/valency-connectors",
   "skills": "./skills/",
   "mcpServers": "./.mcp.json",
   "license": "MIT",

@@ -40,7 +40,7 @@ research instructions:
 
 ## License and support
 
-- Power license: [MIT](https://github.com/valency-oss/valency-bond/blob/main/LICENSE)
+- Power license: [MIT](https://github.com/valency-oss/valency-connectors/blob/main/LICENSE)
 - Valency Bond MCP server license: Proprietary
 - [Privacy Policy](https://www.valency.io/privacy)
 - [Support](mailto:support@valency.io)

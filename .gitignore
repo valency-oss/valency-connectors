@@ -8,3 +8,7 @@ node_modules/
 # VS Code extension build outputs
 vscode/dist/
 vscode/*.vsix
+
+# Secrets and local environment
+.env
+*.pem
