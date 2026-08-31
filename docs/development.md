@@ -32,12 +32,11 @@ OAuth, or invoke a remote tool.
 
 The root `.cursor-plugin/marketplace.json` routes Cursor to the self-contained
 package at `plugins/cursor/valency`. That package has its own native manifest,
-full-surface `mcp.json`, synchronized skills, and the TeX/BibTeX literature
-rule imported from `valency-oss/valency-cursor-bond`.
+full-surface `mcp.json`, synchronized skills, and a TeX/BibTeX literature
+rule tailored for Cursor.
 
-The initial package connects only to the canonical full endpoint at
-`https://mcp.valency.io/`. Profile selection and reduced authoring
-endpoints are intentionally deferred until those service contracts are ready.
+The package connects only to the canonical full endpoint at
+`https://mcp.valency.io/` and exposes the full tool surface.
 The package must not contain a profile-specific endpoint or server name,
 credentials, authorization headers, or a local MCP wrapper.
 
@@ -58,7 +57,7 @@ uvx --from check-jsonschema==0.37.4 check-jsonschema \
 
 For host validation, record the Cursor version and add this repository as a
 marketplace with `cursor-agent plugin marketplace add
-https://github.com/valency-oss/valency-bond`. Open `/plugin`, install Valency
+https://github.com/valency-oss/valency-connectors`. Open `/plugin`, install Valency
 from the Marketplace tab, and confirm that all seven skills, the literature
 rule, and the `valency` MCP connection load. Complete Cursor-managed OAuth and
 run a representative read-only Valency Bond tool call.
@@ -67,8 +66,8 @@ Record static validation, installation, OAuth, tool discovery, and tool-call
 results separately. If OAuth fails, record only the non-sensitive callback URI
 after removing its query and fragment components. Redact authorization codes,
 tokens, cookies, client secrets, and personal data from the OAuth results. Note
-the Cursor surface, then coordinate any Valency redirect-allowlist or upstream
-identity-provider work separately. Do not add credentials or a callback
+the Cursor surface; any redirect-allowlist or identity-provider change happens
+on the Valency service side, not here. Do not add credentials or a callback
 workaround to the provider package.
 
 ## Grok Build plugin
@@ -84,18 +83,18 @@ With Grok Build installed, record `grok version` and validate the package:
 grok plugin validate plugins/grok/valency
 ```
 
-For a private-release smoke test, use Git credentials authorized to read this
-repository. Add the root marketplace, install `valency --trust`, and confirm
+For an installation smoke test, add the root marketplace, install
+`valency --trust`, and confirm
 `grok plugin details valency` plus `grok inspect` report seven skills and one
 HTTP MCP server. Then authenticate `valency` from `/mcps`, record the actual
 non-sensitive callback URI, and make one representative read-only Valency Bond
 tool call. Exercise update and uninstall separately without changing unrelated
 Grok configuration.
 
-Record static validation, private-repository installation, OAuth, and tool-call
+Record static validation, installation, OAuth, and tool-call
 results as separate evidence. If OAuth fails, do not package credentials or
-guess at a callback workaround; coordinate any broker or upstream OAuth
-application change separately.
+guess at a callback workaround; any broker or upstream OAuth application
+change happens on the Valency service side, not in this package.
 
 ## Kiro Power
 
@@ -108,7 +107,7 @@ For live validation, record the Kiro IDE version, then:
 
 1. Open the Powers panel and choose **Add Custom Power** → **Import power from
    GitHub**.
-2. Enter `https://github.com/valency-oss/valency-bond` and confirm the Power
+2. Enter `https://github.com/valency-oss/valency-connectors` and confirm the Power
    installs. To test unpublished local changes, instead choose **Import power
    from a folder** and select the repository root.
 3. Verify that all seven workflows are reachable through their focused
@@ -122,8 +121,8 @@ OAuth or remote tool use works. If OAuth fails, capture the registration
 request and exact redirect URI. Before sharing that evidence, redact
 authorization codes, access or refresh tokens, cookies, client secrets, and
 unrelated personal data; retain only the redirect URI and non-sensitive request
-fields needed for diagnosis. Coordinate any MCP allowlist or upstream OAuth
-application change separately from this provider package.
+fields needed for diagnosis. Any MCP allowlist or upstream OAuth application
+change belongs to the Valency service, not this provider package.
 
 See [Repository root layout](./repository-layout.md) before adding, moving, or
 consolidating root files. Several similarly named files implement different
@@ -134,8 +133,8 @@ confirm it with `agy plugin list`, then use the interactive `/mcp` manager to
 authenticate `valency` and make a representative tool call. Capture the dynamic
 client registration request and submitted OAuth redirect URI during release
 validation. If the redirect host is not accepted by Valency's MCP registration
-allowlist and upstream OAuth application, coordinate that MCP/auth change and
-deployment separately; do not add credentials or a callback workaround to the
+allowlist and upstream OAuth application, that MCP/auth change belongs on the
+Valency service side; do not add credentials or a callback workaround to the
 plugin package.
 
 With Claude Code installed, run both strict Claude validators:

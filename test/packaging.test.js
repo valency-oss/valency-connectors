@@ -36,7 +36,7 @@ test("Agent Skills CLI groups every canonical skill under one select-all row", (
       name: "Valency Systems Inc",
     },
     homepage: "https://valency.io",
-    repository: "https://github.com/valency-oss/valency-bond",
+    repository: "https://github.com/valency-oss/valency-connectors",
     license: "MIT",
     skills: [
       "./skills/fresh-collaborators",
@@ -128,7 +128,7 @@ test("native Grok package is credential-free and contains only expected componen
       url: "https://valency.io",
     },
     homepage: "https://valency.io",
-    repository: "https://github.com/valency-oss/valency-bond",
+    repository: "https://github.com/valency-oss/valency-connectors",
     license: "MIT",
     keywords: [
       "valency",
@@ -270,7 +270,7 @@ test("Copilot marketplace routes to its independent provider package", () => {
       url: "https://valency.io",
     },
     homepage: "https://valency.io",
-    repository: "https://github.com/valency-oss/valency-bond",
+    repository: "https://github.com/valency-oss/valency-connectors",
     license: "MIT",
     keywords: [
       "research",
@@ -333,7 +333,7 @@ test("Cursor marketplace routes to its full-surface provider package", () => {
     },
     publisher: "Valency Systems Inc",
     homepage: "https://valency.io",
-    repository: "https://github.com/valency-oss/valency-bond",
+    repository: "https://github.com/valency-oss/valency-connectors",
     license: "MIT",
     keywords: [
       "research",
@@ -607,15 +607,15 @@ test("renamed OpenAI skills preserve their provider-specific metadata", () => {
 test("repository metadata and installation docs point at the monorepo", () => {
   assert.equal(
     claudePlugin.repository,
-    "https://github.com/valency-oss/valency-bond",
+    "https://github.com/valency-oss/valency-connectors",
   );
   assert.equal(
     openaiPlugin.repository,
-    "https://github.com/valency-oss/valency-bond",
+    "https://github.com/valency-oss/valency-connectors",
   );
   assert.equal(
     cursorPlugin.repository,
-    "https://github.com/valency-oss/valency-bond",
+    "https://github.com/valency-oss/valency-connectors",
   );
 
   const readme = readFileSync("README.md", "utf8");
@@ -737,7 +737,7 @@ test("uninstall instructions live in the linked guide", () => {
 
   assert.match(
     uninstall,
-    /This repository is registered as `valency`.*source `valency-oss\/valency-bond`/s,
+    /This repository is registered as `valency`.*source `valency-oss\/valency-connectors`/s,
   );
   assert.match(
     uninstall,
@@ -883,7 +883,7 @@ test("Grok documentation uses the GitHub marketplace lifecycle", () => {
   assert.match(uninstall, /grok plugin uninstall valency/);
   assert.match(
     uninstall,
-    /grok plugin marketplace remove https:\/\/github\.com\/valency-oss\/valency-bond\.git/,
+    /grok plugin marketplace remove https:\/\/github\.com\/valency-oss\/valency-connectors\.git/,
   );
   assert.doesNotMatch(
     grokSection,

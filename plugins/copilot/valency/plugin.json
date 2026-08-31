@@ -8,7 +8,7 @@
     "url": "https://valency.io"
   },
   "homepage": "https://valency.io",
-  "repository": "https://github.com/valency-oss/valency-bond",
+  "repository": "https://github.com/valency-oss/valency-connectors",
   "license": "MIT",
   "keywords": [
     "research",

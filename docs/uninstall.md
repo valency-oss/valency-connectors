@@ -31,7 +31,7 @@ codex plugin marketplace remove valency
 
 `codex plugin marketplace remove` expects the configured marketplace name.
 This repository is registered as `valency`, even though it was added using the
-source `valency-oss/valency-bond`.
+source `valency-oss/valency-connectors`.
 
 Start a new Codex session after uninstalling.
 
@@ -66,7 +66,7 @@ agy plugin uninstall valency
 
 ```bash
 grok plugin uninstall valency
-grok plugin marketplace remove https://github.com/valency-oss/valency-bond.git
+grok plugin marketplace remove https://github.com/valency-oss/valency-connectors.git
 ```
 
 ## Kiro

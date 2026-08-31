@@ -1,5 +1,5 @@
 {
-  "name": "valency-bond",
+  "name": "valency-connectors",
   "private": true,
   "type": "module",
   "description": "Provider plugin distributions for the Valency Bond MCP server.",
