@@ -70,10 +70,11 @@ test("extension identity matches the Marketplace plan", () => {
   assert.equal(manifest.publisher, "valencyio");
   assert.equal(manifest.main, "./dist/extension.js");
   assert.match(manifest.version, /^\d+\.\d+\.\d+$/);
-  assert.deepEqual(manifest.galleryBanner, {
-    color: "#00E6FF",
-    theme: "light",
-  });
+  assert.equal(
+    manifest.galleryBanner,
+    undefined,
+    "no gallery banner: the cyan icon needs the default listing background",
+  );
   assert.deepEqual(manifest.capabilities, {
     untrustedWorkspaces: { supported: true },
     virtualWorkspaces: true,

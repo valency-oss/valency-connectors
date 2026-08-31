@@ -2,7 +2,7 @@
   "name": "valency",
   "displayName": "Valency",
   "publisher": "valencyio",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Search, discover, and analyze tens of millions of research papers and preprints.",
   "author": {
     "name": "Valency Systems Inc"
@@ -16,10 +16,6 @@
   "main": "./dist/extension.js",
   "activationEvents": [],
   "icon": "assets/icon.png",
-  "galleryBanner": {
-    "color": "#00E6FF",
-    "theme": "light"
-  },
   "categories": [
     "Machine Learning",
     "Data Science",
