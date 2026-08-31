@@ -631,7 +631,6 @@ test("repository metadata and installation docs point at the monorepo", () => {
     "Claude Code",
     "Codex",
     "ChatGPT",
-    "Cursor",
     "GitHub Copilot CLI",
     "Antigravity CLI",
     "Grok Build",
@@ -640,6 +639,7 @@ test("repository metadata and installation docs point at the monorepo", () => {
   ]) {
     assert.match(readme, new RegExp(`^### ${surface}$`, "m"));
   }
+  assert.doesNotMatch(readme, /^### Cursor$/m);
   assert.match(
     readme,
     /claude plugin marketplace add valency-oss\/valency-connectors --scope user &&\n  claude plugin install valency@valency-claude-plugin --scope user &&\n  claude mcp login plugin:valency:valency/,
@@ -647,10 +647,6 @@ test("repository metadata and installation docs point at the monorepo", () => {
   assert.match(
     readme,
     /codex plugin marketplace add valency-oss\/valency-connectors &&\n  codex plugin add valency@valency &&\n  codex mcp login valency/,
-  );
-  assert.match(
-    readme,
-    /cursor-agent plugin marketplace add https:\/\/github\.com\/valency-oss\/valency-connectors/,
   );
   assert.doesNotMatch(readme, /mcp\/authoring|valency-authoring/);
   assert.match(
@@ -849,29 +845,15 @@ test("Copilot documentation uses marketplace-first CLI-only support", () => {
   );
 });
 
-test("Cursor documentation keeps installation interactive and profile-free", () => {
+test("Cursor documentation lives outside the README and stays profile-free", () => {
   const readme = readFileSync("README.md", "utf8");
   const development = readFileSync("docs/development.md", "utf8");
   const uninstall = readFileSync("docs/uninstall.md", "utf8");
-  const cursorSection = readme.match(
-    /^### Cursor$([\s\S]*?)(?=^### |^## )/m,
-  )?.[1];
 
-  assert.ok(cursorSection, "README must contain a Cursor install section");
-  assert.match(
-    cursorSection,
-    /cursor-agent plugin marketplace add https:\/\/github\.com\/valency-oss\/valency-connectors/,
-  );
-  assert.match(cursorSection, /`\/plugin`/);
-  assert.match(cursorSection, /Marketplace\*\* tab/);
-  assert.match(cursorSection, /Cursor-managed authentication/);
-  assert.match(cursorSection, /Customize/);
+  assert.doesNotMatch(readme, /^### Cursor$/m);
+  assert.doesNotMatch(readme, /cursor-agent plugin marketplace add/);
   assert.match(uninstall, /^## Cursor$/m);
   assert.match(uninstall, /disable or uninstall \*\*Valency\*\*/);
-  assert.doesNotMatch(
-    cursorSection,
-    /mcp\/authoring|valency-authoring|authoring profile|install\.sh/i,
-  );
 
   assert.match(development, /Cursor provider package/);
   assert.match(development, /official Cursor schemas/);
@@ -882,7 +864,7 @@ test("Cursor documentation keeps installation interactive and profile-free", () 
   );
 });
 
-test("Grok documentation uses the private marketplace lifecycle", () => {
+test("Grok documentation uses the GitHub marketplace lifecycle", () => {
   const readme = readFileSync("README.md", "utf8");
   const development = readFileSync("docs/development.md", "utf8");
   const layout = readFileSync("docs/repository-layout.md", "utf8");
@@ -896,8 +878,7 @@ test("Grok documentation uses the private marketplace lifecycle", () => {
     grokSection,
     /grok plugin marketplace add valency-oss\/valency-connectors &&\n  grok plugin install valency --trust/,
   );
-  assert.match(readme, /repository is private/i);
-  assert.match(readme, /GitHub credentials\s+> with access/i);
+  assert.doesNotMatch(readme, /repository is private/i);
   assert.match(grokSection, /`\/mcps`/);
   assert.match(uninstall, /grok plugin uninstall valency/);
   assert.match(
