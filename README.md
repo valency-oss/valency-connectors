@@ -20,10 +20,6 @@ Authentication is handled through your agent's browser-based sign-in flow. The
 packages do not require a client secret, bearer token, or manually configured
 authorization header.
 
-> [!NOTE]
-> While this repository is private, installation requires GitHub credentials
-> with access to `valency-oss/valency-connectors`.
-
 ## Install
 
 ### Claude Code
@@ -59,17 +55,6 @@ prompted.
 ChatGPT web cannot install directly from a repository marketplace. It requires
 Valency to be distributed through the ChatGPT plugin directory or a ChatGPT
 workspace.
-
-### Cursor
-
-```bash
-cursor-agent plugin marketplace add https://github.com/valency-oss/valency-connectors
-```
-
-Then open `/plugin` in Cursor Agent, select the **Marketplace** tab, and install
-**Valency**. In the Cursor IDE, use **Customize → Plugins**. Reload Cursor and
-complete the Cursor-managed authentication flow when the `valency` MCP server
-prompts you to connect.
 
 ### GitHub Copilot CLI
 
