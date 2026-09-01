@@ -650,6 +650,7 @@ test("repository metadata and installation docs point at the monorepo", () => {
     true,
   );
   for (const surface of [
+    "VS Code",
     "Claude Code",
     "Codex",
     "ChatGPT",
@@ -662,6 +663,11 @@ test("repository metadata and installation docs point at the monorepo", () => {
     assert.match(readme, new RegExp(`^### ${surface}$`, "m"));
   }
   assert.doesNotMatch(readme, /^### Cursor$/m);
+  assert.match(readme, /code --install-extension valencyio\.valency/);
+  assert.match(
+    readme,
+    /marketplace\.visualstudio\.com\/items\?itemName=valencyio\.valency/,
+  );
   assert.match(
     readme,
     /claude plugin marketplace add valency-oss\/valency-connectors --scope user &&\n  claude plugin install valency@valency-claude-plugin --scope user &&\n  claude mcp login plugin:valency:valency/,
@@ -733,6 +739,7 @@ test("uninstall instructions live in the linked guide", () => {
   assert.doesNotMatch(readme, /^### (?:Update or |Disable, enable, or )?Uninstall/m);
 
   for (const surface of [
+    "VS Code",
     "Claude Code",
     "Codex",
     "ChatGPT",
@@ -747,6 +754,7 @@ test("uninstall instructions live in the linked guide", () => {
   }
 
   for (const command of [
+    "code --uninstall-extension valencyio.valency",
     "claude plugin uninstall valency@valency-claude-plugin --scope user",
     "codex plugin remove valency@valency",
     "copilot plugin uninstall valency",

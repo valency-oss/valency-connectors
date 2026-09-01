@@ -22,6 +22,21 @@ authorization header.
 
 ## Install
 
+### VS Code
+
+Install **[Valency](https://marketplace.visualstudio.com/items?itemName=valencyio.valency)**
+from the Extensions view (search "Valency") or from the command line:
+
+```bash
+code --install-extension valencyio.valency
+```
+
+The extension registers the Valency Bond MCP server and all seven skills;
+there is nothing to configure. The first time the server starts — typically
+when you open Chat in agent mode — VS Code shows a one-time trust prompt,
+then opens a browser sign-in to complete authorization. Requires VS Code
+1.109 or later.
+
 ### Claude Code
 
 ```bash
