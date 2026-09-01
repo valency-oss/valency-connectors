@@ -219,8 +219,10 @@ test("repository root is a native Valency Power with host-managed OAuth", () => 
   assert.match(power, /mailto:support@valency\.io/);
 
   assert.deepEqual(readJson(`${kiroPowerRoot}/mcp.json`), {
+    $schema: "https://agent-plugins.org/schemas/1.0.0/mcp.schema.json",
     mcpServers: {
       valency: {
+        type: "streamable-http",
         url: "https://mcp.valency.io/",
       },
     },
