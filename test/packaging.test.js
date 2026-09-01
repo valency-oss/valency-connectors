@@ -15,6 +15,28 @@ const cursorMarketplace = readJson(".cursor-plugin/marketplace.json");
 const cursorPlugin = readJson("plugins/cursor/valency/.cursor-plugin/plugin.json");
 const openaiMarketplace = readJson(".agents/plugins/marketplace.json");
 const openaiPlugin = readJson("plugins/openai/valency/.codex-plugin/plugin.json");
+const rootPlugin = readJson("plugin.json");
+const expectedRootPlugin = {
+  $schema: "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  name: "valency",
+  version: "0.1.0",
+  description:
+    "Search, profile, and analyze research papers through the Valency Bond MCP server.",
+  author: {
+    name: "Valency Systems Inc",
+  },
+  keywords: [
+    "research papers",
+    "researcher profile",
+    "research landscape",
+    "similar papers",
+    "publication trends",
+    "research network",
+    "research reading list",
+    "fresh collaborators",
+    "research onboarding",
+  ],
+};
 const kiroPowerRoot = ".";
 const kiroWorkflows = [
   "profile",
@@ -51,11 +73,7 @@ test("Agent Skills CLI groups every canonical skill under one select-all row", (
 });
 
 test("repository root is an installable Antigravity plugin", () => {
-  assert.deepEqual(readJson("plugin.json"), {
-    name: "valency",
-    description:
-      "Search, profile, and analyze research papers through the Valency Bond MCP server.",
-  });
+  assert.deepEqual(rootPlugin, expectedRootPlugin);
 
   assert.deepEqual(readJson("mcp_config.json"), {
     mcpServers: {
@@ -174,6 +192,8 @@ test("native Grok package is credential-free and contains only expected componen
 
 test("repository root is a native Valency Power with host-managed OAuth", () => {
   assert.equal(existsSync("plugins/kiro/valency"), false);
+  assert.deepEqual(rootPlugin, expectedRootPlugin);
+
   const power = readFileSync(`${kiroPowerRoot}/POWER.md`, "utf8");
   const frontmatter = power.match(/^---\n([\s\S]*?)\n---/);
 
