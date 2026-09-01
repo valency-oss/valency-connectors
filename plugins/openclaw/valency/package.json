@@ -1,0 +1,34 @@
+{
+  "name": "@valency-oss/openclaw-valency",
+  "version": "0.1.0",
+  "description": "Install seven guided Valency research skills in OpenClaw.",
+  "license": "MIT",
+  "type": "module",
+  "files": [
+    "index.js",
+    "openclaw.plugin.json",
+    "skills",
+    "LICENSE"
+  ],
+  "peerDependencies": {
+    "openclaw": ">=2026.8.1"
+  },
+  "peerDependenciesMeta": {
+    "openclaw": {
+      "optional": true
+    }
+  },
+  "openclaw": {
+    "extensions": [
+      "./index.js"
+    ],
+    "compat": {
+      "pluginApi": ">=2026.8.1",
+      "minGatewayVersion": "2026.8.1"
+    },
+    "build": {
+      "openclawVersion": "2026.8.1",
+      "pluginSdkVersion": "2026.8.1"
+    }
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "id": "valency",
+  "name": "Valency",
+  "version": "0.1.0",
+  "description": "Install seven guided Valency research skills in OpenClaw.",
+  "skills": [
+    "./skills"
+  ],
+  "configSchema": {
+    "type": "object",
+    "properties": {},
+    "additionalProperties": false
+  }
+}
