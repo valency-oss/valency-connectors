@@ -41,7 +41,7 @@ unless every affected provider contract and packaging test is updated.
 | `plugins/` | Claude, Copilot, Cursor, Grok Build, OpenAI, and OpenClaw hosts | Contains self-contained provider packages for hosts that install from a nested package or marketplace path. Kiro is at the root because its GitHub importer requires root `POWER.md`. |
 | `plugins/cursor/valency` | Cursor | Contains the dedicated Cursor manifest, full-surface remote MCP configuration, MIT license, literature rule, and seven canonical skill copies. |
 | `plugins/grok/valency` | Grok Build | Contains the dedicated Grok manifest, credential-free remote MCP configuration, MIT license, and seven canonical skill copies. The root marketplace hides this internal path from testers. |
-| `plugins/openclaw/valency` | OpenClaw | Contains the native OpenClaw manifest, direct JavaScript runtime entry, package metadata, MIT license, and seven canonical skill copies. The runtime registers nothing; the manifest-owned MCP server supplies the tools. |
+| `plugins/openclaw/valency` | OpenClaw | Contains the native OpenClaw manifest, direct JavaScript runtime entry, package metadata, MIT license, and seven canonical skill copies. The runtime registers nothing; operators add the hosted OAuth MCP server through OpenClaw's `mcp set` command. |
 
 ### Why Agent Skills metadata is under `.claude-plugin/`
 

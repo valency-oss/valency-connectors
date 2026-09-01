@@ -1,6 +1,6 @@
 export default {
   id: "valency",
   name: "Valency",
-  description: "Connect OpenClaw to the hosted Valency MCP server.",
+  description: "Install seven guided Valency research skills in OpenClaw.",
   register() {},
 };

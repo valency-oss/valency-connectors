@@ -7,41 +7,44 @@ This document records the implemented Valency connector contract for
 [`fa09ec4c49b969794996158838cf69b1344165a3`](https://github.com/openclaw/openclaw/commit/fa09ec4c49b969794996158838cf69b1344165a3),
 accessed 2026-08-27.
 
-The native package lives at `plugins/openclaw/valency`. It connects OpenClaw to
-the hosted Valency MCP server and carries the seven canonical skills. It does
-not contain the MCP server implementation, a local wrapper, credentials, or
-authorization headers.
+The native package lives at `plugins/openclaw/valency`. It carries the seven
+canonical skills and the installer-required no-op runtime. It does not contain
+the MCP server implementation, a local wrapper, an MCP connection definition,
+credentials, or authorization headers.
 
 The package is prepared for installation from a repository checkout. It has
-not been published on ClawHub, and this repository does not claim a completed
-live OpenClaw install, browser OAuth flow, or Valency tool call. ClawHub is an
-optional future distribution channel rather than the initial install path.
+not been published on ClawHub. Live testing on 2026-09-01 against OpenClaw
+2026.8.2 confirmed package installation, all seven skills eligible, browser
+OAuth, discovery of all 38 Valency MCP tools, and a successful read-only
+`get_paper_by_id` call for `1706.03762`.
 
-## Why the connector is native
+## Why MCP setup is explicit
 
-A native OpenClaw plugin can declare all three parts of the connector in one
-package:
+A native OpenClaw plugin can declare skill directories and `mcpServers` in one
+manifest, but OpenClaw 2026.8.2 does not provide a working end-to-end OAuth
+path for Valency through that declarative server:
 
-- plugin-owned skill directories;
-- a static remote MCP server using `streamable-http`; and
-- OpenClaw-managed `auth: "oauth"`.
+1. `openclaw mcp login` reads only servers saved under operator-managed
+   `mcp.servers`; it does not find a plugin-only server.
+2. Native plugin server normalization supplies the plugin root as `cwd` when no
+   working directory is declared. Codex rejects `cwd` for
+   `streamable_http`, including after a same-name operator override is merged.
 
-OpenClaw reads `skills` and `mcpServers` from `openclaw.plugin.json` before it
-loads plugin code. The server exists only while the plugin is enabled, and an
-operator's `mcp.servers.valency` setting remains authoritative. Declaring the
-server does not bypass normal tool policy. These boundaries are defined by the
-pinned [manifest field and MCP server reference](https://github.com/openclaw/openclaw/blob/fa09ec4c49b969794996158838cf69b1344165a3/docs/plugins/manifest.md#L136-L265).
-The remote transport and OAuth fields follow OpenClaw's pinned
-[MCP configuration reference](https://github.com/openclaw/openclaw/blob/fa09ec4c49b969794996158838cf69b1344165a3/docs/gateway/configuration-reference.md#L98-L190).
+The normalization behavior is visible in OpenClaw 2026.8.2
+[`absolutizeBundleMcpServer`](https://github.com/openclaw/openclaw/blob/v2026.8.2/src/plugins/bundle-mcp.ts#L141-L190)
+and its native-plugin caller
+[`loadNativePluginMcpConfig`](https://github.com/openclaw/openclaw/blob/v2026.8.2/src/plugins/bundle-mcp.ts#L477-L493).
+The MCP CLI documents that login operates on a configured HTTP server:
+[MCP CLI login](https://github.com/openclaw/openclaw/blob/v2026.8.2/docs/cli/mcp.md#L424-L453).
 
-A portable Agent Plugins 1.0.0 bundle can carry skills and a Streamable HTTP
-MCP definition, but its closed MCP schema has no OAuth field. Valency would
-therefore require a second operator-owned server override before login. See the
-[Agent Plugins MCP transport specification](https://agent-plugins.org/specification#streamable-http-and-legacy-httpsse)
-and OpenClaw's pinned [bundle mapping](https://github.com/openclaw/openclaw/blob/fa09ec4c49b969794996158838cf69b1344165a3/docs/plugins/bundles.md#L75-L168).
-The native package avoids that duplicated connection configuration.
+The package therefore owns the seven skills, while installation saves the
+hosted endpoint and `auth: "oauth"` with `openclaw mcp set`. This duplicates one
+small connection definition, but avoids a manifest contribution that breaks
+Codex sessions and makes login impossible. Do not lower the OpenClaw
+compatibility floor or re-add `mcpServers` until both upstream behaviors are
+fixed and live-tested.
 
-The connector must be additive. The repository-root `plugin.json` belongs to
+The connector remains additive. The repository-root `plugin.json` belongs to
 Antigravity, root `mcp.json` belongs to Kiro, and root `skills/` is the shared
 workflow source. OpenClaw therefore gets a self-contained nested package rather
 than changes to another provider's root contract.
@@ -83,26 +86,20 @@ source and a generated `dist/` copy would create synchronization work without
 changing the installed artifact.
 
 The entry exposes the required empty registration function and registers no
-OpenClaw tools, hooks, services, or commands. MCP owns the tool catalog and
-tool execution. Do not add `registerTool` wrappers around the hosted service.
+OpenClaw tools, hooks, services, or commands. The operator-managed MCP server
+owns the tool catalog and execution. Do not add `registerTool` wrappers around
+the hosted service.
 Native plugins execute in the Gateway process and must be treated as trusted
 code even when the entry is empty; see OpenClaw's pinned
 [plugin security guidance](https://github.com/openclaw/openclaw/blob/fa09ec4c49b969794996158838cf69b1344165a3/docs/gateway/security.md#L335-L346).
 
-`openclaw.plugin.json` pins the following connector behavior:
+`openclaw.plugin.json` pins only the native package and skill behavior:
 
 ```json
 {
   "id": "valency",
   "version": "0.1.0",
   "skills": ["./skills"],
-  "mcpServers": {
-    "valency": {
-      "url": "https://labs.valency.io/mcp/",
-      "transport": "streamable-http",
-      "auth": "oauth"
-    }
-  },
   "configSchema": {
     "type": "object",
     "additionalProperties": false,
@@ -127,6 +124,7 @@ authorized repository checkout:
 git clone https://github.com/valency-oss/valency-bond.git
 openclaw plugins install ./valency-bond/plugins/openclaw/valency
 openclaw plugins enable valency
+openclaw mcp set valency '{"url":"https://labs.valency.io/mcp/","transport":"streamable-http","auth":"oauth"}'
 openclaw gateway restart
 openclaw mcp login valency
 ```
@@ -134,14 +132,14 @@ openclaw mcp login valency
 The private repository requires GitHub credentials with access. Local path
 installation and Gateway restart are documented by OpenClaw's pinned
 [plugin quick start](https://github.com/openclaw/openclaw/blob/fa09ec4c49b969794996158838cf69b1344165a3/docs/tools/plugin.md#L20-L99).
-OpenClaw may ask the operator to review and trust a non-ClawHub source. A
-managed Gateway can restart automatically, but the explicit restart ensures
-the running process sees the installed package.
+OpenClaw may ask the operator to review and trust a non-ClawHub source. Accept
+the package's reviewed `skills` surface when prompted.
 
-OAuth is a separate browser step. `openclaw mcp login valency` starts the
-loopback callback and authorization flow; installation itself neither opens an
-account session nor embeds credentials. OpenClaw's exact shared-credential flow
-is documented in the pinned
+The `mcp set` command persists the endpoint in `mcp.servers`, making it visible
+to `mcp login` and downstream agent runtimes. OAuth is a separate browser step:
+`openclaw mcp login valency` starts the callback and authorization flow;
+installation itself neither opens an account session nor embeds credentials.
+See the pinned
 [MCP OAuth workflow](https://github.com/openclaw/openclaw/blob/fa09ec4c49b969794996158838cf69b1344165a3/docs/cli/mcp.md#L731-L814).
 
 No ClawHub or npm registry install command is documented because
@@ -154,18 +152,20 @@ created and pass review before it appears on normal install surfaces:
 
 ## Uninstall
 
-Clear the separately managed OAuth session before removing the package:
+Clear the separately managed OAuth session and MCP definition before removing
+the package:
 
 ```bash
 openclaw mcp logout valency
+openclaw mcp unset valency
 openclaw plugins uninstall valency
 openclaw gateway restart
 ```
 
-Removing plugin files is not evidence that saved OAuth credentials were
-cleared. Conversely, logging out does not remove the package. The explicit
-Gateway restart ensures the running process drops the skills and static MCP
-server.
+Removing plugin files clears neither saved OAuth credentials nor
+`mcp.servers.valency`. Conversely, removing the MCP definition does not remove
+the skills. The explicit Gateway restart ensures the running process drops
+both surfaces.
 
 ## Validation boundary
 
@@ -173,13 +173,15 @@ Repository packaging tests should pin:
 
 1. the exact package id, version, OpenClaw 2026.8.1 compatibility/build floor,
    direct JavaScript entry, and file inventory;
-2. the exact manifest id, strict empty config schema, seven-skill root, hosted
-   `streamable-http` endpoint, and `auth: "oauth"`;
-3. the absence of credentials, bearer tokens, authorization headers, local MCP
+2. the exact manifest id, strict empty config schema, seven-skill root, and
+   absence of a native manifest MCP contribution;
+3. the explicit operator `mcp set` endpoint, transport, and OAuth mode in
+   installation documentation;
+4. the absence of credentials, bearer tokens, authorization headers, local MCP
    wrappers, and alternate or profile-specific endpoints;
-4. exactly seven expected skill directories, each byte-identical to its root
+5. exactly seven expected skill directories, each byte-identical to its root
    canonical source; and
-5. package `LICENSE` equality plus install, uninstall, layout, and validation
+6. package `LICENSE` equality plus install, uninstall, layout, and validation
    documentation.
 
 Static tests and `npm pack --dry-run` catch repository and payload drift. They
@@ -193,15 +195,15 @@ OpenClaw version:
 1. Create the actual npm tarball and review its included files.
 2. Install it through `npm-pack:<tarball.tgz>`; a linked directory is useful
    for development but does not exercise managed package installation.
-3. Inspect `valency` with `openclaw plugins inspect valency --runtime --json`.
-   This loads a fresh CLI process and does not prove the already-running
-   Gateway has loaded the same package.
-4. Restart the Gateway and confirm a fresh session exposes all seven skills and
-   the `valency` MCP server.
-5. Run `openclaw mcp login valency`, then probe the server. Browser OAuth,
-   connection status, and tool discovery are separate results.
-6. Make one representative read-only Valency tool call.
-7. Exercise update and uninstall separately without changing unrelated
+3. Accept the reviewed package surface, enable the plugin, and inspect `valency`
+   with `openclaw plugins inspect valency --runtime --json`.
+4. Save the endpoint with the documented `openclaw mcp set` command.
+5. Restart the Gateway and confirm a fresh session exposes all seven skills.
+6. Run `openclaw mcp login valency`, then `openclaw mcp doctor valency
+   --probe`. Browser OAuth, connection status, and tool discovery are separate
+   results.
+7. Make one representative read-only Valency tool call.
+8. Exercise update and uninstall separately without changing unrelated
    OpenClaw configuration.
 
 If OAuth fails, retain only the non-sensitive callback URI after removing its

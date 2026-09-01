@@ -1,7 +1,7 @@
 {
   "name": "@valency-oss/openclaw-valency",
   "version": "0.1.0",
-  "description": "Connect OpenClaw to the hosted Valency MCP server.",
+  "description": "Install seven guided Valency research skills in OpenClaw.",
   "license": "MIT",
   "type": "module",
   "files": [

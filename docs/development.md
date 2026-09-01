@@ -12,8 +12,8 @@ They cover workflow routing and the Kiro Power. They also enforce byte-for-byte 
 across the shared root, Claude, Copilot, Cursor, Grok, OpenAI, OpenClaw, and
 Kiro copies. The Antigravity checks pin the exact `plugin.json` and
 `mcp_config.json` contracts and the host-specific rule. The OpenClaw checks pin
-its manifest-owned OAuth MCP server, package and runtime metadata, exact file
-inventory, license, and direct JavaScript entry.
+its skill-only manifest, explicit operator MCP setup, package and runtime
+metadata, exact file inventory, license, and direct JavaScript entry.
 
 The Kiro checks pin the supported `POWER.md` frontmatter, the credential-free
 remote endpoint in `mcp.json`, and the one-to-one mapping from all seven
@@ -131,15 +131,20 @@ application change separately from this provider package.
 
 ## OpenClaw package
 
-`plugins/openclaw/valency` is a self-contained native package for OpenClaw
-2026.8.1 and newer. Its checked-in ESM JavaScript entry is the installed
-runtime entry, so there is no TypeScript source or generated `dist/` tree to
-build or synchronize. The entry intentionally registers no tools: the static
-`openclaw.plugin.json` declaration connects OpenClaw to the hosted Valency MCP
-server, which owns the tool implementations.
+`plugins/openclaw/valency` is a self-contained native skill package for
+OpenClaw 2026.8.1 and newer. Its checked-in ESM JavaScript entry is the
+installed runtime entry, so there is no TypeScript source or generated `dist/`
+tree to build or synchronize. The entry intentionally registers no tools.
+
+The package manifest intentionally omits `mcpServers`. OpenClaw 2026.8.2 adds a
+plugin-root `cwd` while normalizing native manifest HTTP MCP servers; Codex
+rejects that field for `streamable_http`. In addition, `openclaw mcp login`
+authorizes only servers saved under operator-managed `mcp.servers`. Installation
+therefore keeps the seven skills in the package and configures the hosted server
+explicitly with `openclaw mcp set`.
 
 `npm test` is the repository's static contract check. It verifies the strict
-empty config schema, exact hosted `streamable-http` OAuth server, compatibility
+empty config schema, absence of a manifest MCP contribution, compatibility
 floor, JavaScript entry, seven byte-identical skills, license, and absence of
 credentials, authorization headers, alternate endpoints, or a local MCP
 wrapper. To inspect the package payload without publishing it, also review:
@@ -154,6 +159,7 @@ development, link the package and restart the Gateway:
 ```bash
 openclaw plugins install --link ./plugins/openclaw/valency
 openclaw plugins enable valency
+openclaw mcp set valency '{"url":"https://labs.valency.io/mcp/","transport":"streamable-http","auth":"oauth"}'
 openclaw plugins inspect valency --runtime --json
 openclaw gateway restart
 ```
@@ -166,18 +172,21 @@ and install that tarball through `npm-pack:`:
 npm pack ./plugins/openclaw/valency
 openclaw plugins install npm-pack:<tarball.tgz>
 openclaw plugins enable valency
+openclaw mcp set valency '{"url":"https://labs.valency.io/mcp/","transport":"streamable-http","auth":"oauth"}'
 openclaw plugins inspect valency --runtime --json
 openclaw gateway restart
 ```
 
 Then verify the running Gateway and a fresh OpenClaw session expose all seven
-skills and the `valency` MCP server. Complete authorization separately with
-`openclaw mcp login valency`, confirm the connection with `openclaw mcp doctor
-valency --probe`, and run one representative read-only Valency tool call.
-Record installation, runtime discovery, Gateway restart, OAuth, MCP probing,
-tool use, update, and uninstall as separate results. Static checks, a cold
-manifest inspection, and `plugins inspect --runtime` in a fresh CLI process do
-not prove that an already-running Gateway loaded the package.
+skills. Confirm `openclaw mcp status --verbose` reports the operator-managed
+`valency` server, complete authorization separately with `openclaw mcp login
+valency`, and confirm the connection with `openclaw mcp doctor valency
+--probe`. Run one representative read-only Valency tool call.
+
+Record installation, runtime discovery, MCP configuration, Gateway restart,
+OAuth, MCP probing, tool use, update, and uninstall as separate results. Static
+checks, a cold manifest inspection, and `plugins inspect --runtime` in a fresh
+CLI process do not prove that an already-running Gateway loaded the package.
 
 If OAuth fails, keep only the non-sensitive callback URI after removing its
 query and fragment. Redact authorization codes, access and refresh tokens,

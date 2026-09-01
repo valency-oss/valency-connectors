@@ -11,10 +11,10 @@
 # Valency Bond
 
 Valency Bond connects AI assistants to [Valency](https://valency.io) for
-research discovery and analysis. Each provider package connects to the hosted
-Valency Bond MCP server and includes seven guided workflows for researcher
-profiles, field landscapes, similar papers, publication trends, collaboration
-networks, reading lists, and fresh collaborators.
+research discovery and analysis. Its provider integrations combine the hosted
+Valency Bond MCP server with seven guided workflows for researcher profiles,
+field landscapes, similar papers, publication trends, collaboration networks,
+reading lists, and fresh collaborators.
 
 Authentication is handled through your agent's browser-based sign-in flow. The
 packages do not require a client secret, bearer token, or manually configured
@@ -115,14 +115,17 @@ OpenClaw 2026.8.1 or newer can install the native
 git clone https://github.com/valency-oss/valency-bond.git
 openclaw plugins install ./valency-bond/plugins/openclaw/valency
 openclaw plugins enable valency
+openclaw mcp set valency '{"url":"https://labs.valency.io/mcp/","transport":"streamable-http","auth":"oauth"}'
 openclaw gateway restart
 openclaw mcp login valency
 ```
 
-The final command starts a separate browser OAuth flow; installing the package
-does not authorize an account. A managed Gateway may restart automatically,
-but an explicit restart is safe and ensures the running Gateway sees the new
-package.
+The package installs the seven skills. The explicit `mcp set` command adds the
+hosted connection to OpenClaw's operator-managed MCP configuration, which is
+required before `mcp login` can authorize it. The final command starts a
+separate browser OAuth flow; installing the package does not authorize an
+account. A managed Gateway may restart automatically, but an explicit restart
+ensures the running Gateway sees the new skills and configured MCP server.
 
 Valency has not yet been published on ClawHub. ClawHub will be an optional
 distribution path, not a prerequisite for installing from this checkout.

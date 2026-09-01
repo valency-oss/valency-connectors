@@ -172,13 +172,13 @@ test("native Grok package is credential-free and contains only expected componen
   }
 });
 
-test("native OpenClaw package pins its managed MCP runtime contract", async () => {
+test("native OpenClaw package pins its skill and setup contract", async () => {
   const packageRoot = "plugins/openclaw/valency";
   const packagePath = `${packageRoot}/package.json`;
   const manifestPath = `${packageRoot}/openclaw.plugin.json`;
   const runtimePath = `${packageRoot}/index.js`;
   const runtimeContents = readFileSync(runtimePath, "utf8");
-  const description = "Connect OpenClaw to the hosted Valency MCP server.";
+  const description = "Install seven guided Valency research skills in OpenClaw.";
 
   assert.deepEqual(readJson(packagePath), {
     name: "@valency-oss/openclaw-valency",
@@ -214,13 +214,6 @@ test("native OpenClaw package pins its managed MCP runtime contract", async () =
     version: "0.1.0",
     description,
     skills: ["./skills"],
-    mcpServers: {
-      valency: {
-        url: "https://labs.valency.io/mcp/",
-        transport: "streamable-http",
-        auth: "oauth",
-      },
-    },
     configSchema: {
       type: "object",
       properties: {},
@@ -879,25 +872,41 @@ test("OpenClaw documentation keeps the unpublished local lifecycle honest", () =
   const openclawSection = readme.match(
     /^### OpenClaw$([\s\S]*?)(?=^### |^## )/m,
   )?.[1];
+  const openclawInstallCommands = openclawSection?.match(
+    /```bash\n([\s\S]*?)```/,
+  )?.[1];
+  const openclawUninstallSection = uninstall.match(
+    /^## OpenClaw$([\s\S]*?)(?=^## )/m,
+  )?.[1];
+  const openclawUninstallCommands = openclawUninstallSection?.match(
+    /```bash\n([\s\S]*?)```/,
+  )?.[1];
 
   assert.ok(openclawSection, "README must contain an OpenClaw install section");
   assert.match(openclawSection, /OpenClaw 2026\.8\.1 or newer/);
-  assert.match(
-    openclawSection,
-    /openclaw plugins install \.\/valency-bond\/plugins\/openclaw\/valency/,
-  );
-  assert.match(openclawSection, /openclaw plugins enable valency/);
-  assert.match(openclawSection, /openclaw gateway restart/);
-  assert.match(openclawSection, /openclaw mcp login valency/);
+  assert.deepEqual(openclawInstallCommands?.trim().split("\n"), [
+    "git clone https://github.com/valency-oss/valency-bond.git",
+    "openclaw plugins install ./valency-bond/plugins/openclaw/valency",
+    "openclaw plugins enable valency",
+    "openclaw mcp set valency '{\"url\":\"https://labs.valency.io/mcp/\",\"transport\":\"streamable-http\",\"auth\":\"oauth\"}'",
+    "openclaw gateway restart",
+    "openclaw mcp login valency",
+  ]);
   assert.match(openclawSection, /separate browser OAuth flow/);
   assert.match(openclawSection, /has not yet been published on ClawHub/);
   assert.doesNotMatch(openclawSection, /plugins install clawhub:/);
 
-  assert.match(uninstall, /^## OpenClaw$/m);
-  assert.match(uninstall, /openclaw mcp logout valency/);
-  assert.match(uninstall, /openclaw plugins uninstall valency/);
-  assert.match(uninstall, /openclaw gateway restart/);
-  assert.match(uninstall, /plugin removal alone.*saved OAuth session/s);
+  assert.ok(
+    openclawUninstallSection,
+    "uninstall guide must contain an OpenClaw section",
+  );
+  assert.deepEqual(openclawUninstallCommands?.trim().split("\n"), [
+    "openclaw mcp logout valency",
+    "openclaw mcp unset valency",
+    "openclaw plugins uninstall valency",
+    "openclaw gateway restart",
+  ]);
+  assert.match(uninstall, /plugin removal alone clears neither/);
 
   assert.match(development, /^## OpenClaw package$/m);
   assert.match(
@@ -906,6 +915,11 @@ test("OpenClaw documentation keeps the unpublished local lifecycle honest", () =
   );
   assert.match(development, /openclaw plugins install --link/);
   assert.match(development, /openclaw plugins install npm-pack:<tarball\.tgz>/);
+  assert.match(
+    development,
+    /openclaw mcp set valency '\{"url":"https:\/\/labs\.valency\.io\/mcp\/","transport":"streamable-http","auth":"oauth"\}'/,
+  );
+  assert.match(development, /manifest intentionally omits `mcpServers`/);
   assert.match(development, /Those checks do not execute an OpenClaw install/);
   assert.match(
     development,
@@ -914,7 +928,12 @@ test("OpenClaw documentation keeps the unpublished local lifecycle honest", () =
   assert.match(development, /not part of this\s+initial validation path/);
 
   assert.match(openclaw, /has\s+not been published on ClawHub/);
-  assert.match(openclaw, /does not claim a completed\s+live OpenClaw install/);
+  assert.match(
+    openclaw,
+    /Live testing on 2026-09-01 against OpenClaw\s+2026\.8\.2 confirmed package installation, all seven skills eligible, browser\s+OAuth, discovery of all 38 Valency MCP tools, and a successful read-only\s+`get_paper_by_id` call for `1706\.03762`\./,
+  );
+  assert.match(openclaw, /`openclaw mcp login` reads only servers saved/);
+  assert.match(openclaw, /Codex rejects `cwd` for\s+`streamable_http`/);
   assert.match(layout, /`plugins\/openclaw\/valency` \| OpenClaw/);
 });
 

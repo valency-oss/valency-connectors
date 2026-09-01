@@ -76,18 +76,20 @@ to remove it. Do not edit Kiro's generated MCP configuration directly.
 
 ## OpenClaw
 
-Remove the OAuth session before removing the plugin, then restart the Gateway:
+Clear the OAuth session and operator-managed MCP definition before removing the
+plugin, then restart the Gateway:
 
 ```bash
 openclaw mcp logout valency
+openclaw mcp unset valency
 openclaw plugins uninstall valency
 openclaw gateway restart
 ```
 
-OAuth credentials are managed separately from the package, so do not treat
-plugin removal alone as evidence that the saved OAuth session was cleared. A
-managed Gateway may restart automatically after uninstall; the explicit
-restart ensures the running Gateway drops the package's skills and MCP server.
+OAuth credentials and the MCP definition are managed separately from the
+package, so plugin removal alone clears neither. A managed Gateway may restart
+automatically after uninstall; the explicit restart ensures the running Gateway
+drops the package's skills and the operator-managed MCP server.
 
 ## Skills-only installation
 
