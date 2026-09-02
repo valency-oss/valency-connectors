@@ -8,7 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
-- A **Valency: Sign in** command that starts the Valency server interactively, which is what triggers the browser sign-in. Chat's automatic server start deliberately suppresses prompts, so this gives users a one-click path to connect.
+- A **Valency: Sign in** command that starts the Valency server interactively, which is what triggers the browser sign-in. Chat's automatic server start deliberately suppresses prompts, so this gives users a one-click path to connect. The command shows progress while connecting, then confirms with the number of research tools available (with an **Open Chat** shortcut) or warns with a **Show Output** shortcut if the connection did not complete.
 - First-run onboarding: the extension now activates once on install, opens the **Get started with Valency** walkthrough directly (instead of relying on VS Code's install-time heuristics, which skip command-line and repeat installs), and shows a notification with a **Sign in** button.
 
 ### Changed
