@@ -244,7 +244,17 @@ test("the extension activates on startup and owns first-run onboarding", () => {
   assert.match(extensionSource, /registerCommand\("valency\.signIn"/);
   assert.match(
     extensionSource,
-    /"workbench\.action\.openWalkthrough",\s*WALKTHROUGH_ID/,
+    /"workbench\.action\.openWalkthrough",\s*target,/,
+  );
+  assert.match(
+    extensionSource,
+    /\{ category: WALKTHROUGH_ID, step: "valency\.signIn" \}/,
+    "open with a step: VS Code then treats repeats as reveal-only instead of rebuilding the page, which flashed",
+  );
+  assert.match(
+    extensionSource,
+    /&& !walkthroughTabIsOpen\(\); attempt\+\+/,
+    "never issue an open when a Valency walkthrough tab already exists",
   );
   assert.match(
     extensionSource,

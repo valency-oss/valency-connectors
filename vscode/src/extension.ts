@@ -205,21 +205,19 @@ async function showFirstRun(): Promise<void> {
 }
 
 // VS Code registers contributed walkthroughs asynchronously after startup, and
-// opening ours before that silently lands on the generic Welcome page. Keep
-// re-opening until a tab for our walkthrough exists (its label carries the
-// extension display name and it is not a text, notebook, or terminal tab).
+// opening ours before that silently lands on the generic Welcome page, so the
+// open is retried until a tab for our walkthrough exists. Passing a step makes
+// each repeat idempotent: when the walkthrough is already showing, VS Code only
+// reveals the step instead of rebuilding the page, so retries never flash.
 async function openWalkthroughWhenRegistered(): Promise<void> {
-  const deadline = Date.now() + 15000;
-  while (Date.now() < deadline) {
+  const target = { category: WALKTHROUGH_ID, step: "valency.signIn" };
+  for (let attempt = 0; attempt < 10 && !walkthroughTabIsOpen(); attempt++) {
     await vscode.commands.executeCommand(
       "workbench.action.openWalkthrough",
-      WALKTHROUGH_ID,
+      target,
       false,
     );
     await delay(1000);
-    if (walkthroughTabIsOpen()) {
-      return;
-    }
   }
 }
 
