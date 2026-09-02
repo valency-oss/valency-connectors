@@ -6,7 +6,7 @@ This extension connects VS Code's agent to the hosted [Valency](https://valency.
 
 ## What you get
 
-- **The Valency MCP server**, registered automatically at `https://mcp.valency.io/`. VS Code handles trust and browser sign-in; the extension ships no credentials and reads nothing from your workspace.
+- **The Valency MCP server**, registered automatically at `https://mcp.valency.io/`. VS Code handles the browser sign-in; the extension ships no credentials and reads nothing from your workspace.
 - **Seven agent skills**, selected automatically by what you ask:
 
 | Skill | Ask things like |
@@ -21,10 +21,9 @@ This extension connects VS Code's agent to the hosted [Valency](https://valency.
 
 ## Getting started
 
-1. Install the extension — the **Get started with Valency** walkthrough opens automatically.
-2. When the Valency server first starts, approve VS Code's one-time trust prompt.
-3. Sign in with Valency when your browser opens.
-4. Ask the agent: **"Profile Yoshua Bengio"**.
+1. Install the extension — the **Get started with Valency** walkthrough opens, along with a notification offering to sign in.
+2. Choose **Sign in** (or run **Valency: Sign in** from the Command Palette) and complete the sign-in when your browser opens.
+3. Ask the agent: **"Profile Yoshua Bengio"**.
 
 ## Requirements
 

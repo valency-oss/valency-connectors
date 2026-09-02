@@ -235,3 +235,41 @@ test("the walkthrough contributes three steps with packaged media", () => {
     );
   }
 });
+
+test("the extension activates on startup and owns first-run onboarding", () => {
+  assert.deepEqual(manifest.activationEvents, ["onStartupFinished"]);
+  assert.deepEqual(manifest.contributes.commands, [
+    { command: "valency.signIn", title: "Sign in", category: "Valency" },
+  ]);
+  assert.match(extensionSource, /registerCommand\("valency\.signIn"/);
+  assert.match(
+    extensionSource,
+    /"workbench\.action\.openWalkthrough",\s*WALKTHROUGH_ID/,
+  );
+  assert.match(
+    extensionSource,
+    /WALKTHROUGH_ID = "valencyio\.valency#valency\.gettingStarted"/,
+  );
+  assert.match(
+    extensionSource,
+    /SERVER_ID = "valencyio\.valency\/Valency"/,
+    "VS Code derives the server id from the extension id and the definition label",
+  );
+  assert.match(extensionSource, /"workbench\.mcp\.startServer",\s*SERVER_ID/);
+  assert.match(extensionSource, /"workbench\.mcp\.listServer"/);
+});
+
+test("the walkthrough's sign-in step drives the sign-in command", () => {
+  const [walkthrough] = manifest.contributes.walkthroughs;
+  const signInStep = walkthrough.steps.find((step) => step.id === "valency.signIn");
+  assert.ok(signInStep, "walkthrough must contain the valency.signIn step");
+  assert.match(signInStep.description, /\[Sign in\]\(command:valency\.signIn\)/);
+  assert.deepEqual(signInStep.completionEvents, ["onCommand:valency.signIn"]);
+  for (const step of walkthrough.steps) {
+    assert.doesNotMatch(
+      `${step.title} ${step.description}`,
+      /trust/i,
+      "extension-contributed MCP servers are trusted by default; no trust step",
+    );
+  }
+});
