@@ -4,6 +4,12 @@ All notable changes to the Valency VS Code extension are documented in this file
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.6] - 2026-09-02
+
+### Fixed
+
+- The walkthrough no longer flashes after it opens. The opener retried the open command with the bare walkthrough id, which made VS Code rebuild the page on every retry; it now opens the sign-in step directly, which VS Code treats as a no-op once the walkthrough is showing, and it skips opening altogether when a Valency walkthrough tab already exists.
+
 ## [0.1.5] - 2026-09-02
 
 ### Fixed
