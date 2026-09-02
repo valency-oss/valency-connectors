@@ -13,7 +13,7 @@ Open the Extensions view, select the gear icon on **Valency**, and choose
 code --uninstall-extension valencyio.valency
 ```
 
-Server trust and sign-in state are managed by VS Code, not the extension. To
+Sign-in state is managed by VS Code, not the extension. To
 remove the cached sign-in, sign out of the Valency entry in the Accounts menu;
 the **MCP: List Servers** command shows any remaining server state.
 

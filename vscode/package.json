@@ -2,7 +2,7 @@
   "name": "valency",
   "displayName": "Valency",
   "publisher": "valencyio",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Search, discover, and analyze tens of millions of research papers and preprints.",
   "author": {
     "name": "Valency Systems Inc"
@@ -14,7 +14,9 @@
     "vscode": "^1.109.0"
   },
   "main": "./dist/extension.js",
-  "activationEvents": [],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
   "icon": "assets/icon.png",
   "categories": [
     "Machine Learning",
@@ -39,6 +41,13 @@
       {
         "id": "valency.mcp",
         "label": "Valency"
+      }
+    ],
+    "commands": [
+      {
+        "command": "valency.signIn",
+        "title": "Sign in",
+        "category": "Valency"
       }
     ],
     "chatSkills": [
@@ -79,12 +88,15 @@
             }
           },
           {
-            "id": "valency.trustAndSignIn",
-            "title": "Trust the server and sign in",
-            "description": "The first time the Valency server starts, VS Code shows a one-time trust prompt, then opens your browser to sign in.\n[Open Chat](command:workbench.action.chat.open)",
+            "id": "valency.signIn",
+            "title": "Sign in to Valency",
+            "description": "One browser sign-in connects your agent to the hosted corpus. VS Code stores it and refreshes it automatically.\n[Sign in](command:valency.signIn)",
             "media": {
-              "markdown": "walkthrough/trust-and-signin.md"
-            }
+              "markdown": "walkthrough/sign-in.md"
+            },
+            "completionEvents": [
+              "onCommand:valency.signIn"
+            ]
           },
           {
             "id": "valency.firstSkill",
