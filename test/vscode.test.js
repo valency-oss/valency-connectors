@@ -271,6 +271,12 @@ test("the extension activates on startup and owns first-run onboarding", () => {
     /statSync\(context\.extensionPath\)\.mtimeMs/,
     "onboarding keys on the install directory so reinstalls onboard again",
   );
+  assert.match(
+    extensionSource,
+    /installedTimestamp/,
+    "a same-version reinstall reuses the folder without re-extracting, so the registry's installedTimestamp must be consulted too",
+  );
+  assert.match(extensionSource, /Math\.max\(folderMtime, installedTimestamp\)/);
   assert.doesNotMatch(
     extensionSource,
     /get<boolean>\("valency\.onboarded"\)/,
