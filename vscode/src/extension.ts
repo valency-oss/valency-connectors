@@ -187,11 +187,11 @@ async function signIn(): Promise<void> {
 }
 
 async function showFirstRun(): Promise<void> {
-  const openWalkthrough = vscode.workspace
+  const walkthroughEnabled = vscode.workspace
     .getConfiguration("workbench.welcomePage.walkthroughs")
     .get<boolean>("openOnInstall", true);
-  if (openWalkthrough) {
-    void openWalkthroughWhenRegistered();
+  if (walkthroughEnabled) {
+    void openWalkthrough();
   }
 
   const signInAction = "Sign in";
@@ -204,42 +204,17 @@ async function showFirstRun(): Promise<void> {
   }
 }
 
-// VS Code registers contributed walkthroughs asynchronously after startup, and
-// opening ours before that lands on the generic Welcome list instead. Opening
-// the sign-in step is idempotent (VS Code only reveals the step when the
-// walkthrough is already showing), so the open is retried a few times over the
-// window VS Code needs. Tab labels alone cannot confirm success, because the
-// "Extension: Valency" details tab looks identical to "Walkthrough: Valency"
-// through the API, so success is judged by what the open changed: a different
-// Valency-labelled tab became active, or nothing changed because the
-// walkthrough was already the active editor.
-async function openWalkthroughWhenRegistered(): Promise<void> {
-  const target = { category: WALKTHROUGH_ID, step: "valency.signIn" };
-  const before = activeTabLabel();
-  for (const wait of [0, 1500, 2000, 2500]) {
-    await delay(wait);
-    await vscode.commands.executeCommand(
-      "workbench.action.openWalkthrough",
-      target,
-      false,
-    );
-    await delay(300);
-    const after = activeTabLabel();
-    const opened = after !== before && after.includes("Valency");
-    const alreadyShowing = after === before && before.includes("Valency");
-    log.info(`walkthrough open: before="${before}" after="${after}" opened=${opened} alreadyShowing=${alreadyShowing}`);
-    if (opened || alreadyShowing) {
-      return;
-    }
-  }
-}
-
-function activeTabLabel(): string {
-  const tab = vscode.window.tabGroups.activeTabGroup.activeTab;
-  if (!tab) {
-    return "";
-  }
-  return tab.label;
+// One open is enough. VS Code registers contributed walkthroughs shortly
+// after startup; if the open lands before that, the Welcome editor keeps the
+// requested category and switches to it as soon as the walkthrough registers.
+// Re-opening is harmful: it brings the page back after the user closes it.
+async function openWalkthrough(): Promise<void> {
+  await vscode.commands.executeCommand(
+    "workbench.action.openWalkthrough",
+    { category: WALKTHROUGH_ID, step: "valency.signIn" },
+    false,
+  );
+  log.info("walkthrough opened");
 }
 
 function countValencyTools(): number {

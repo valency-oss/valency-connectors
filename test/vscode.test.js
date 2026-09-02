@@ -244,27 +244,18 @@ test("the extension activates on startup and owns first-run onboarding", () => {
   assert.match(extensionSource, /registerCommand\("valency\.signIn"/);
   assert.match(
     extensionSource,
-    /"workbench\.action\.openWalkthrough",\s*target,/,
-  );
-  assert.match(
-    extensionSource,
-    /\{ category: WALKTHROUGH_ID, step: "valency\.signIn" \}/,
+    /"workbench\.action\.openWalkthrough",\s*\{ category: WALKTHROUGH_ID, step: "valency\.signIn" \},/,
     "open with a step: VS Code then treats repeats as reveal-only instead of rebuilding the page, which flashed",
+  );
+  assert.equal(
+    (extensionSource.match(/workbench\.action\.openWalkthrough/g) || []).length,
+    1,
+    "the walkthrough is opened exactly once per install; VS Code re-renders to it when it registers, and re-opening brought the page back after the user closed it",
   );
   assert.doesNotMatch(
     extensionSource,
-    /tab\.input === undefined && tab\.label\.includes\("Valency"\)/,
-    "the Extension: Valency details tab is indistinguishable from the walkthrough tab by label and input kind; that check skipped opening on reinstall",
-  );
-  assert.match(
-    extensionSource,
-    /const opened = after !== before && after\.includes\("Valency"\)/,
-    "success is judged by the open changing the active tab to a Valency-labelled one",
-  );
-  assert.match(
-    extensionSource,
-    /activeTabGroup\.activeTab/,
-    "the walkthrough must be re-opened until it is showing: VS Code registers walkthroughs asynchronously and an early open silently shows the Welcome page",
+    /activeTab|tabGroups/,
+    "tab labels cannot confirm the walkthrough is showing (the walkthrough tab is labelled Welcome), so no tab-based retry logic",
   );
   assert.match(
     extensionSource,
