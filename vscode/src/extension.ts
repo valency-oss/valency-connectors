@@ -1,4 +1,5 @@
-import { statSync } from "fs";
+import { readFileSync, statSync } from "fs";
+import { dirname, join } from "path";
 import * as vscode from "vscode";
 
 const WALKTHROUGH_ID = "valencyio.valency#valency.gettingStarted";
@@ -27,19 +28,45 @@ export async function activate(
     vscode.commands.registerCommand("valency.signIn", signIn),
   );
 
-  // VS Code extracts a fresh directory on every install, so its mtime is an
-  // install marker: reinstalls onboard again, while a version update on an
-  // already-onboarded install stays quiet. Global state alone would not do,
-  // because VS Code keeps it across uninstall and reinstall.
+  // Reinstalls onboard again, while a version update on an already-onboarded
+  // install stays quiet. Global state alone would not do, because VS Code
+  // keeps it across uninstall and reinstall.
   const current: InstallRecord = {
     version: String(context.extension.packageJSON.version),
-    installedAt: statSync(context.extensionPath).mtimeMs,
+    installedAt: installMarker(context),
   };
   const previous = context.globalState.get<InstallRecord>(INSTALL_KEY);
   await context.globalState.update(INSTALL_KEY, current);
   if (shouldOnboard(previous, current)) {
     void showFirstRun();
   }
+}
+
+// VS Code records installedTimestamp in the extensions registry on every
+// install, including a same-version reinstall that reuses the existing folder
+// without re-extracting it. A fresh extraction also bumps the folder's mtime.
+// Either signal moving forward means a new install, so take the newer one.
+function installMarker(context: vscode.ExtensionContext): number {
+  const folderMtime = statSync(context.extensionPath).mtimeMs;
+  let installedTimestamp = 0;
+  try {
+    const registryPath = join(dirname(context.extensionPath), "extensions.json");
+    const entries = JSON.parse(readFileSync(registryPath, "utf8")) as Array<{
+      identifier: { id: string };
+      metadata: { installedTimestamp: number };
+    }>;
+    for (const entry of entries) {
+      const matches =
+        entry.identifier &&
+        entry.identifier.id.toLowerCase() === context.extension.id.toLowerCase();
+      if (matches && entry.metadata && typeof entry.metadata.installedTimestamp === "number") {
+        installedTimestamp = entry.metadata.installedTimestamp;
+      }
+    }
+  } catch {
+    // Registry unreadable (for example a non-default profile layout): fall back to the folder.
+  }
+  return Math.max(folderMtime, installedTimestamp);
 }
 
 function shouldOnboard(
