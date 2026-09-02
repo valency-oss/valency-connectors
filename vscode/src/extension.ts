@@ -1,7 +1,13 @@
+import { statSync } from "fs";
 import * as vscode from "vscode";
 
 const WALKTHROUGH_ID = "valencyio.valency#valency.gettingStarted";
-const ONBOARDED_KEY = "valency.onboarded";
+const INSTALL_KEY = "valency.install";
+
+interface InstallRecord {
+  version: string;
+  installedAt: number;
+}
 
 // VS Code derives the server id from the extension id and the definition label.
 const SERVER_ID = "valencyio.valency/Valency";
@@ -21,10 +27,32 @@ export async function activate(
     vscode.commands.registerCommand("valency.signIn", signIn),
   );
 
-  if (!context.globalState.get<boolean>(ONBOARDED_KEY)) {
-    await context.globalState.update(ONBOARDED_KEY, true);
+  // VS Code extracts a fresh directory on every install, so its mtime is an
+  // install marker: reinstalls onboard again, while a version update on an
+  // already-onboarded install stays quiet. Global state alone would not do,
+  // because VS Code keeps it across uninstall and reinstall.
+  const current: InstallRecord = {
+    version: String(context.extension.packageJSON.version),
+    installedAt: statSync(context.extensionPath).mtimeMs,
+  };
+  const previous = context.globalState.get<InstallRecord>(INSTALL_KEY);
+  await context.globalState.update(INSTALL_KEY, current);
+  if (shouldOnboard(previous, current)) {
     void showFirstRun();
   }
+}
+
+function shouldOnboard(
+  previous: InstallRecord | undefined,
+  current: InstallRecord,
+): boolean {
+  if (!previous) {
+    return true;
+  }
+  if (previous.version !== current.version) {
+    return false;
+  }
+  return previous.installedAt !== current.installedAt;
 }
 
 // Starting the server interactively is what triggers the browser sign-in.
