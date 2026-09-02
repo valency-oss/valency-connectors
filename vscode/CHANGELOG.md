@@ -4,6 +4,17 @@ All notable changes to the Valency VS Code extension are documented in this file
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.5] - 2026-09-02
+
+### Fixed
+
+- Reinstalling after uninstalling did not onboard when the reinstalled version differed from the previously recorded one, because a version change was treated as an automatic update. The extension now uses the `updated` flag VS Code records on every install: fresh installs and reinstalls onboard, while automatic updates and the Update button stay quiet.
+- The install registry is now read from the active profile's location as well as the shared extensions folder, so named profiles are detected correctly.
+
+### Added
+
+- A **Valency** output channel that logs each onboarding decision and the install facts behind it.
+
 ## [0.1.4] - 2026-09-02
 
 ### Fixed
