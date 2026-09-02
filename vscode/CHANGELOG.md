@@ -10,6 +10,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 - The walkthrough now leads with **Sign in to Valency**, followed by what was installed and running a first skill, so new users connect before anything else.
 - Onboarding (walkthrough plus the sign-in notification) now runs again when the extension is reinstalled, not only on the very first install. Updating an already-onboarded install stays quiet.
+- The walkthrough is re-opened until VS Code has actually registered it, since opening it too early after startup silently showed the generic Welcome page instead. The sign-in notification no longer waits on the walkthrough.
 
 ## [0.1.2] - 2026-09-02
 

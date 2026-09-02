@@ -102,30 +102,12 @@ async function signIn(): Promise<void> {
   }
 }
 
-function countValencyTools(): number {
-  return vscode.lm.tools.filter(
-    (tool) =>
-      tool.name.startsWith("mcp_") && tool.name.toLowerCase().includes("valency"),
-  ).length;
-}
-
-async function waitForValencyTools(timeoutMs: number): Promise<void> {
-  const deadline = Date.now() + timeoutMs;
-  while (countValencyTools() === 0 && Date.now() < deadline) {
-    await new Promise((resolve) => setTimeout(resolve, 250));
-  }
-}
-
 async function showFirstRun(): Promise<void> {
   const openWalkthrough = vscode.workspace
     .getConfiguration("workbench.welcomePage.walkthroughs")
     .get<boolean>("openOnInstall", true);
   if (openWalkthrough) {
-    await vscode.commands.executeCommand(
-      "workbench.action.openWalkthrough",
-      WALKTHROUGH_ID,
-      false,
-    );
+    void openWalkthroughWhenRegistered();
   }
 
   const signInAction = "Sign in";
@@ -136,4 +118,49 @@ async function showFirstRun(): Promise<void> {
   if (choice === signInAction) {
     await signIn();
   }
+}
+
+// VS Code registers contributed walkthroughs asynchronously after startup, and
+// opening ours before that silently lands on the generic Welcome page. Keep
+// re-opening until a tab for our walkthrough exists (its label carries the
+// extension display name and it is not a text, notebook, or terminal tab).
+async function openWalkthroughWhenRegistered(): Promise<void> {
+  const deadline = Date.now() + 15000;
+  while (Date.now() < deadline) {
+    await vscode.commands.executeCommand(
+      "workbench.action.openWalkthrough",
+      WALKTHROUGH_ID,
+      false,
+    );
+    await delay(1000);
+    if (walkthroughTabIsOpen()) {
+      return;
+    }
+  }
+}
+
+function walkthroughTabIsOpen(): boolean {
+  return vscode.window.tabGroups.all.some((group) =>
+    group.tabs.some(
+      (tab) => tab.input === undefined && tab.label.includes("Valency"),
+    ),
+  );
+}
+
+function countValencyTools(): number {
+  return vscode.lm.tools.filter(
+    (tool) =>
+      tool.name.startsWith("mcp_") && tool.name.toLowerCase().includes("valency"),
+  ).length;
+}
+
+async function waitForValencyTools(timeoutMs: number): Promise<void> {
+  const deadline = Date.now() + timeoutMs;
+  while (countValencyTools() === 0 && Date.now() < deadline) {
+    await delay(250);
+  }
+}
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
