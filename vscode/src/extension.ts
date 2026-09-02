@@ -205,28 +205,41 @@ async function showFirstRun(): Promise<void> {
 }
 
 // VS Code registers contributed walkthroughs asynchronously after startup, and
-// opening ours before that silently lands on the generic Welcome page, so the
-// open is retried until a tab for our walkthrough exists. Passing a step makes
-// each repeat idempotent: when the walkthrough is already showing, VS Code only
-// reveals the step instead of rebuilding the page, so retries never flash.
+// opening ours before that lands on the generic Welcome list instead. Opening
+// the sign-in step is idempotent (VS Code only reveals the step when the
+// walkthrough is already showing), so the open is retried a few times over the
+// window VS Code needs. Tab labels alone cannot confirm success, because the
+// "Extension: Valency" details tab looks identical to "Walkthrough: Valency"
+// through the API, so success is judged by what the open changed: a different
+// Valency-labelled tab became active, or nothing changed because the
+// walkthrough was already the active editor.
 async function openWalkthroughWhenRegistered(): Promise<void> {
   const target = { category: WALKTHROUGH_ID, step: "valency.signIn" };
-  for (let attempt = 0; attempt < 10 && !walkthroughTabIsOpen(); attempt++) {
+  const before = activeTabLabel();
+  for (const wait of [0, 1500, 2000, 2500]) {
+    await delay(wait);
     await vscode.commands.executeCommand(
       "workbench.action.openWalkthrough",
       target,
       false,
     );
-    await delay(1000);
+    await delay(300);
+    const after = activeTabLabel();
+    const opened = after !== before && after.includes("Valency");
+    const alreadyShowing = after === before && before.includes("Valency");
+    log.info(`walkthrough open: before="${before}" after="${after}" opened=${opened} alreadyShowing=${alreadyShowing}`);
+    if (opened || alreadyShowing) {
+      return;
+    }
   }
 }
 
-function walkthroughTabIsOpen(): boolean {
-  return vscode.window.tabGroups.all.some((group) =>
-    group.tabs.some(
-      (tab) => tab.input === undefined && tab.label.includes("Valency"),
-    ),
-  );
+function activeTabLabel(): string {
+  const tab = vscode.window.tabGroups.activeTabGroup.activeTab;
+  if (!tab) {
+    return "";
+  }
+  return tab.label;
 }
 
 function countValencyTools(): number {
