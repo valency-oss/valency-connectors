@@ -248,6 +248,11 @@ test("the extension activates on startup and owns first-run onboarding", () => {
   );
   assert.match(
     extensionSource,
+    /tabGroups\.all\.some/,
+    "the walkthrough must be re-opened until its tab exists: VS Code registers walkthroughs asynchronously and an early open silently shows the Welcome page",
+  );
+  assert.match(
+    extensionSource,
     /WALKTHROUGH_ID = "valencyio\.valency#valency\.gettingStarted"/,
   );
   assert.match(
