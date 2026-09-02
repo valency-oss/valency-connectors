@@ -2,7 +2,7 @@
   "name": "valency",
   "displayName": "Valency",
   "publisher": "valencyio",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Search, discover, and analyze tens of millions of research papers and preprints.",
   "author": {
     "name": "Valency Systems Inc"
@@ -77,8 +77,19 @@
       {
         "id": "valency.gettingStarted",
         "title": "Get started with Valency",
-        "description": "Connect your agent to tens of millions of research papers in three steps.",
+        "description": "Sign in, see what was installed, and run your first skill.",
         "steps": [
+          {
+            "id": "valency.signIn",
+            "title": "Sign in to Valency",
+            "description": "Sign in once to connect your agent to the hosted corpus. VS Code stores the sign-in and refreshes it automatically.\n[Sign in](command:valency.signIn)",
+            "media": {
+              "markdown": "walkthrough/sign-in.md"
+            },
+            "completionEvents": [
+              "onCommand:valency.signIn"
+            ]
+          },
           {
             "id": "valency.installed",
             "title": "See what was installed",
@@ -86,17 +97,6 @@
             "media": {
               "markdown": "walkthrough/installed.md"
             }
-          },
-          {
-            "id": "valency.signIn",
-            "title": "Sign in to Valency",
-            "description": "One browser sign-in connects your agent to the hosted corpus. VS Code stores it and refreshes it automatically.\n[Sign in](command:valency.signIn)",
-            "media": {
-              "markdown": "walkthrough/sign-in.md"
-            },
-            "completionEvents": [
-              "onCommand:valency.signIn"
-            ]
           },
           {
             "id": "valency.firstSkill",

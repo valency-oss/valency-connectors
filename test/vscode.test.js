@@ -263,6 +263,16 @@ test("the extension activates on startup and owns first-run onboarding", () => {
   assert.match(extensionSource, /"workbench\.mcp\.showOutput",\s*SERVER_ID/);
   assert.match(
     extensionSource,
+    /statSync\(context\.extensionPath\)\.mtimeMs/,
+    "onboarding keys on the install directory so reinstalls onboard again",
+  );
+  assert.doesNotMatch(
+    extensionSource,
+    /get<boolean>\("valency\.onboarded"\)/,
+    "a persisted boolean would survive uninstall and suppress reinstall onboarding",
+  );
+  assert.match(
+    extensionSource,
     /withProgress\(/,
     "sign-in must show progress: the start command gives no feedback of its own",
   );
@@ -275,8 +285,12 @@ test("the extension activates on startup and owns first-run onboarding", () => {
 
 test("the walkthrough's sign-in step drives the sign-in command", () => {
   const [walkthrough] = manifest.contributes.walkthroughs;
-  const signInStep = walkthrough.steps.find((step) => step.id === "valency.signIn");
-  assert.ok(signInStep, "walkthrough must contain the valency.signIn step");
+  assert.deepEqual(
+    walkthrough.steps.map((step) => step.id),
+    ["valency.signIn", "valency.installed", "valency.firstSkill"],
+    "sign-in comes first so users connect before anything else",
+  );
+  const signInStep = walkthrough.steps[0];
   assert.match(signInStep.description, /\[Sign in\]\(command:valency\.signIn\)/);
   assert.deepEqual(signInStep.completionEvents, ["onCommand:valency.signIn"]);
   for (const step of walkthrough.steps) {

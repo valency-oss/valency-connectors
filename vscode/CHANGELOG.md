@@ -4,6 +4,13 @@ All notable changes to the Valency VS Code extension are documented in this file
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.3] - 2026-09-02
+
+### Changed
+
+- The walkthrough now leads with **Sign in to Valency**, followed by what was installed and running a first skill, so new users connect before anything else.
+- Onboarding (walkthrough plus the sign-in notification) now runs again when the extension is reinstalled, not only on the very first install. Updating an already-onboarded install stays quiet.
+
 ## [0.1.2] - 2026-09-02
 
 ### Added
