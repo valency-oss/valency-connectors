@@ -255,8 +255,22 @@ test("the extension activates on startup and owns first-run onboarding", () => {
     /SERVER_ID = "valencyio\.valency\/Valency"/,
     "VS Code derives the server id from the extension id and the definition label",
   );
-  assert.match(extensionSource, /"workbench\.mcp\.startServer",\s*SERVER_ID/);
+  assert.match(
+    extensionSource,
+    /"workbench\.mcp\.startServer",\s*SERVER_ID,\s*\{ waitForLiveTools: true \}/,
+  );
   assert.match(extensionSource, /"workbench\.mcp\.listServer"/);
+  assert.match(extensionSource, /"workbench\.mcp\.showOutput",\s*SERVER_ID/);
+  assert.match(
+    extensionSource,
+    /withProgress\(/,
+    "sign-in must show progress: the start command gives no feedback of its own",
+  );
+  assert.match(
+    extensionSource,
+    /vscode\.lm\.tools/,
+    "success is confirmed by the server's tools appearing in vscode.lm.tools",
+  );
 });
 
 test("the walkthrough's sign-in step drives the sign-in command", () => {
