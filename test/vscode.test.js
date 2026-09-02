@@ -277,6 +277,22 @@ test("the extension activates on startup and owns first-run onboarding", () => {
     "a same-version reinstall reuses the folder without re-extracting, so the registry's installedTimestamp must be consulted too",
   );
   assert.match(extensionSource, /Math\.max\(folderMtime, installedTimestamp\)/);
+  assert.match(
+    extensionSource,
+    /registry\.updated/,
+    "quiet only when VS Code marks the install as an update; a version change alone must not suppress onboarding",
+  );
+  assert.doesNotMatch(
+    extensionSource,
+    /previous\.version !== current\.version\) \{\n\s*return false/,
+    "the old version-change rule suppressed onboarding after uninstall + install of a newer version",
+  );
+  assert.match(extensionSource, /createOutputChannel\("Valency", \{ log: true \}\)/);
+  assert.match(
+    extensionSource,
+    /globalStorageUri\.fsPath, "\.\.", "\.\.", "extensions\.json"/,
+    "named profiles keep their registry in the profile directory",
+  );
   assert.doesNotMatch(
     extensionSource,
     /get<boolean>\("valency\.onboarded"\)/,

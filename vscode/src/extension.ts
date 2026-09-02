@@ -10,13 +10,23 @@ interface InstallRecord {
   installedAt: number;
 }
 
+// What VS Code's extensions registry says about the current install.
+interface RegistryEntry {
+  installedTimestamp: number;
+  updated: boolean;
+}
+
 // VS Code derives the server id from the extension id and the definition label.
 const SERVER_ID = "valencyio.valency/Valency";
+
+let log: vscode.LogOutputChannel;
 
 export async function activate(
   context: vscode.ExtensionContext,
 ): Promise<void> {
+  log = vscode.window.createOutputChannel("Valency", { log: true });
   context.subscriptions.push(
+    log,
     vscode.lm.registerMcpServerDefinitionProvider("valency.mcp", {
       provideMcpServerDefinitions: () => [
         new vscode.McpHttpServerDefinition(
@@ -28,58 +38,105 @@ export async function activate(
     vscode.commands.registerCommand("valency.signIn", signIn),
   );
 
-  // Reinstalls onboard again, while a version update on an already-onboarded
-  // install stays quiet. Global state alone would not do, because VS Code
-  // keeps it across uninstall and reinstall.
+  const registry = readRegistryEntry(context);
   const current: InstallRecord = {
     version: String(context.extension.packageJSON.version),
-    installedAt: installMarker(context),
+    installedAt: installMarker(context, registry),
   };
   const previous = context.globalState.get<InstallRecord>(INSTALL_KEY);
   await context.globalState.update(INSTALL_KEY, current);
-  if (shouldOnboard(previous, current)) {
+
+  const decision = onboardingDecision(previous, current, registry);
+  log.info(
+    `activate: previous=${JSON.stringify(previous)} current=${JSON.stringify(current)} registry=${JSON.stringify(registry)} onboard=${decision.onboard} (${decision.reason})`,
+  );
+  if (decision.onboard) {
     void showFirstRun();
   }
 }
 
-// VS Code records installedTimestamp in the extensions registry on every
-// install, including a same-version reinstall that reuses the existing folder
-// without re-extracting it. A fresh extraction also bumps the folder's mtime.
-// Either signal moving forward means a new install, so take the newer one.
-function installMarker(context: vscode.ExtensionContext): number {
-  const folderMtime = statSync(context.extensionPath).mtimeMs;
-  let installedTimestamp = 0;
-  try {
-    const registryPath = join(dirname(context.extensionPath), "extensions.json");
-    const entries = JSON.parse(readFileSync(registryPath, "utf8")) as Array<{
-      identifier: { id: string };
-      metadata: { installedTimestamp: number };
-    }>;
-    for (const entry of entries) {
-      const matches =
-        entry.identifier &&
-        entry.identifier.id.toLowerCase() === context.extension.id.toLowerCase();
-      if (matches && entry.metadata && typeof entry.metadata.installedTimestamp === "number") {
-        installedTimestamp = entry.metadata.installedTimestamp;
-      }
-    }
-  } catch {
-    // Registry unreadable (for example a non-default profile layout): fall back to the folder.
-  }
-  return Math.max(folderMtime, installedTimestamp);
-}
-
-function shouldOnboard(
+// Onboarding must run on every fresh install and every reinstall, and stay
+// quiet on updates of an install that is already set up. Global state alone
+// cannot tell these apart: VS Code keeps it across uninstall and reinstall.
+// VS Code's registry can: installedTimestamp moves on every install, even a
+// same-version reinstall that reuses the folder, and `updated` is true only
+// when the install replaced an existing one (auto-update or Update button).
+function onboardingDecision(
   previous: InstallRecord | undefined,
   current: InstallRecord,
-): boolean {
+  registry: RegistryEntry | undefined,
+): { onboard: boolean; reason: string } {
   if (!previous) {
-    return true;
+    return { onboard: true, reason: "no install record" };
   }
-  if (previous.version !== current.version) {
-    return false;
+  if (current.installedAt === previous.installedAt) {
+    return { onboard: false, reason: "install marker unchanged" };
   }
-  return previous.installedAt !== current.installedAt;
+  if (registry) {
+    if (registry.updated) {
+      return { onboard: false, reason: "registry marks this install as an update" };
+    }
+    return { onboard: true, reason: "new install per registry" };
+  }
+  // Registry unreadable: a moved marker with the same version is a reinstall;
+  // with a different version it is most likely an update.
+  if (previous.version === current.version) {
+    return { onboard: true, reason: "reinstall (registry unavailable)" };
+  }
+  return { onboard: false, reason: "version changed (registry unavailable)" };
+}
+
+// The registry lives next to the extension folder for the default profile and
+// inside the profile directory for named profiles. Check the profile first,
+// since the shared registry can hold a stale entry from another profile.
+function readRegistryEntry(
+  context: vscode.ExtensionContext,
+): RegistryEntry | undefined {
+  const candidates = [
+    join(context.globalStorageUri.fsPath, "..", "..", "extensions.json"),
+    join(dirname(context.extensionPath), "extensions.json"),
+  ];
+  const wanted = context.extension.id.toLowerCase();
+  for (const registryPath of candidates) {
+    try {
+      const entries = JSON.parse(readFileSync(registryPath, "utf8")) as Array<{
+        identifier: { id: string };
+        metadata: { installedTimestamp: number; updated: boolean };
+      }>;
+      for (const entry of entries) {
+        const matches =
+          entry.identifier && entry.identifier.id.toLowerCase() === wanted;
+        if (matches && entry.metadata && typeof entry.metadata.installedTimestamp === "number") {
+          return {
+            installedTimestamp: entry.metadata.installedTimestamp,
+            updated: entry.metadata.updated === true,
+          };
+        }
+      }
+    } catch {
+      // Missing or unreadable candidate: try the next one.
+    }
+  }
+  return undefined;
+}
+
+// A fresh extraction bumps the folder mtime; a same-version reinstall that
+// reuses the folder bumps only the registry timestamp. Take the newer.
+function installMarker(
+  context: vscode.ExtensionContext,
+  registry: RegistryEntry | undefined,
+): number {
+  let folderMtime = 0;
+  try {
+    folderMtime = statSync(context.extensionPath).mtimeMs;
+  } catch {
+    // No local filesystem (for example the web): rely on the registry alone.
+  }
+  let installedTimestamp = 0;
+  if (registry) {
+    installedTimestamp = registry.installedTimestamp;
+  }
+  return Math.max(folderMtime, installedTimestamp);
 }
 
 // Starting the server interactively is what triggers the browser sign-in.
