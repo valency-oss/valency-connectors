@@ -1,138 +1,150 @@
 ---
 name: fresh-collaborators
-description: "Use when the user asks who a researcher should be talking to that they aren't already, wants to find new potential collaborators outside an existing network, asks 'who else is doing this work', 'who should X meet', 'who are the new faces in this field', or wants to expand a researcher's collaboration network beyond their current circle. Triggers on requests to find recent, relevant researchers who are not among an author's top coauthor matches."
+description: "Use when the user asks who a researcher should meet, who else is doing related recent work, or wants collaborators outside a researcher's existing network."
 ---
 
 # Fresh Collaborators
 
-Find researchers doing thematically relevant work in records updated in the last 12–18 months whose complete returned bylines do **not** match the focal author's name bucket or the strongest returned top-100 coauthor name buckets. This does not prove that the researchers have never collaborated. Useful for expanding a researcher's collaborator pool, suggesting first-author candidates for new projects, or surfacing people for an upcoming conference / visit.
+Find first authors of thematically relevant, recently first-submitted work whose complete returned bylines contain neither the focal author nor anyone in the focal author's returned top-100 coauthor name-bucket list. This is weak-tie discovery, not proof that two people have never collaborated.
 
 ## Input
 
-The user provides an author name (e.g., "David W. Hogg", "Karl Friston").
+Require a focal author name. Accept an optional recency window in months; default to 18 months. Compute `cutoff = today - window_months` as `YYYY-MM-DD`.
 
-Optional: a number of months for the recency window. If not specified, default to **18 months**.
+## Tool and metadata discipline
 
-## Tool Chain
+Use the Valency Bond MCP tools available in the current host. Tool names may be qualified by an MCP server prefix; discover and call the matching exposed tool. If the required Valency Bond tools are unavailable, say so and stop.
 
-Use the Valency Bond MCP tools available in the current host. Tool names may be
-qualified by an MCP server prefix; call the matching exposed tool. If the
-required Valency Bond tools are unavailable, say so and stop.
+For every call, inspect `warnings` and distinguish successful empty results from tool errors, reporting material qualifications. For every paper, inspect `authors_truncated`. Preserve source-specific `categories` lists and returned display names.
 
-For each call, distinguish a tool error from a successful empty result and
-surface material `warnings`.
+`datestamp` is always a source record/update date. For arXiv, bioRxiv, and medRxiv, `first_submitted` can support a first-submission estimate; for every other or unknown source it is only a record-derived month estimate. None of these fields is a publication date.
 
-**Date discipline:** Compute the cutoff date as `today - <window_months>`, formatted as `YYYY-MM-DD`. Use this cutoff string consistently as the source record/update-date filter in Steps 3 and 5.
+Define one local `comparison_key(name)` and apply it to every name being compared, including returned `coauthor_norm` values: Unicode case-fold, transliterate common Latin ligatures, NFKD-fold diacritics, delete apostrophes, trim, and collapse whitespace. Keep original/canonical names for display; comparison keys are never display names or identities.
 
-### Step 1: Verify the author exists
+## Workflow
 
-Call `get_author_profile` with:
-- `author` (string): the author name
+### 1. Resolve the focal human
 
-If no results are found, tell the user the author was not found. Stop here.
+Call:
 
-Note from this result:
-- The `resolved_name`, treated as a normalized corpus name bucket rather than proof of a unique identity
-- The top 5 categories (you'll use these in Step 4 to select themes)
-- The total paper count (sets context for the author summary)
+```json
+{"author":"<user-supplied name>"}
+```
 
-### Step 2: Build the exclusion set (returned coauthor name buckets)
+with `get_author_identity`. If the user supplied a paper context, also pass its versioned corpus ID as `paper_id`.
 
-Call `find_coauthors` with:
-- `author` (string): the resolved name from Step 1
-- `limit` (integer): 100
+A non-null `resolved_name` alone does not establish a unique person. Inspect `warnings`, `career_metrics`, and `candidates`:
 
-Build the **exclusion set** from every returned `coauthor_norm` matching key, plus the normalized focal `resolved_name`. Use `coauthor` only as the display value; use `coauthor_norm` for matching.
+- If `candidates` is non-empty, show the returned display name, institution, and recent-title evidence, ask the user to pick, and re-call with the chosen candidate's returned stable author identifier — or an ORCID or identifying paper when it is null. When a re-call carrying an ORCID returns a single collision candidate with `confidence` >= 0.95, select it without prompting again. Do not continue while candidates remain unresolved.
+- If the response remains unverifiable, explain that an identity-safe collaborator search cannot be completed and stop.
+- In researcher calls, use the strongest resolved key: ORCID, then the stable author identifier returned in `career_metrics`, then the canonical author name plus a paper hint, retaining the returned disambiguation qualification. Use `career_metrics.display_name` when non-null as the focal display name.
 
-This call returns at most 100 of the strongest coauthor name buckets and has no pagination. Name variants may split across buckets, and weaker coauthors may be absent — acceptable, since reconnecting with a weak tie is also useful. Describe the exclusion only as the returned top-100 name buckets.
+Then call `get_author_profile` for corpus context:
 
-### Step 3: Pull the focal author's record-window papers (current themes)
+```json
+{"author":"<canonical focal display name>","orcid":"<resolved ORCID>"}
+```
 
-Call `search_by_author` with:
-- `author` (string): the resolved name
-- `limit` (integer): 10
-- `sort_by` (string): "relevance"
-- `strict_mode` (string): "fuzzy"
-- `start_date` (string): the cutoff date computed in the Date discipline section, `YYYY-MM-DD`
+Omit `orcid` only when it is null; without an ORCID, set `author` to the identity `resolved_name` so the profile keys the same corpus bucket. Record `resolved_name`, `stats_source`, profile warnings, corpus `summary.total_papers`, and the returned category/count list. Categories are source-specific corpus labels, not a uniform field ontology.
 
-These are up to 10 relevance-ranked author matches from the source record/update-date window, not a definitive list of the author's most recently published papers. Use them as evidence of the author's *current* intellectual direction with that qualification.
+This step is complete only when one focal identity and one corpus name bucket are explicit.
 
-### Step 4: Identify 2–4 current themes
+### 2. Build the bounded coauthor exclusion set
 
-From the Step 3 papers, identify **2 to 4 distinct themes** that characterize the author's work in the record-date window. A theme is a short natural-language phrase (5–12 words) suitable as a semantic search query — not a category code.
+Call `find_coauthors`:
 
-Construct themes by reading the record-window paper titles and abstracts. For each theme, you should be able to point to at least two of those papers as evidence. If the papers cluster tightly, 2 themes is fine; if they span disparate topics, use up to 4.
+```json
+{"author":"<profile resolved_name>","limit":100}
+```
 
-Examples of well-formed themes:
-- "Bayesian experimental design for cosmological survey forecasting"
-- "Equivariant neural networks for stellar abundance prediction"
-- "Metacognitive uncertainty in human and machine inference"
+Display each returned `coauthor`; use `coauthor_norm` only to construct comparison keys. Let the exclusion set contain `comparison_key(coauthor_norm)` for every row plus `comparison_key(profile.resolved_name)` and the keys of other known focal display forms from Step 1.
 
-Bad themes (too narrow or too broad):
-- "stars" (too broad)
-- "Section 4 of the 2025 paper on REACH 21cm calibration" (too narrow / not a search query)
+This endpoint returns at most the strongest 100 coauthor name buckets for one focal normalized-name bucket, with no pagination. It can split name variants and omit weaker prior coauthors. Record the returned count; never call it a complete identity-resolved network.
 
-### Step 5: Search for record-window work in each theme
+### 3. Retrieve identity-specific recent corpus activity
 
-For each theme from Step 4, call `semantic_search_papers` with:
-- `query` (string): the theme phrase
-- `start_date` (string): the cutoff date computed in the Date discipline section, `YYYY-MM-DD`
-- `limit` (integer): 25
-- `sort_by` (string): "relevance"
-- `include_abstract` (boolean): false
-- `max_authors` (integer): 500
+When an ORCID is available, call `find_papers_by_researcher`:
 
-`start_date` is a server-side `datestamp` prefilter: it restricts semantic search by source record/update date, not publication date, and does not establish that every result was recently first-submitted.
+```json
+{"orcid":"<resolved ORCID>","limit":10,"sort_by":"recency"}
+```
 
-If a theme returns fewer than 5 papers, that theme is too narrow or the corpus is too sparse for this query and record-date window. Note this in the output but do not stop.
+Without an ORCID, keep `limit` and `sort_by` and identify the researcher by the strongest available key instead: the stable author identifier returned in `career_metrics` when present, otherwise `author` (the canonical focal display name) plus the user-supplied versioned `paper_id` when available. Resolve reappearing `candidates` with the chosen candidate's stable author identifier before continuing. Stop on `unverifiable`; qualify name-only, potentially incomplete, low-confidence, and capped results. Here recency is record-recency ordering, not publication chronology.
 
-### Step 6: Filter against the exclusion set
+### 4. Derive current themes
 
-For each surviving paper, compare every returned `authors` name (after normalization — lowercase, strip accents/diacritics, collapse whitespace) with the focal-name and top-100 `coauthor_norm` matching keys built in Step 2. **Drop any paper** for which any returned author name matches.
+A focal paper is usable for themes only when its supported `first_submitted` or `datestamp` is on or after the cutoff — `find_papers_by_researcher` has no date filter, so enforce the window here. From usable titles and substantive abstracts, derive 2–4 natural-language theme queries of 5–12 words. Each theme must be supported by at least two usable focal papers. Preserve their source-specific category lists as context rather than merging them into a common taxonomy.
 
-Also drop papers with an empty byline or `authors_truncated: true` after requesting 500 authors: an incomplete returned byline cannot substantiate that the focal or excluded coauthor name buckets are absent. The retained papers therefore establish only that their complete returned bylines contained no matching focal or top-100 bucket name.
+If fewer than two usable focal papers remain, report that no in-window focal activity grounds current themes and stop. If only two defensible themes exist, use two.
 
-### Step 7: Rank and categorize the fresh faces
+### 5. Search each theme, then enforce first-submission recency
 
-For each remaining paper, identify the **first-author name bucket** as the primary "fresh face" candidate (other returned authors are noted but secondary). Treat each candidate as a name bucket attached to paper occurrences rather than proof of a unique person. For each first-author name bucket across all surviving papers:
+For each theme call `semantic_search_papers`:
 
-1. **Junior/senior heuristic.** Without making additional tool calls, infer junior vs senior from signals available in the paper records: number of papers in the result set (1 = likely junior; many = likely established), position of the focal-author-adjacent name in the author list, and seniority cues from coauthors. Tag each candidate `[junior]`, `[senior]`, or `[unclear]`.
+```json
+{"query":"<theme>","start_date":"<cutoff YYYY-MM-DD>","limit":25,"sort_by":"relevance","include_abstract":false,"max_authors":500}
+```
 
-2. **Theme attribution.** Tag each candidate with which theme(s) surfaced them. Candidates surfaced by multiple themes are stronger matches and should be ranked higher.
+`start_date` is only a server-side `datestamp` prefilter. It does not prove that a paper was first submitted in the window. From each response:
 
-3. **Deduplicate paper occurrences.** Group matching first-author display strings as a name bucket and list all surfacing papers, without claiming that the grouped records prove a unique person.
+1. Keep strict first-submission candidates only from arXiv, bioRxiv, or medRxiv with a usable `first_submitted` satisfying `cutoff <= first_submitted <= today`. Exclude other/unknown sources and missing or out-of-window values from this workflow's first-submission freshness claim.
+2. Reject a paper when `authors` is empty.
+3. If `authors_truncated` remains true after requesting 500 authors, reject it as unverifiable for byline exclusion.
+4. For a complete returned byline, compute a key for every author and reject the paper if any key intersects the Step 2 exclusion set.
 
-## Output Format
+The remaining paper evidence supports only this statement: no displayed byline author matches the focal/top-100 returned name buckets under the uniform comparison fold. It does not establish no prior collaboration.
 
-### Author Summary
+### 6. Shortlist, identity-resolve, and rank first authors
 
-A short block:
-- **Focal author**: name (resolved), total papers, primary domains
-- **Returned coauthor name-bucket count**: count from Step 2 (at most 100; weaker coauthors may be absent)
-- **Record-date window**: e.g. "Last 18 months by source record/update date (cutoff: 2024-10-07)"
-- **Themes searched**: bullet list of the 2–4 themes from Step 4
+The first element of a non-empty returned `authors` array is the byline first author. Create provisional author-paper pairs without merging people by name. Use `final_score`, not `semantic_score`, as the thematic search rank.
 
-### Fresh Faces
+Budget about 10 `get_author_identity` calls per task — the server's recommended per-task limit at the default tier. After the focal resolution's calls, the shortlist may contain at most the remaining budget in pairs.
 
-A ranked list of fresh-face name-bucket candidates. Rank by: (a) number of distinct themes that surfaced them, then (b) the semantic-search `final_score` values of their surfacing papers.
+Build that bounded shortlist deterministically: take the highest-`final_score` remaining pair from each theme in theme order, then fill remaining slots by `final_score` across all themes. The eventual candidate ranking is explicitly limited to this preselected evidence.
 
-For each candidate:
+Process shortlisted pairs in order while identity-call budget remains. Resolve each first author with its actual, preferably versioned, surfacing paper ID:
 
-#### N. Author Name `[junior|senior|unclear]`
+```json
+{"author":"<paper authors[0]>","paper_id":"<surfacing paper id>"}
+```
 
-- **Surfaced by themes**: theme A; theme B (if multiple)
-- **Surfacing paper(s)**: Title (paper ID), available `first_submitted` estimate or source record/update `datestamp`, source-specific categories as returned
-- **Why fresh**: explicit confirmation that no name in the complete returned byline matched the focal name or a returned top-100 coauthor name bucket
-- **Why interesting**: one sentence on the connection to the focal author's current work
+Inspect warnings and candidates. If another identity call with an ORCID or stronger paper hint is needed, make it only when budget remains; otherwise keep that pair unresolved. Treat an author as stably resolved only when the response uniquely establishes an ORCID or a stable author identifier; keep other paper-scoped resolutions separate.
 
-Show the top 10 candidates. If fewer than 10 survived, show all of them. Date fields are source-aware: `first_submitted` is a first-submission estimate for supported preprint sources and a record-derived month estimate otherwise; `datestamp` is a source record/update date. Neither is a publication date.
+Deduplicate resolved entries by ORCID or the returned stable author identifier. Merge themes, papers, and each paper's `final_score` only after this stable-identity match. Fetch abstracts via `get_paper_by_id` only for the shortlisted surfacing papers when writing the output's abstract-grounded sentences; when no abstract is returned, ground the sentence in the title and categories and label that basis. Rank the processed shortlist by:
 
-### Theme Coverage Notes
+1. number of distinct themes represented;
+2. highest `final_score` among retained papers;
+3. remaining `final_score` values in descending order.
 
-For each theme from Step 4, report the number of papers returned by the record-date-prefiltered search and the number that survived exclusion filtering. Sparse results characterize only this query and record-date window; they do not show that no one is working on the theme.
+Do not infer or report career stage from this evidence.
 
-### Suggested Follow-ups
+## Output
 
-- Ask for a profile of `<fresh_face_name>` for a deeper look at any candidate.
-- Ask for papers similar to `<surfacing_paper_id>` to find more work in that vein.
-- Ask for a reading list for `<focal_author>` for the *what* to read alongside the *who* to meet.
+### Focal author and search bounds
+
+Report:
+
+- canonical focal display name and stable identifier type;
+- corpus paper count, `stats_source`, and source-specific top category/count entries;
+- researcher disambiguation status and material warnings;
+- returned coauthor bucket count and the exact top-100/name-bucket limitation;
+- recency window as “first-submission estimate on or after `<cutoff>`,” plus the record-date prefilter;
+- that non-preprint sources are excluded from candidacy by design, because only arXiv, bioRxiv, and medRxiv records carry a usable first-submission estimate;
+- the grounded themes.
+
+### Candidates
+
+Show the resolved or explicitly unresolved candidates produced within the remaining identity-call budget. For each, include:
+
+- canonical display name when resolved; otherwise the observed first-author name plus **identity unresolved**;
+- identity basis: ORCID, paper-scoped resolution, or unresolved paper-scoped evidence;
+- themes and surfacing papers with each paper's `final_score`;
+- title, source, complete category list, and **first-submission estimate** from the supported preprint source when present, plus non-null `url`;
+- the Step 5 exclusion statement;
+- one abstract-grounded sentence connecting the paper to the focal themes.
+
+If fewer candidates survive date, byline, exclusion, shortlist, and identity handling than the available budget, return fewer and state why.
+
+### Coverage and qualifications
+
+For each theme, report counts for: returned by the record-date-prefiltered search; supported-source `first_submitted` in-window; verifiable complete byline; and surviving top-100 exclusion. An empty or sparse theme means only that this query/window produced little usable evidence, not that nobody works on the theme.
