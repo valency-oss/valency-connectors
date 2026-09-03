@@ -35,6 +35,20 @@ source `valency-oss/valency-connectors`.
 
 Start a new Codex session after uninstalling.
 
+## OpenCode
+
+Remove OpenCode's stored Valency authorization before unregistering the plugin:
+
+```bash
+opencode mcp logout valency
+```
+
+Then remove `@valency/opencode` from the `plugin` array in the global
+`~/.config/opencode/opencode.json` or `opencode.jsonc`. If the plugin was
+installed without `--global`, remove it from the project configuration instead.
+Start a new OpenCode session afterward. Cached npm files are inert once the
+plugin is absent from the configuration.
+
 ## ChatGPT
 
 Open ChatGPT's plugin settings and remove **Valency**. If a workspace installed

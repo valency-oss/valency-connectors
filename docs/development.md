@@ -7,9 +7,11 @@ npm test
 ```
 
 These tests include static checks for the native Antigravity plugin, the
-Copilot, Cursor, and Grok marketplaces and provider packages, workflow routing,
-and the Kiro Power. They also enforce byte-for-byte skill synchronization
-across the shared root, Claude, Copilot, Cursor, Grok, OpenAI, and Kiro copies.
+Copilot, Cursor, and Grok marketplaces and provider packages, the OpenCode npm
+package, workflow routing, and the Kiro Power. They enforce byte-for-byte skill
+synchronization across the shared root, Claude, Copilot, Cursor, Grok, OpenAI,
+and Kiro copies. OpenCode's namespaced projections must differ only in the
+frontmatter name.
 The Antigravity checks pin the exact `plugin.json` and `mcp_config.json`
 contracts and the host-specific rule.
 
@@ -26,7 +28,47 @@ Cursor package checks do not prove that Cursor can install the plugin, complete
 OAuth, or invoke a remote tool. Static validation does not prove that Grok Build
 can install the plugin, complete OAuth, or invoke a remote tool.
 The Kiro static checks do not prove that Kiro can install the Power, complete
-OAuth, or invoke a remote tool.
+OAuth, or invoke a remote tool. OpenCode package tests exercise its configuration
+hook directly, but do not prove npm installation, browser OAuth, or a remote tool
+call. Record each layer of evidence separately.
+
+## OpenCode npm package
+
+`plugins/opencode/valency` is the publishable `@valency/opencode` package. Its
+single configuration hook adds the hosted `valency` MCP server only when the
+user has not already configured that name, then appends its package-relative
+skills directory without duplicating it. OpenCode owns MCP transport and OAuth;
+the package contains no local server, credentials, or authorization headers.
+
+OpenCode skill names are prefixed with `valency-` to avoid collisions in its
+global skill registry. Regenerate them after changing a canonical skill:
+
+```bash
+npm run sync:opencode
+npm test
+npm pack --dry-run ./plugins/opencode/valency
+```
+
+The generator copies every canonical skill and changes only its frontmatter
+name. Packaging tests pin the projected folders, exact transformation, plugin
+behavior, endpoint, public npm metadata, and credential-free payload.
+
+For release validation, record the OpenCode version. Install the published
+package, or extract the npm tarball and pass its package directory to
+`opencode plugin --global`; OpenCode 1.18.26 does not accept a `.tgz` path
+directly. Then run:
+
+```bash
+opencode debug config
+opencode debug skill
+opencode mcp auth valency
+opencode mcp list
+```
+
+Confirm every `valency-*` skill is discoverable, complete browser OAuth, invoke
+one representative read-only Valency Bond tool, restart OpenCode, and confirm
+authentication is reused. Test a pre-existing disabled or custom `mcp.valency`
+separately; the plugin must preserve it.
 
 ## Cursor provider package
 
@@ -158,7 +200,7 @@ inside this repository.
 
 Provider release versions live in their respective manifests when the host
 supports them. Antigravity's `plugin.json` schema has no version field, so its
-package revision follows the repository commit. The Claude and OpenAI package
-versions can advance independently; the Copilot package version lives in
-`plugins/copilot/valency/plugin.json`, and the Grok package version lives in
-`plugins/grok/valency/.grok-plugin/plugin.json`.
+package revision follows the repository commit. Claude and OpenAI versions can
+advance independently; Copilot and Grok versions live in their provider
+manifests, and the OpenCode npm version lives in
+`plugins/opencode/valency/package.json`.
