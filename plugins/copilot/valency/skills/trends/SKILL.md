@@ -1,106 +1,114 @@
 ---
 name: trends
-description: "Use when the user asks how research activity for a topic has changed over time, wants publication volume trends, asks 'is X growing', 'when did X take off', or wants to compare the trajectories of two fields. Triggers on trend, growth, or timeline questions about research areas."
+description: "Use when the user asks how a research topic has changed over time, wants publication volume trends, whether its activity is growing, when it first appears in the corpus, or how category and keyword trajectories compare. Triggers on trend, growth, and timeline questions about research areas."
 ---
 
-# Record Activity Trends
+# Research Record Trends
 
-Show how matching research records for a topic or category have changed over time.
+Show how category records or abstract-keyword matches change over time.
 
-## Input
+## Input routing
 
-The user provides one of:
-- An arXiv category code (e.g., `cs.LG`) — recognized by the short-prefix-dot-suffix pattern; the server scopes dotted codes to arXiv.
-- A keyword or phrase (e.g., "transformer", "CRISPR")
-- Multiple categories or keywords separated by commas or "vs" (e.g., "cs.LG, cs.CL" or "transformers vs RNNs") — for comparison
+Split comma- or `vs`-separated comparisons into ordered inputs. Run at most five keyword or mixed inputs per comparison — when more arrive, ask the user to choose up to five or split the comparison. A same-source category-only comparison may instead carry up to 20 categories in one batch call; when it exceeds five, retrieve representative matches for at most five user-chosen inputs — `search_by_abstract` is bounded at ten invocations per task — rather than refusing the comparison. Then classify each input:
 
-## Tool Chain
+1. Dotted codes such as `cs.LG` take the arXiv-category route with `source: "arxiv"`.
+2. Categories explicitly tied to another source take the category route with that exact category and source. Other sources use source-specific vocabularies rather than arXiv-code syntax.
+3. All other inputs are keywords or phrases.
 
-Use the Valency Bond MCP tools available in the current host. Tool names may be
-qualified by an MCP server prefix; call the matching exposed tool. If the
-required Valency Bond tools are unavailable, say so and stop.
+Mixed category/keyword comparisons are supported.
 
-### Step 1: Get trend data
+## Tool chain
 
-**If the input is a single category code:**
+Use the Valency Bond MCP tools available in the current host. Tool names may be qualified by an MCP server prefix; discover and call the tools matching the short names below. If the required Valency Bond tools are unavailable, say so and stop.
+In the call templates, replace angle-bracket placeholders and omit `source` when it is unknown.
 
-Call `get_publication_trends` with:
-- `category` (string): the category code
-- `granularity` (string): "year"
-- `format` (string): "compact"
+### 1. Retrieve annual trend series
 
-**If the input is a single keyword/phrase:**
+For one category, call `get_publication_trends`:
 
-Call `get_keyword_trends` with:
-- `query` (string): the keyword
-- `granularity` (string): "year"
-- `format` (string): "compact"
+```json
+{"category":"<category>","source":"<source when known>","granularity":"year","format":"compact"}
+```
 
-**If the input contains multiple categories** (comma-separated or "vs"):
+For 2–20 categories sharing the same source, make one `get_publication_trends_batch` call:
 
-Call `get_publication_trends_batch` once with:
-- `categories` (array of strings): the category codes
-- `granularity` (string): "year"
-- `format` (string): "compact"
+```json
+{"categories":["<category 1>","<category 2>"],"source":"<shared source when known>","granularity":"year","format":"compact"}
+```
+The batch tool deduplicates categories while preserving input order. For categories from different sources, group by source and use one batch call per group of at least two; use the single-category call for a group of one.
 
-The batch call accepts up to 20 categories under one optional `source` filter and deduplicates them in first-occurrence order. Per-category series are keyed by category in `data`.
+For every keyword or phrase, call `get_keyword_trends` once:
 
-**If the input contains multiple keywords** (comma-separated or "vs"):
+```json
+{"query":"<keyword or phrase>","granularity":"year","format":"compact"}
+```
+When the user supplies a date window, include its `start_date` and `end_date` in every category, batch, and keyword trend call so the series share the same bound.
 
-Call `get_keyword_trends` once per keyword with:
-- `query` (string): each keyword
-- `granularity` (string): "year"
-- `format` (string): "compact"
+In a mixed comparison, route category inputs through the category calls and keyword inputs through their individual keyword calls. Category series count latest records in a resolved hierarchical category. Keyword series count records whose abstract full-text index lexically matches the query. Both are grouped by `datestamp`; neither is a formal publication-count series.
 
-Category series count latest records in the resolved hierarchical category. Keyword series count lexical abstract-index matches. Both group records by source-record `datestamp`, so they show matching record activity rather than publication history.
+Normalize every response into one year → count series per input before comparison; batch responses carry one series per category in `data`. Record each series' scope and warnings. Sum counts only within one scoped series when a matching-record total is useful.
 
-Inspect `too_broad_categories`: those categories' `data` entries are drill-down objects (`error`, `direct_subcategories`) instead of period series — show the drill-down in place of that series while retaining successful siblings. Unknown categories surface in top-level `warnings` with suggestions; do not silently substitute another category. A successful empty series is not an error. Within one batch call, only `CATEGORY_TOO_BROAD` is resilient per entry — any other failure fails the whole batch — while separate per-keyword calls fail independently.
+### 2. Resolve category partials
 
-### Step 2: Get representative matches
+Inspect batch `too_broad_categories` and every entry in `data`. A `CATEGORY_TOO_BROAD` entry is an in-place drill-down, not a failed batch: show `direct_subcategories`, leave that requested series unavailable, and retain successful siblings. Surface unknown-category warnings and suggestions without substituting a category.
 
-Call `search_by_abstract` with:
-- `query` (string): the keyword or category name (use the human-readable name for categories, e.g., "machine learning" for cs.LG)
-- `limit` (integer): 5
-- `sort_by` (string): "relevance"
+A successful empty series means no matching record activity in that exact scope. A true tool error affects only its input or source group; retain every independently successful series. If no series succeeds, report the errors or empty scopes and stop before interpretation.
 
-These are representative abstract-text matches, not necessarily recent papers. Relevance ranks abstract-text match strength; surface returned fallback or ranking warnings.
+### 3. Align periods
 
-## Output Format
+Convert returned annual periods to the same year keys while retaining each series label and semantics. Use an explicit user-requested date range when supplied; otherwise use the earliest through latest observed year across the non-empty successful series. Fill omitted years with zero only inside that common observed or explicit range.
+
+For a completely empty but otherwise successful series, label it **no matching corpus records**. Show zeros only when an explicit or shared comparison range exists; without one, do not invent a first year or trajectory. Compute growth rates only between nonzero baselines.
+
+The aligned table is complete when every requested input is represented by a scoped series, a drill-down, an empty-result label, or an error.
+
+### 4. Retrieve representative matches in a recent record window
+
+Compute one ISO cutoff date for the run: the user-supplied `start_date` when given, otherwise the start of the latest three observed years of the aligned Step 3 range — so a historical topic gets matches from its actual active period rather than an empty recent window — falling back to three calendar years before today when no series returned data. Then make exactly one `search_by_abstract` call per representative-match input, at most five, including `end_date` when supplied.
+
+For a category:
+
+```json
+{"query":"<user wording or authoritative category label>","category":"<category>","source":"<source when known>","start_date":"<cutoff YYYY-MM-DD>","limit":5,"sort_by":"relevance"}
+```
+
+For a keyword:
+
+```json
+{"query":"<keyword or phrase>","start_date":"<cutoff YYYY-MM-DD>","limit":5,"sort_by":"relevance"}
+```
+
+If no authoritative human-readable category label is available, use the user's exact category input as the nonempty query rather than inventing an expansion. Skip an unresolved too-broad or unknown category until a drill-down is selected.
+
+`start_date` filters source record/update `datestamp`. Relevance is abstract-text match strength, with any fallback disclosed by warnings; describe results as the best textual matches inside the record-date window, not as the newest papers. Keep each input's results separate rather than concatenating concepts into one search.
+
+### 5. Validate paper metadata
+
+For every representative-search response, inspect warnings, ranking, and the date-range echo. A successful empty result leaves only that input's panel empty; a true error leaves that panel unavailable.
+
+Prefer a non-null `url`; otherwise show the ID without constructing a link. Show the first three byline authors and add “et al.” whenever more are known or `authors_truncated` is true; report `total_authors` when supplied. Render the returned source-specific `categories` list, or “unavailable” when empty. Dates carry the source-aware date label: for arXiv, bioRxiv, or medRxiv, non-null `first_submitted` is a **first-submission estimate**; for every other or unknown source it is a **record-derived month estimate**; otherwise `datestamp` is the **source record/update date**. None is a publication date.
+
+## Output
 
 ### Record Activity
 
-**For single input:** a year-by-year table:
+For one input, show `Year | Matching records`. For comparisons, show one column per input in original order. Label each column **hierarchical category records** or **lexical abstract-keyword matches**. Add a note above every mixed table that the columns use different inclusion semantics.
 
-| Year | Matching records |
-|------|------------------|
-| 2018 | 500              |
-| ...  | ...              |
+### Narrative
 
-**For comparisons:** a side-by-side table of matching records:
+In three to five sentences, describe:
 
-| Year | cs.LG | cs.CL |
-|------|-------|-------|
-| 2018 | 500   | 300   |
-| ...  | ...   | ...   |
+- The first observed matching record in this corpus, never the topic's invention or first publication.
+- Inflection points and the current record-activity trajectory, only where the non-empty series supports them.
+- For comparisons, the observed divergence in matching-record activity, preserving each column's inclusion semantics.
+- Empty, partial, drill-down, and warning-qualified series that limit the comparison.
 
-### Narrative Summary
+### Representative Matches in the Record-Date Window
 
-A 3-5 sentence narrative covering:
-- The first observed matching record in this corpus
-- Key inflection points (years where matching record activity jumped or dropped significantly)
-- Current record-activity trajectory (accelerating, plateauing, declining)
-- For comparisons: which scoped series is growing faster and when their matching-record activity diverged
-
-### Representative Matches
-
-A numbered list of 3-5 papers from Step 2. For each:
-- Title (with paper ID)
-- Authors (first 3, then "et al.")
-- Source record/update date (`datestamp`)
-- `first_submitted`, when present: a first-submission estimate for supported preprint sources; otherwise a record-derived month estimate
+Group up to five papers under each searched input and state the cutoff. Inputs beyond the five searched show their series only; say so rather than leaving an unexplained gap. For each, show linked title or ID, byline head, labeled date, source when present, and exact category list. State that relevance selected textual matches within the window.
 
 ### Suggested Follow-ups
 
-- Ask for a landscape of `<category>` for a broader overview of the field.
-- Ask for a profile of `<author>` for authors driving the trend.
-- Ask for trends in `<other_keyword>` to compare with related topics.
+- Select a returned category drill-down and rerun the trend.
+- Ask for a landscape of a resolved category.
+- Add a related keyword or category for another explicitly scoped comparison.
