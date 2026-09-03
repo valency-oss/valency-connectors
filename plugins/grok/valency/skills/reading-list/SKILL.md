@@ -1,120 +1,154 @@
 ---
 name: reading-list
-description: "Use when the user asks what a researcher should be reading, wants a curated bibliography for a researcher's interests, asks 'what should X read', 'find me adjacent work to X's research', or wants to know what literature surrounds an author's body of work. Triggers on reading-list, bibliography, or 'what should I read next' style requests anchored on a specific researcher."
+description: "Use when the user asks what a specific researcher should read next, wants adjacent literature around that person's work, or requests a researcher-anchored curated bibliography."
 ---
 
 # Researcher Reading List
 
-Build a curated reading list for a researcher, organized by intellectual thread, by triangulating off representative relevance-ranked and highest citation-ranked returned work.
+Build a reading list around one identity-resolved researcher by using separate citation-ranked and record-recent seed pools, then retrieving paper-to-paper semantic neighbors. Preserve evidence per seed and make every identity, citation, date, and byline limitation visible.
 
 ## Input
 
-The user provides an author name (e.g., "David W. Hogg", "Yoshua Bengio", "Jennifer Doudna").
+Require a focal author name. Accept an optional versioned corpus paper ID when the user provides paper context; use it as an identity hint.
 
-## Tool Chain
+## Tool and metadata discipline
 
-Use the Valency Bond MCP tools available in the current host. Tool names may be
-qualified by an MCP server prefix; call the matching exposed tool. If the
-required Valency Bond tools are unavailable, say so and stop.
+Use the Valency Bond MCP tools available in the current host. Tool names may be qualified by an MCP server prefix; discover and call the matching exposed tool. If the required Valency Bond tools are unavailable, say so and stop.
 
-For each call, distinguish a tool error from a successful empty result and
-surface material `warnings`.
+For every call, inspect `warnings` and distinguish successful empty results from tool errors; for every paper, inspect `authors_truncated`. Preserve each source's `categories` list instead of treating categories as one cross-source taxonomy.
 
-### Step 1: Verify the author exists
+Date fields carry the **source-aware date label**: `datestamp` is always a source record/update date and drives record-recency ordering; for arXiv, bioRxiv, and medRxiv, optional `first_submitted` is a first-submission estimate, and for every other or unknown source it is a record-derived month estimate. None of these fields is a publication date or year.
 
-Call `get_author_profile` with:
-- `author` (string): the author name provided by the user
+Define:
 
-If no results are found, tell the user the author was not found and suggest checking the spelling or trying a partial name. Stop here.
+- `paper_key(p)`: `(source, base_id ?? id)` — versions share a family without conflating identifiers across sources.
+- `comparison_key(name)`: one uniform name fold for local self-authorship checks—Unicode case-fold, transliterate common Latin ligatures, NFKD-fold diacritics, delete apostrophes, trim, and collapse whitespace. Keep returned names for display.
 
-Note the author's top categories from this result — you'll use them later to interpret which themes the reading list is covering. Also note the resolved author name (`resolved_name`) — use it consistently in subsequent calls and when filtering returned self-authorship matches.
+## Workflow
 
-### Step 2: Get citation-ranked papers (career-anchor candidates)
+### 1. Resolve the focal human
 
-Call `search_by_author` with:
-- `author` (string): the resolved name
-- `limit` (integer): 5
-- `sort_by` (string): "citations"
-- `strict_mode` (string): "fuzzy"
+Call `get_author_identity`:
 
-These are the highest citation-ranked results returned within this query's scope and available citation coverage, not necessarily the author's definitive most-cited works. Citation counts are nullable, best-effort enrichment.
+```json
+{"author":"<user-supplied name>"}
+```
 
-### Step 3: Get relevance-ranked papers (current-direction evidence)
+Add `"paper_id":"<versioned corpus paper ID>"` when the user supplied a paper context.
 
-Call `search_by_author` with:
-- `author` (string): the resolved name
-- `limit` (integer): 5
-- `sort_by` (string): "relevance"
-- `strict_mode` (string): "fuzzy"
+A non-null `resolved_name` alone is not proof of a unique person. Inspect `warnings`, `career_metrics`, and `candidates`:
 
-These are the first relevance-ranked results returned, not a definitive list of the author's most recent publications. They may represent the author's *current* intellectual direction with that qualification.
+- If `candidates` is non-empty, show the returned display name, institution, and recent-title evidence, ask the user to pick, and re-call with the chosen candidate's returned stable author identifier — or an ORCID or identifying paper when it is null. When a re-call carrying an ORCID returns a single collision candidate with `confidence` >= 0.95, select it without prompting again. Do not continue while candidates remain unresolved.
+- If the result remains unverifiable, explain that an identity-specific reading list cannot be completed and stop.
+- In researcher calls, use the strongest resolved key: ORCID, then the stable author identifier returned in `career_metrics`, then the canonical author name plus a paper hint, retaining the returned disambiguation qualification. Use `career_metrics.display_name` when non-null as the display name.
 
-### Step 4: Select 3–5 representative seed papers
+Call `get_author_profile` for corpus context and known focal name forms:
 
-From the combined Step 2 + Step 3 results, select 3 to 5 **seed papers** that best represent the author's distinct intellectual threads:
+```json
+{"author":"<canonical focal display name>","orcid":"<resolved ORCID>"}
+```
 
-- Always include the first citation-ranked result returned (career-anchor candidate).
-- Always include, from the Step 3 pool, the paper with the latest `first_submitted` or `datestamp` that has a substantive abstract (current-direction candidate).
-- Fill the remaining slots by picking papers whose titles and available metadata support different threads. Source-specific category-list differences alone do not establish distinct intellectual threads.
+Omit `orcid` only when null. Record `resolved_name`, `stats_source`, profile warnings, corpus `summary.total_papers`, and returned category/count entries.
 
-If two papers have nearly identical category lists and similar topics, pick only one.
+Build a focal alias-key set from the input name, identity `resolved_name`, non-null canonical display names, and profile `resolved_name`. These are comparison aliases, not stable identities.
 
-### Step 5: Find similar papers for each seed
+### 2. Retrieve two identity-specific seed pools
 
-For each seed paper from Step 4, call `find_similar_papers` with:
-- `paper_id` (string): the seed paper's ID
-- `limit` (integer): 10
-- `include_abstract` (boolean): false
-- `max_authors` (integer): 500
+Make separate `find_papers_by_researcher` calls, preferring ORCID when available.
 
-If the successful response has `count: 0` and `papers: []` with a warning that the seed has no embedding, mark that seed as skipped and continue with the others. Do not report this as a tool error; treat a genuine error envelope separately.
+Citation-ranked pool:
 
-### Step 6: Aggregate and clean
+```json
+{"orcid":"<resolved ORCID>","limit":10,"sort_by":"citations"}
+```
 
-After all `find_similar_papers` calls complete:
+Record-recent pool:
 
-1. **Tag each result** with the seed paper that surfaced it.
-2. **Deduplicate by paper family** — use `(source, base_id ?? id)` as the family key so versions share a family without conflating identifiers from different sources. If a family appears in multiple seeds' similar lists, keep the entry with the highest similarity score and merge the seed tags.
-3. **Filter out returned self-authorship matches** — drop any paper whose returned author list contains a name matching the focal `resolved_name` from Step 1 after normalization (lowercase, strip accents/diacritics, collapse whitespace). Also drop papers with an empty byline or `authors_truncated: true` after requesting 500 authors, because an incomplete returned byline cannot establish the focal name bucket's absence.
-4. **Group by seed** — partition the cleaned results by which seed paper(s) surfaced them. This grouping defines the reading-list "threads."
+```json
+{"orcid":"<resolved ORCID>","limit":10,"sort_by":"recency"}
+```
 
-## Output Format
+When ORCID is null, replace it in both objects with the stable author-identifier parameter, set to the value returned in `career_metrics`, when present, otherwise with `"author":"<canonical focal display name>"` plus the user-supplied versioned `paper_id` when available.
 
-### Researcher Summary
+For both responses, resolve `candidates` before seed selection and stop on `unverifiable`; explicitly qualify `potentially_incomplete_recent_window`, name-only/linked-unverified rows, and any hard cap. Prefer verified rows for identity-critical seeds.
 
-A short block:
-- **Name**: full name as it appears in the corpus
-- **Total papers**: from Step 1
-- **Primary domains**: top 3 categories from Step 1
+Citation counts are nullable, enriched best-effort metadata. If citation coverage is thin or warnings qualify the ranking, call the first usable item the **highest citation-ranked result returned**, not the researcher's definitively most-cited paper. The recency call is ordered by record recency, not publication date. Do not call either capped pool a complete oeuvre.
 
-### Reading List by Thread
+Deduplicate the union by `paper_key`, retaining both pool provenances. Preserve citation nulls and all material warnings.
 
-For each seed paper from Step 4, produce a thread section:
+### 3. Select 3–5 grounded seeds
 
-#### Thread N: <one-line characterization of the thread>
+Choose 3–5 distinct paper families when available:
 
-Anchored by the seed paper:
-- **Seed**: Title (paper ID), available `first_submitted` estimate or source record/update `datestamp`, source-specific categories as returned
+1. Include the highest usable citation-ranked returned result, with the citation qualification from Step 2.
+2. Include the first record-recent result with a substantive returned abstract.
+3. Fill remaining slots with papers whose titles, abstracts, and source-specific category lists establish distinct intellectual threads.
 
-Recommended reading (up to 8 papers per thread, ordered by similarity score; fewer or zero is valid after caps, empty results, and filtering):
+A seed's thread must be supported by its title and abstract; source-specific category-list differences alone do not establish distinct threads. If only 1–2 usable seeds exist, proceed with a shorter list and explain why; if none has enough metadata to ground a thread, stop.
 
-1. **Title** (paper ID) — first 3 returned authors; available `first_submitted` estimate or source record/update `datestamp`; source-specific categories as returned — one-sentence reason it matters here
-2. ...
+### 4. Retrieve semantic neighbors with enough metadata
 
-Date fields are source-aware: `first_submitted` is a first-submission estimate for supported preprint sources and a record-derived month estimate otherwise; `datestamp` is a source record/update date. Neither is a publication date.
+For each seed, call `find_similar_papers`:
 
-If a seed paper was skipped because it had no embedding, add a note under that thread: *"This seed had no embedding; no similar papers could be retrieved."*
+```json
+{"paper_id":"<seed paper id>","limit":10,"include_abstract":true,"max_authors":500}
+```
 
-### Cross-Thread Highlights
+Omit `source` so discovery can cross sources. Each result is ranked by cosine `similarity_score` to the seed paper's stored embedding.
 
-If any paper appeared as similar to **multiple** seeds, highlight it as a cross-thread find — these are often the most interesting recommendations because they sit at the intersection of the author's threads:
+A seed without an embedding returns a successful empty result with a warning. Mark that seed as skipped and continue. Treat a genuine tool error separately.
 
-- **Title** (paper ID) — surfaced by Seed A *and* Seed C — why this matters
+### 5. Deduplicate and filter conservatively
 
-If no cross-thread papers were found, omit this section.
+Process all similarity responses together:
 
-### Suggested Follow-ups
+1. Attach `{seed_key, seed_title, similarity_score}` to every occurrence before deduplication.
+2. Deduplicate by `paper_key`, retaining a separate score and provenance entry for every seed that surfaced the paper.
+3. Exclude any recommendation whose `paper_key` is a selected seed or appears in either returned focal-researcher pool.
+4. **Self-authorship filter:** exclude a paper if any author in its complete returned byline has a key in the focal alias-key set.
+5. If `authors` is empty, exclude the paper because self-authorship cannot be checked. If `authors_truncated` remains true after requesting 500, exclude it as unverifiable rather than claiming the focal author is absent.
 
-- Ask for a profile of `<author>` for any author that appears across multiple recommendations.
-- Ask for papers similar to `<paper_id>` to dig deeper into any specific recommendation.
-- Ask for fresh collaborators for `<author>` when the user is interested in *who* (not what) to engage with next.
+Passing this filter proves only that no known focal alias occurs in the complete returned byline and that the paper is not in the capped focal pools. Label the result that way; do not claim exhaustive identity-level non-authorship.
+
+Group remaining papers by seed provenance. Within each thread, order by that seed's own `similarity_score`. A paper surfaced by multiple seeds appears once in the cross-thread section with every seed-specific score retained.
+
+### 6. Ground explanations
+
+Use the seed and recommendation titles, substantive abstracts, and source-specific category lists to explain the connection. If a recommendation's abstract is missing or empty despite the explicit request, either ground the explanation only in the available title/categories and label that basis, or omit the explanation.
+
+## Output
+
+### Researcher and retrieval summary
+
+Report:
+
+- canonical focal display name and stable identifier type;
+- corpus paper count, `stats_source`, and source-specific top category/count entries;
+- the citation-ranked and record-recent pool sizes, limits, disambiguation statuses, and material warnings;
+- citation coverage/null qualifications;
+- skipped seeds and empty-result reasons;
+- recommendations excluded because their bylines were empty or still truncated.
+
+### Reading list by thread
+
+For each seed, give a one-line abstract-grounded thread description and a seed card containing:
+
+- title and paper ID;
+- source and complete category list when available;
+- citation count when non-null, with its returned-ranking label;
+- the source-aware date label;
+- non-null `url`.
+
+Then show up to 8 surviving recommendations for that thread—fewer, including zero, is valid after deduplication and self-authorship checks. For each recommendation include:
+
+- title, paper ID, and non-null `url`;
+- visible author names; because truncated bylines were excluded, this is the complete returned byline;
+- source and complete category list when available;
+- the source-aware date label;
+- that thread's `similarity_score`;
+- one grounded sentence explaining the connection;
+- **Self-authorship check**: no known focal alias appeared in the complete returned byline.
+
+### Cross-thread results
+
+For every recommendation surfaced by multiple seeds, list all seed names and their separate `similarity_score` values, plus a grounded explanation of the intersection. Omit this section when none survive.
