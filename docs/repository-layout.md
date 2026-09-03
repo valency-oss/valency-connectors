@@ -38,9 +38,10 @@ unless every affected provider contract and packaging test is updated.
 | `.cursor-plugin/` | Cursor | Declares this repository's Cursor plugin marketplace and routes `valency` to its independent provider package. |
 | `.grok-plugin/` | Grok Build | Declares the root Grok marketplace and maps the user-visible `valency` plugin to its dedicated nested package. |
 | `.github/` | GitHub and CI | Contains the GitHub Copilot marketplace plus GitHub Actions workflows. |
-| `plugins/` | Claude, Copilot, Cursor, Grok Build, and OpenAI hosts | Contains self-contained provider packages for hosts that install from a nested marketplace path. Kiro is at the root because its GitHub importer requires root `POWER.md`. |
+| `plugins/` | Claude, Copilot, Cursor, Grok Build, OpenAI, and OpenCode hosts | Contains self-contained provider packages for hosts that install from a nested marketplace path or package registry. Kiro is at the root because its GitHub importer requires root `POWER.md`. |
 | `plugins/cursor/valency` | Cursor | Contains the dedicated Cursor manifest, full-surface remote MCP configuration, MIT license, literature rule, and seven canonical skill copies. |
 | `plugins/grok/valency` | Grok Build | Contains the dedicated Grok manifest, credential-free remote MCP configuration, MIT license, and seven canonical skill copies. The root marketplace hides this internal path from users. |
+| `plugins/opencode/valency` | OpenCode | Contains the public npm package, additive configuration hook, MIT license, and `valency-*` projections of every canonical skill. The hook registers the hosted MCP endpoint and its packaged skill directory without replacing user configuration. |
 
 ### Why Agent Skills metadata is under `.claude-plugin/`
 
@@ -63,7 +64,7 @@ marketplace package.
 | --- | --- |
 | `README.md` | Short product overview and installation path for every supported provider. |
 | `docs/` | Uninstall, maintainer validation, and repository layout documentation. |
-| `scripts/` | Repository validation helpers, including the OpenAI package validator wrapper. |
+| `scripts/` | Repository validation and synchronization helpers, including the OpenAI validator wrapper and OpenCode skill projection generator. |
 | `test/` | Cross-provider packaging tests that pin manifests, endpoints, workflow mappings, and synchronization. |
 | `package.json` | Defines the repository's Node-based validation commands. This repository is not published as an npm package. |
 | `LICENSE` | MIT license for this repository and its provider integration files. The hosted Valency Bond service has its own license. |

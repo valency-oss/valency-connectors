@@ -60,6 +60,19 @@ do not need to add a separate MCP server or install a separate Valency app.
 
 Start a new Codex session after installation so its skills and MCP tools load.
 
+### OpenCode
+
+OpenCode 1.18.23 or newer:
+
+```bash
+opencode plugin --global @valency/opencode &&
+  opencode mcp auth valency
+```
+
+Start a new OpenCode session after installation. The npm plugin registers the
+hosted Valency Bond MCP server and exposes seven `valency-*` skills while
+preserving an existing `mcp.valency` configuration.
+
 ### ChatGPT
 
 In ChatGPT desktop, add `valency-oss/valency-connectors` as a plugin marketplace,

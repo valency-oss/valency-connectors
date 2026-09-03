@@ -1,0 +1,43 @@
+{
+  "name": "@valency/opencode",
+  "version": "0.1.0",
+  "description": "Connect OpenCode to Valency for research discovery and analysis.",
+  "type": "module",
+  "main": "./index.js",
+  "exports": {
+    ".": "./index.js",
+    "./server": "./index.js"
+  },
+  "files": [
+    "index.js",
+    "skills",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "opencode": ">=1.18.23"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "author": {
+    "name": "Valency Systems Inc",
+    "email": "support@valency.io",
+    "url": "https://valency.io/"
+  },
+  "homepage": "https://valency.io/",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/valency-oss/valency-connectors.git",
+    "directory": "plugins/opencode/valency"
+  },
+  "license": "MIT",
+  "keywords": [
+    "opencode",
+    "mcp",
+    "research",
+    "academic",
+    "papers",
+    "literature-review"
+  ]
+}
