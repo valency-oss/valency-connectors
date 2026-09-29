@@ -7,16 +7,12 @@ npm test
 ```
 
 These tests include static checks for the native Antigravity plugin, the
-Copilot, Cursor, and Grok marketplaces and provider packages, workflow routing,
-and the Kiro Power. They also enforce byte-for-byte skill synchronization
-across the shared root, Claude, Copilot, Cursor, Grok, OpenAI, and Kiro copies.
-The Antigravity checks pin the exact `plugin.json` and `mcp_config.json`
+Copilot, Cursor, and Grok marketplaces and provider packages, and the Kiro
+Power. The Antigravity checks pin the exact `plugin.json` and `mcp_config.json`
 contracts and the host-specific rule.
 
-The Kiro checks pin the supported `POWER.md` frontmatter, the credential-free
-remote endpoint in `mcp.json`, and the one-to-one mapping from all seven
-workflows to `steering/*.md`. Each Kiro steering file must remain byte-identical
-to its canonical `skills/*/SKILL.md` source.
+The Kiro checks pin the supported `POWER.md` frontmatter and the
+credential-free remote endpoint in `mcp.json`.
 
 Static checks catch repository drift, but do not prove that Antigravity CLI can
 install the plugin, complete OAuth, or invoke a remote tool. They also do not
@@ -32,8 +28,8 @@ OAuth, or invoke a remote tool.
 
 The root `.cursor-plugin/marketplace.json` routes Cursor to the self-contained
 package at `plugins/cursor/valency`. That package has its own native manifest,
-full-surface `mcp.json`, synchronized skills, and a TeX/BibTeX literature
-rule tailored for Cursor.
+full-surface `mcp.json`, and a TeX/BibTeX literature rule tailored for
+Cursor.
 
 The package connects only to the canonical full endpoint at
 `https://mcp.valency.io/` and exposes the full tool surface.
@@ -58,8 +54,8 @@ uvx --from check-jsonschema==0.37.4 check-jsonschema \
 For host validation, record the Cursor version and add this repository as a
 marketplace with `cursor-agent plugin marketplace add
 https://github.com/valency-oss/valency-connectors`. Open `/plugin`, install Valency
-from the Marketplace tab, and confirm that all seven skills, the literature
-rule, and the `valency` MCP connection load. Complete Cursor-managed OAuth and
+from the Marketplace tab, and confirm that the literature rule and the
+`valency` MCP connection load. Complete Cursor-managed OAuth and
 run a representative read-only Valency Bond tool call.
 
 Record static validation, installation, OAuth, tool discovery, and tool-call
@@ -73,8 +69,7 @@ workaround to the provider package.
 ## Grok Build plugin
 
 The repository-root `.grok-plugin/marketplace.json` maps `valency` to the
-self-contained `plugins/grok/valency` package. Its seven skills must remain
-byte-identical to the canonical root skills. Its `.mcp.json` must contain only
+self-contained `plugins/grok/valency` package. Its `.mcp.json` must contain only
 the remote HTTP endpoint; Grok owns OAuth and dynamic client registration.
 
 With Grok Build installed, record `grok version` and validate the package:
@@ -85,8 +80,7 @@ grok plugin validate plugins/grok/valency
 
 For an installation smoke test, add the root marketplace, install
 `valency --trust`, and confirm
-`grok plugin details valency` plus `grok inspect` report seven skills and one
-HTTP MCP server. Then authenticate `valency` from `/mcps`, record the actual
+`grok plugin details valency` plus `grok inspect` report one HTTP MCP server. Then authenticate `valency` from `/mcps`, record the actual
 non-sensitive callback URI, and make one representative read-only Valency Bond
 tool call. Exercise update and uninstall separately without changing unrelated
 Grok configuration.
@@ -99,7 +93,7 @@ change happens on the Valency service side, not in this package.
 ## Kiro Power
 
 Kiro requires `POWER.md` at a repository root for repository-URL imports. The
-root `POWER.md`, `mcp.json`, and `steering/` directory therefore form one
+root `POWER.md` and `mcp.json` therefore form one
 self-contained Kiro Power alongside the independent Antigravity contract. Kiro
 does not currently document a standalone Power validator.
 
@@ -110,11 +104,9 @@ For live validation, record the Kiro IDE version, then:
 2. Enter `https://github.com/valency-oss/valency-connectors` and confirm the Power
    installs. To test unpublished local changes, instead choose **Import power
    from a folder** and select the repository root.
-3. Verify that all seven workflows are reachable through their focused
-   steering files.
-4. Confirm that Kiro registers and starts the `valency` server from `mcp.json`.
-5. Complete browser OAuth through dynamic client registration.
-6. Run a representative read-only Valency Bond tool call.
+3. Confirm that Kiro registers and starts the `valency` server from `mcp.json`.
+4. Complete browser OAuth through dynamic client registration.
+5. Run a representative read-only Valency Bond tool call.
 
 Record each result separately. A successful folder import does not prove that
 OAuth or remote tool use works. If OAuth fails, capture the registration

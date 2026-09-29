@@ -18,8 +18,6 @@ not tell the user to install a separate connector plugin.
   metadata. Base research claims on Valency Bond tool results.
 - If a tool returns no results or lacks a field, say so plainly and suggest a
   different query when useful.
-- Follow an activated skill's tool chain and evidence limits. Do not replace a
-  prescribed multi-step workflow with a single broad search.
 - Call `submit_feedback` only when the user explicitly asks to send feedback.
 - Produce clean, scannable Markdown.
 
@@ -34,8 +32,3 @@ not tell the user to install a separate connector plugin.
 - Reuse stable Valency paper identifiers across calls instead of repeating
   searches.
 - Use export tools when the user wants BibTeX, CSV, or JSON output.
-
-## Skills
-
-Natural-language requests activate the seven research skills automatically.
-Users can also invoke the skill-derived slash commands shown by Antigravity.
