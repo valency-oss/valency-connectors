@@ -23,21 +23,6 @@ enabled, and complete the host-managed authorization flow for `valency`. Do
 not invent research records or continue a workflow that requires unavailable
 Valency Bond tools.
 
-## Workflows
-
-Use Kiro's `readSteering` action with `powerName="valency"` to load the focused
-steering file that matches the user's request before calling Valency Bond
-tools. Keep these workflows distinct rather than replacing them with generic
-research instructions:
-
-- `profile` — build a researcher's publication and collaboration profile → `steering/profile.md`
-- `landscape` — summarize a field, its trajectory, and its key participants → `steering/landscape.md`
-- `similar` — find papers related to a known title or stable identifier → `steering/similar.md`
-- `trends` — analyze or compare publication activity over time → `steering/trends.md`
-- `network` — map a researcher's direct and second-degree collaborators → `steering/network.md`
-- `reading-list` — curate adjacent literature around a researcher's work → `steering/reading-list.md`
-- `fresh-collaborators` — find relevant researchers outside an established coauthor network → `steering/fresh-collaborators.md`
-
 ## License and support
 
 - Power license: [MIT](https://github.com/valency-oss/valency-connectors/blob/main/LICENSE)

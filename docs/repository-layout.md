@@ -15,18 +15,11 @@ unless every affected provider contract and packaging test is updated.
 
 | Entry | Consumer | Purpose |
 | --- | --- | --- |
-| `POWER.md` | Kiro IDE | Defines the Valency Power metadata, onboarding, and seven workflow routes. Kiro requires this file at the repository root for GitHub imports. |
+| `POWER.md` | Kiro IDE | Defines the Valency Power metadata and onboarding. Kiro requires this file at the repository root for GitHub imports. |
 | `mcp.json` | Kiro IDE | Connects the Power to the remote Valency Bond MCP server using Kiro's schema. |
-| `steering/` | Kiro IDE | Contains Kiro-readable copies of the seven canonical workflows. Packaging tests enforce byte-for-byte parity with `skills/`. |
 | `plugin.json` | Antigravity CLI | Declares the repository-root Antigravity plugin. |
 | `mcp_config.json` | Antigravity CLI | Connects Antigravity to Valency Bond using Antigravity's MCP schema. It is not interchangeable with Kiro's `mcp.json`. |
 | `rules/` | Antigravity CLI | Provides host-specific setup and interaction guidance. |
-
-## Shared workflow source
-
-| Entry | Consumer | Purpose |
-| --- | --- | --- |
-| `skills/` | All provider packages | Holds the seven canonical, provider-neutral Valency workflows. Provider packages copy this content into the format their host expects, and tests prevent drift. |
 
 ## Provider marketplaces and packages
 
@@ -34,28 +27,12 @@ unless every affected provider contract and packaging test is updated.
 | --- | --- | --- |
 | `.agents/` | Codex | Declares this repository's OpenAI plugin marketplace. |
 | `.claude-plugin/marketplace.json` | Claude Code | Declares this repository's Claude plugin marketplace. |
-| `.claude-plugin/plugin.json` | Agent Skills CLI | Groups every canonical workflow under the `Valency Skills` select-all row. It is not a second Claude marketplace entry. |
 | `.cursor-plugin/` | Cursor | Declares this repository's Cursor plugin marketplace and routes `valency` to its independent provider package. |
 | `.grok-plugin/` | Grok Build | Declares the root Grok marketplace and maps the user-visible `valency` plugin to its dedicated nested package. |
 | `.github/` | GitHub and CI | Contains the GitHub Copilot marketplace plus GitHub Actions workflows. |
 | `plugins/` | Claude, Copilot, Cursor, Grok Build, and OpenAI hosts | Contains self-contained provider packages for hosts that install from a nested marketplace path. Kiro is at the root because its GitHub importer requires root `POWER.md`. |
-| `plugins/cursor/valency` | Cursor | Contains the dedicated Cursor manifest, full-surface remote MCP configuration, MIT license, literature rule, and seven canonical skill copies. |
-| `plugins/grok/valency` | Grok Build | Contains the dedicated Grok manifest, credential-free remote MCP configuration, MIT license, and seven canonical skill copies. The root marketplace hides this internal path from users. |
-
-### Why Agent Skills metadata is under `.claude-plugin/`
-
-The Agent Skills CLI reuses Claude's plugin-manifest convention as an
-interoperable way to describe named groups of skills. It reads the root
-`.claude-plugin/plugin.json`, follows its explicit `skills/*` paths, and uses
-the manifest name to render one `Valency Skills` parent row in its selector.
-That group works when the selected destination is Codex or any other supported
-agent; it is not limited to Claude.
-
-Claude's marketplace flow follows a separate path. It reads
-`.claude-plugin/marketplace.json`, resolves the `valency` entry to
-`plugins/claude/valency`, and installs that self-contained package. Therefore,
-the root grouping manifest does not replace, rename, or enter the normal Claude
-marketplace package.
+| `plugins/cursor/valency` | Cursor | Contains the dedicated Cursor manifest, full-surface remote MCP configuration, MIT license, and literature rule. |
+| `plugins/grok/valency` | Grok Build | Contains the dedicated Grok manifest, credential-free remote MCP configuration, and MIT license. The root marketplace hides this internal path from users. |
 
 ## Development and repository infrastructure
 
@@ -64,7 +41,7 @@ marketplace package.
 | `README.md` | Short product overview and installation path for every supported provider. |
 | `docs/` | Uninstall, maintainer validation, and repository layout documentation. |
 | `scripts/` | Repository validation helpers, including the OpenAI package validator wrapper. |
-| `test/` | Cross-provider packaging tests that pin manifests, endpoints, workflow mappings, and synchronization. |
+| `test/` | Cross-provider packaging tests that pin manifests and endpoints. |
 | `package.json` | Defines the repository's Node-based validation commands. This repository is not published as an npm package. |
 | `LICENSE` | MIT license for this repository and its provider integration files. The hosted Valency Bond service has its own license. |
 

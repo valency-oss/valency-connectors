@@ -12,9 +12,9 @@
 
 Valency Bond connects AI assistants to [Valency](https://valency.io) for
 research discovery and analysis. Each provider package connects to the hosted
-Valency Bond MCP server and includes seven guided workflows for researcher
-profiles, field landscapes, similar papers, publication trends, collaboration
-networks, reading lists, and fresh collaborators.
+Valency Bond MCP server for paper search, researcher profiles, field
+landscapes, similar papers, publication trends, collaboration networks, and
+more.
 
 Authentication is handled through your agent's browser-based sign-in flow. The
 packages do not require a client secret, bearer token, or manually configured
@@ -31,8 +31,8 @@ from the Extensions view (search "Valency") or from the command line:
 code --install-extension valencyio.valency
 ```
 
-The extension registers the Valency Bond MCP server and all seven skills;
-there is nothing to configure. After installing, choose **Sign in** in the
+The extension registers the Valency Bond MCP server; there is nothing to
+configure. After installing, choose **Sign in** in the
 notification (or run **Valency: Sign in** from the Command Palette) and
 complete the browser sign-in when it opens. Requires VS Code 1.109 or later.
 
@@ -54,11 +54,11 @@ codex plugin marketplace add valency-oss/valency-connectors &&
   codex mcp login valency
 ```
 
-The plugin installation includes both the seven skills and the Valency Bond MCP
-connection. `codex mcp login valency` authorizes that bundled connection; users
-do not need to add a separate MCP server or install a separate Valency app.
+The plugin installation includes the Valency Bond MCP connection.
+`codex mcp login valency` authorizes that bundled connection; users do not need
+to add a separate MCP server or install a separate Valency app.
 
-Start a new Codex session after installation so its skills and MCP tools load.
+Start a new Codex session after installation so its MCP tools load.
 
 ### ChatGPT
 
@@ -107,17 +107,6 @@ server; the package does not contain a local executable or credentials.
 2. Select **Import power from GitHub**.
 3. Enter `https://github.com/valency-oss/valency-connectors` and install the Power.
 4. Activate Valency and complete Kiro's browser-based authorization flow.
-
-### Skills-only installation
-
-To install the seven guided workflows without the Valency Bond MCP server:
-
-```bash
-npx skills@latest add valency-oss/valency-connectors
-```
-
-Toggle **Valency Skills** to select or clear all seven workflows, or choose
-individual skills. This does not configure or authenticate the MCP server.
 
 ## More information
 

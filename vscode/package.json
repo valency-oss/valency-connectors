@@ -2,7 +2,7 @@
   "name": "valency",
   "displayName": "Valency",
   "publisher": "valencyio",
-  "version": "0.1.8",
+  "version": "0.1.9",
   "description": "Search, discover, and analyze tens of millions of research papers and preprints.",
   "author": {
     "name": "Valency Systems Inc"
@@ -27,7 +27,6 @@
     "research",
     "papers",
     "mcp",
-    "skills",
     "semantic-search"
   ],
   "capabilities": {
@@ -50,34 +49,11 @@
         "category": "Valency"
       }
     ],
-    "chatSkills": [
-      {
-        "path": "./skills/valency-fresh-collaborators/SKILL.md"
-      },
-      {
-        "path": "./skills/valency-landscape/SKILL.md"
-      },
-      {
-        "path": "./skills/valency-network/SKILL.md"
-      },
-      {
-        "path": "./skills/valency-profile/SKILL.md"
-      },
-      {
-        "path": "./skills/valency-reading-list/SKILL.md"
-      },
-      {
-        "path": "./skills/valency-similar/SKILL.md"
-      },
-      {
-        "path": "./skills/valency-trends/SKILL.md"
-      }
-    ],
     "walkthroughs": [
       {
         "id": "valency.gettingStarted",
         "title": "Get started with Valency",
-        "description": "Sign in, see what was installed, and run your first skill.",
+        "description": "Sign in and see what was installed.",
         "steps": [
           {
             "id": "valency.signIn",
@@ -93,21 +69,10 @@
           {
             "id": "valency.installed",
             "title": "See what was installed",
-            "description": "This extension registered the hosted Valency MCP server and added seven research skills to your agent. Nothing runs or is stored on your machine.",
+            "description": "This extension registered the hosted Valency MCP server. Nothing runs or is stored on your machine.",
             "media": {
               "markdown": "walkthrough/installed.md"
             }
-          },
-          {
-            "id": "valency.firstSkill",
-            "title": "Run your first skill",
-            "description": "Ask the agent to profile a researcher, map a field, or build a reading list — it picks the right skill automatically.\n[Open Chat](command:workbench.action.chat.open)",
-            "media": {
-              "markdown": "walkthrough/first-skill.md"
-            },
-            "completionEvents": [
-              "onCommand:workbench.action.chat.open"
-            ]
           }
         ]
       }

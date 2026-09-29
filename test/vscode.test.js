@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { existsSync, readFileSync, readdirSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { test } from "node:test";
 
 const readJson = (path) => JSON.parse(readFileSync(path, "utf8"));
@@ -7,40 +7,6 @@ const readJson = (path) => JSON.parse(readFileSync(path, "utf8"));
 const extensionRoot = "vscode";
 const manifest = readJson(`${extensionRoot}/package.json`);
 const extensionSource = readFileSync(`${extensionRoot}/src/extension.ts`, "utf8");
-
-const expectedSkills = [
-  "valency-fresh-collaborators",
-  "valency-landscape",
-  "valency-network",
-  "valency-profile",
-  "valency-reading-list",
-  "valency-similar",
-  "valency-trends",
-];
-
-// The union of every MCP tool the seven vendored skills reference — the
-// complete surface the registered endpoint must expose. More than double the
-// 8-tool /mcp/authoring allowlist, which is why the extension points at the
-// full https://mcp.valency.io/ surface.
-const pinnedTools = [
-  "analyze_corpus_metrics",
-  "batch_author_categories",
-  "compare_authors",
-  "find_coauthors",
-  "find_similar_papers",
-  "get_author_profile",
-  "get_keyword_trends",
-  "get_paper_by_id",
-  "get_publication_trends",
-  "get_publication_trends_batch",
-  "identify_prolific_authors",
-  "identify_research_domains",
-  "search_by_abstract",
-  "search_by_author",
-  "search_by_category",
-  "search_by_title",
-  "semantic_search_papers",
-];
 
 // The Marketplace's fixed category enum (17 values; no AI or Chat category
 // exists). https://code.visualstudio.com/api/references/extension-manifest
@@ -103,80 +69,6 @@ test("the MCP definition points at the bare hosted endpoint", () => {
   );
 });
 
-test("chatSkills contributes exactly the seven prefixed skill files", () => {
-  assert.deepEqual(
-    manifest.contributes.chatSkills,
-    expectedSkills.map((skill) => ({ path: `./skills/${skill}/SKILL.md` })),
-  );
-  for (const { path } of manifest.contributes.chatSkills) {
-    assert.match(path, /\/SKILL\.md$/);
-    assert.equal(
-      existsSync(`${extensionRoot}/${path.slice(2)}`),
-      true,
-      `${path} must exist inside ${extensionRoot}/`,
-    );
-  }
-});
-
-test("every vendored skill's frontmatter name equals its directory", () => {
-  assert.deepEqual(
-    readdirSync(`${extensionRoot}/skills`, { withFileTypes: true })
-      .filter((entry) => entry.isDirectory())
-      .map((entry) => entry.name)
-      .sort(),
-    expectedSkills,
-  );
-
-  for (const skill of expectedSkills) {
-    const contents = readFileSync(
-      `${extensionRoot}/skills/${skill}/SKILL.md`,
-      "utf8",
-    );
-    const frontmatter = contents.match(/^---\n([\s\S]*?)\n---/);
-    assert.ok(frontmatter, `${skill}/SKILL.md must start with YAML frontmatter`);
-    assert.match(
-      frontmatter[1],
-      new RegExp(`^name: ${skill}$`, "m"),
-      `${skill}/SKILL.md frontmatter name must equal its directory name`,
-    );
-  }
-});
-
-test("vendored skill directories contain only SKILL.md", () => {
-  for (const skill of expectedSkills) {
-    assert.deepEqual(
-      readdirSync(`${extensionRoot}/skills/${skill}`),
-      ["SKILL.md"],
-      `${skill} must ship a single SKILL.md and nothing else`,
-    );
-  }
-});
-
-test("skills only call tools from the pinned Valency Bond surface", () => {
-  const combined = expectedSkills
-    .map((skill) =>
-      readFileSync(`${extensionRoot}/skills/${skill}/SKILL.md`, "utf8"),
-    )
-    .join("\n");
-
-  const calledTools = new Set(
-    [...combined.matchAll(/Call `([a-z_]+)`/g)].map((match) => match[1]),
-  );
-  assert.ok(calledTools.size > 0, "skills must call at least one tool");
-  for (const tool of calledTools) {
-    assert.ok(
-      pinnedTools.includes(tool),
-      `${tool} is called by a skill but missing from the pinned tool fixture`,
-    );
-  }
-  for (const tool of pinnedTools) {
-    assert.ok(
-      combined.includes(`\`${tool}\``),
-      `${tool} is pinned but no vendored skill references it`,
-    );
-  }
-});
-
 test("Marketplace presentation obeys icon, category, and keyword rules", () => {
   const icon = readFileSync(`${extensionRoot}/${manifest.icon}`);
   assert.deepEqual(
@@ -221,12 +113,12 @@ test("the manifest pins a concrete VS Code engine range", () => {
   assert.equal(manifest.engines.vscode, "^1.109.0");
 });
 
-test("the walkthrough contributes three steps with packaged media", () => {
+test("the walkthrough contributes two steps with packaged media", () => {
   assert.equal(manifest.contributes.walkthroughs.length, 1);
   const [walkthrough] = manifest.contributes.walkthroughs;
   assert.equal(walkthrough.id, "valency.gettingStarted");
   assert.equal(walkthrough.title, "Get started with Valency");
-  assert.equal(walkthrough.steps.length, 3);
+  assert.equal(walkthrough.steps.length, 2);
   for (const step of walkthrough.steps) {
     assert.equal(
       existsSync(`${extensionRoot}/${step.media.markdown}`),
@@ -320,7 +212,7 @@ test("the walkthrough's sign-in step drives the sign-in command", () => {
   const [walkthrough] = manifest.contributes.walkthroughs;
   assert.deepEqual(
     walkthrough.steps.map((step) => step.id),
-    ["valency.signIn", "valency.installed", "valency.firstSkill"],
+    ["valency.signIn", "valency.installed"],
     "sign-in comes first so users connect before anything else",
   );
   const signInStep = walkthrough.steps[0];
