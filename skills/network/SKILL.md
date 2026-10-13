@@ -21,13 +21,13 @@ Call `get_author_profile` with `author` (plus any hint). Branch on `status`:
 - `not_found` / `no_match` / `name_only` → say so, ask for an ORCID or a known paper. Stop.
 - `did_you_mean` → show the suggestions, offer to retry. Stop.
 - `ambiguous` → pick a candidate only if its `corpus_papers` is several times the next *genuinely different* candidate (a small same-field entry with the same name is likely a fragment of the same person), and say it's a judgment call. Otherwise list the candidates (name, ORCID, papers, top fields, latest title) and ask. Once picked, re-call with that `author_id`.
-- `resolved` → keep `person.author_id`, `person.display_name`, `corpus.top_categories`.
+- `resolved` → keep `person.author_id`, `person.display_name`, `corpus.corpus_papers`, `corpus.top_categories`.
 
 If a response carries `degraded: true` (`next_action: "retry_unchanged"`), part of it was skipped, not empty: retry that call once unchanged, and if it is still degraded, say that part is unavailable rather than reporting zero.
 
 ### Step 2: Direct collaborators
 
-Call `find_coauthors` with `author_id`, `limit: 20`. Rows are `{coauthor, coauthor_id, shared_papers}`. `count` is rows returned, not a network total. If no rows come back, give the Network Summary, say no collaborators were found, and skip Steps 3–5.
+Call `find_coauthors` with `author_id`, `limit: 100`. Every row counts as a direct collaborator in Step 3; the output shows the top 10. Rows are `{coauthor, coauthor_id, shared_papers}`. `count` is rows returned, not a network total. If no rows come back, give the Network Summary, say no collaborators were found, and skip Steps 3–5.
 
 The same person can appear twice (two records, e.g. "Robert M. Califf" and "Robert Califf"). Merge rows whose names match (surname plus given name, or first initial when one side has only initials; ignore case, accents, apostrophes and every hyphen variant, e.g. "Hans‐Walter" with a Unicode hyphen vs "Hans-Walter") and that share the same field. Keep the larger shared-paper count (the two can overlap, so don't add them) and note the merge. Then take the top 5 (ties: keep the tool's order).
 
@@ -35,7 +35,7 @@ Note the warning's count of excluded >50-author papers. If it's more than about 
 
 ### Step 3: Second-degree connections
 
-For each of the top 5, call `find_coauthors` with `author_id` = their `coauthor_id`, `limit: 10`. Drop from these lists: the researcher (they appear under a different ID form — `A5…` here vs `A_…` from Step 1 — so match by name), anyone in Step 2's list, and duplicates of the same person. Count, for each remaining person, how many of the top 5 lead to them; merge the two records of any person merged in Step 2 before counting.
+For each of the top 5, call `find_coauthors` with `author_id` = their `coauthor_id`, `limit: 10`. Drop from these lists: the researcher (they appear under a different ID form — `A5…` here vs `A_…` from Step 1 — so match by name), anyone in Step 2's full list (all rows, not just the top 5), and duplicates of the same person. Count, for each remaining person, how many of the top 5 lead to them; merge the two records of any person merged in Step 2 before counting.
 
 ### Step 4: Compare
 

@@ -64,17 +64,18 @@ const strayCopies = () => {
     const dir = `plugins/${provider}/valency/skills`;
     if (!existsSync(join(root, dir))) return [];
     return readdirSync(join(root, dir)).flatMap((entry) => {
+      if (entry.startsWith(".")) return [];
       if (!names.has(entry)) return [`${dir}/${entry}`];
       if (provider === "openai") return [];
       return readdirSync(join(root, dir, entry))
-        .filter((file) => file !== "SKILL.md")
+        .filter((file) => file !== "SKILL.md" && !file.startsWith("."))
         .map((file) => `${dir}/${entry}/${file}`);
     });
   });
   if (existsSync(join(root, "steering"))) {
     stray.push(
       ...readdirSync(join(root, "steering"))
-        .filter((entry) => !names.has(entry.replace(/\.md$/, "")))
+        .filter((entry) => !entry.startsWith(".") && !names.has(entry.replace(/\.md$/, "")))
         .map((entry) => `steering/${entry}`),
     );
   }
@@ -116,7 +117,10 @@ const main = (args) => {
     return 0;
   }
 
-  for (const path of strayCopies()) rmSync(join(root, path), { recursive: true, force: true });
+  for (const path of strayCopies()) {
+    console.log(`Removing ${path}`);
+    rmSync(join(root, path), { recursive: true, force: true });
+  }
   for (const [path, contents] of committedCopies()) write(path, contents);
   return 0;
 };
