@@ -1,6 +1,6 @@
 {
   "name": "valency-skills",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Portable research-corpus workflows for agents using the Valency Bond MCP server.",
   "author": {
     "name": "Valency Systems Inc"

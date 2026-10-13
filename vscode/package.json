@@ -2,7 +2,7 @@
   "name": "valency",
   "displayName": "Valency",
   "publisher": "valencyio",
-  "version": "0.1.8",
+  "version": "0.1.10",
   "description": "Search, discover, and analyze tens of millions of research papers and preprints.",
   "author": {
     "name": "Valency Systems Inc"
@@ -116,7 +116,7 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "build": "esbuild src/extension.ts --bundle --platform=node --external:vscode --outfile=dist/extension.js",
-    "vscode:prepublish": "npm run build -- --minify"
+    "vscode:prepublish": "node ../scripts/sync-skills.mjs --vscode && npm run build -- --minify"
   },
   "devDependencies": {
     "@types/node": "22.20.1",

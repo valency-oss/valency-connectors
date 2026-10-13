@@ -5,110 +5,73 @@ description: "Use when the user asks what a researcher should be reading, wants 
 
 # Researcher Reading List
 
-Build a curated reading list for a researcher, organized by intellectual thread, by triangulating off their most representative recent and most-cited work.
+Build a reading list for a researcher, organized into threads, each seeded by one of their own representative papers.
+
+Use the Valency Bond MCP tools available in the current host. Tool names may be qualified by an MCP server prefix; call the matching exposed tool. If the required Valency Bond tools are unavailable, say so and stop. If a tool call fails with an error, retry it once before treating it as a real failure.
 
 ## Input
 
-The user provides an author name (e.g., "David W. Hogg", "Yoshua Bengio", "Jennifer Doudna").
+An author name, or an ORCID / author_id / known paper if the name alone is ambiguous.
 
 ## Tool Chain
 
-Use the Valency Bond MCP tools available in the current host. Tool names may be
-qualified by an MCP server prefix; call the matching exposed tool. If the
-required Valency Bond tools are unavailable, say so and stop.
+### Step 1: Resolve the author
 
-### Step 1: Verify the author exists
+Call `get_author_profile` with `author` (plus any hint given). Branch on `status`:
+- `not_found` / `no_match` → say so, ask for an ORCID or a known paper. Stop.
+- `did_you_mean` → show the suggestions, offer to retry.
+- `ambiguous` → pick a candidate only if its `corpus_papers` is several times the next *genuinely different* candidate (a small same-field entry with the same name is likely a fragment of the same person), and say it's a judgment call. Otherwise list the candidates and ask. Once picked, re-call with that `author_id`.
+- `resolved` → keep `person.author_id`, `person.display_name`, `corpus.corpus_papers`, `corpus.top_categories`. If `warnings[]` says the record's affiliations span several countries and may combine people, mention it in one line — and the seed rule in Step 4 keeps a namesake's paper from becoming a thread.
 
-Call `get_author_profile` with:
-- `author` (string): the author name provided by the user
+Use `person.author_id` for every later call.
 
-If no results are found, tell the user the author was not found and suggest checking the spelling or trying a partial name. Stop here.
+### Step 2: Career anchors
 
-Note the author's top categories from this result — you'll use them later to interpret which themes the reading list is covering. Also note the resolved author name (`resolved_name`) — use it consistently in subsequent calls and when filtering self-citations.
+Call `find_papers_by_researcher` with `author_id`, `sort_by: "citations"`, `limit: 15`. The sort covers their whole corpus. Skip papers with `total_authors` > 50 (a collaboration roster says little about the person's own interests); the top 5 of what's left are the anchors.
 
-### Step 2: Get top-cited papers (career anchors)
+### Step 3: Current direction
 
-Call `search_by_author` with:
-- `author` (string): the author name
-- `limit` (integer): 5
-- `sort_by` (string): "citations"
-- `strict_mode` (string): "fuzzy"
+Call `find_papers_by_researcher` with `author_id`, `sort_by: "recency"`, `limit: 40`. Recency follows the record-update date, so many re-stamped old papers come first: keep only papers from the last two years (by the year rules in Displaying papers), up to 5.
 
-These are the author's most influential works — they anchor the "what defined their career so far" threads.
+### Step 4: Pick 3–5 seeds
 
-### Step 3: Get recent papers (current direction)
+From Steps 2–3, pick 3–5 papers on clearly different topics. Every seed must be on a topic that recurs across their other fetched papers — a one-off collaboration (a paper from another lab's line of work) makes a thread that isn't about them. Among papers that pass, prefer ones where the researcher is first, second or last author. Take: the most-cited such anchor, the most recent such paper with a real abstract, then others that add a new topic (judge by title and abstract, not category codes — PubMed papers often have none).
 
-Call `search_by_author` with:
-- `author` (string): the author name
-- `limit` (integer): 5
-- `sort_by` (string): "relevance"
-- `strict_mode` (string): "fuzzy"
+### Step 5: Similar papers per seed
 
-The default `relevance` sort orders by recency. These represent the author's *current* intellectual direction, which may differ from their most-cited work.
+For each seed, call `find_similar_papers` with `paper_id`, `limit: 12`, `max_authors: 100`. Abstracts stay on: each recommendation's one-line reason must come from its abstract, not be guessed from the title. If a seed returns nothing, skip it and note it.
 
-### Step 4: Select 3–5 representative seed papers
+### Step 6: Clean up
 
-From the combined Step 2 + Step 3 results, select 3 to 5 **seed papers** that best represent the author's distinct intellectual threads:
+1. Merge duplicates (see Displaying papers). If a paper surfaces under several seeds, keep it once with all its seeds.
+2. Drop the researcher's own papers: any result whose `id`/`base_id` appeared in Steps 2–3, and any whose authors include the researcher. Match names on surname plus given name; when either side gives only initials, surname plus first initial. Display names vary across records ("D. Huppenkothen", "Huppenkothen, Daniela").
+3. Each seed's survivors form one thread.
 
-- Always include the single most-cited paper (career anchor).
-- Always include the most recent paper that has a substantive abstract (current direction).
-- Fill the remaining slots by picking papers whose category lists differ — i.e. cover different threads of the author's work, not five papers in the same subfield.
+## Displaying papers
 
-If two papers have nearly identical category lists and similar topics, pick only one.
-
-### Step 5: Find similar papers for each seed
-
-For each seed paper from Step 4, call `find_similar_papers` with:
-- `paper_id` (string): the seed paper's ID
-- `limit` (integer): 10
-- `include_abstract` (boolean): false
-
-If a seed paper has no embedding and the call returns an error, skip that seed and continue with the others. Note the skip in the output.
-
-### Step 6: Aggregate and clean
-
-After all `find_similar_papers` calls complete:
-
-1. **Tag each result** with the seed paper that surfaced it.
-2. **Deduplicate** — if a paper appears in multiple seeds' similar lists, keep the entry with the highest similarity score and merge the seed tags.
-3. **Filter out self-citations** — drop any paper whose author list contains the focal author (use the `resolved_name` from Step 1 to match, since name normalization may matter).
-4. **Group by seed** — partition the cleaned results by which seed paper(s) surfaced them. This grouping defines the reading-list "threads."
+- Link each title to its `url`; keep the paper ID in parentheses.
+- **Year:** the year in `journal_ref` when present, else `first_submitted`. If `journal_ref` or the DOI shows an earlier publication year than the arXiv date (an old paper posted late), use the earlier year. For PubMed rows `first_submitted` is often a record-update date — with no `journal_ref` (similar-paper results don't carry it), leave the year off rather than show a wrong one.
+- **Category:** show arXiv codes only; PubMed `categories` are free keywords — omit them.
+- **Authors:** all if three or fewer, else first three + "et al." Show PubMed's "Last, First" as "First Last".
+- **Duplicates:** same DOI, or same title (ignoring case, punctuation and hyphens) with the same first author. Keep the arXiv record.
 
 ## Output Format
 
 ### Researcher Summary
-
-A short block:
-- **Name**: full name as it appears in the corpus
-- **Total papers**: from Step 1
-- **Primary domains**: top 3 categories from Step 1
+Name, papers in the corpus (`corpus.corpus_papers`), main fields (top 3 of `corpus.top_categories`). One line on how the seeds were chosen.
 
 ### Reading List by Thread
+#### Thread N: <short description of the topic>
+**Seed:** title (linked, ID), year
 
-For each seed paper from Step 4, produce a thread section:
+5–8 recommendations, in similarity order:
+1. **Title** (linked, ID) — authors, year, citations — one sentence on why it's relevant to this thread
 
-#### Thread N: <one-line characterization of the thread>
-
-Anchored by the seed paper:
-- **Seed**: Title (paper ID), year, categories
-
-Recommended reading (5–8 papers per thread, ordered by similarity score):
-
-1. **Title** (paper ID) — first 3 authors, year, category — one-sentence reason it matters here
-2. ...
-
-If a seed paper was skipped because it had no embedding, add a note under that thread: *"This seed had no embedding; no similar papers could be retrieved."*
+If a thread has fewer than 3 recommendations left after cleanup, merge it into the nearest thread or drop it, and say so.
 
 ### Cross-Thread Highlights
-
-If any paper appeared as similar to **multiple** seeds, highlight it as a cross-thread find — these are often the most interesting recommendations because they sit at the intersection of the author's threads:
-
-- **Title** (paper ID) — surfaced by Seed A *and* Seed C — why this matters
-
-If no cross-thread papers were found, omit this section.
+Papers that surfaced under several seeds. Omit if none.
 
 ### Suggested Follow-ups
-
-- Ask for a profile of `<author>` for any author that appears across multiple recommendations.
-- Ask for papers similar to `<paper_id>` to dig deeper into any specific recommendation.
-- Ask for fresh collaborators for `<author>` when the user is interested in *who* (not what) to engage with next.
+- Ask for papers similar to `<paper_id>` — go deeper on any recommendation
+- Ask for fresh collaborators for `<author>` — the *who* to meet, alongside the *what* to read

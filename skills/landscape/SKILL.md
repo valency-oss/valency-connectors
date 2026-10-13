@@ -5,119 +5,65 @@ description: "Use when the user asks for an overview of a research field, wants 
 
 # Field Landscape
 
-Generate a landscape overview of a research field or topic.
+An overview of a research field: size, growth, most-cited papers, most prolific authors, neighbouring fields.
+
+Use the Valency Bond MCP tools available in the current host. Tool names may be qualified by an MCP server prefix; call the matching exposed tool. If the required Valency Bond tools are unavailable, say so and stop. If a tool call fails with an error, retry it once before treating it as a real failure.
 
 ## Input
 
-The user provides either:
-- An arXiv category code (e.g., `cs.LG`, `q-bio.BM`, `astro-ph.CO`) — recognized by the pattern of a short prefix, a dot, and a short suffix
-- Free text describing a research area (e.g., "protein folding", "large language models")
+- **arXiv category code** (`cs.LG`, `q-bio.NC`, `astro-ph.HE`) → category path.
+- **Anything else** (free text, a PubMed topic, a bioRxiv label) → topic path. Only arXiv codes get the category path; other sources' labels go through free text.
 
-## Tool Chain
+## Tool Chain — category path
 
-Use the Valency Bond MCP tools available in the current host. Tool names may be
-qualified by an MCP server prefix; call the matching exposed tool. If the
-required Valency Bond tools are unavailable, say so and stop.
+1. **Most-cited papers:** `search_by_category` with `category`, `sort_by: "citations"`, `limit: 100`, `include_abstract: false`, `max_authors: 3`. The sort covers the whole category. Results include papers cross-listed into it; a paper's first-listed category is its primary one.
+2. **Volume over time:** `get_publication_trends` with `category`, `granularity: "year"`, `format: "compact"`.
+3. **Prolific authors:** `identify_prolific_authors` with `category`, `limit: 10`. Rows are keyed by name; use each row's identity fields:
+   - `unambiguous`, `mostly_single`, or `ambiguous` with `top_candidate_coverage` ≥ 0.85 → one person.
+   - other `ambiguous` → "may combine a few people with this name".
+   - `likely_aggregation` / `severe_aggregation` → several people share this name; don't present the count as one person's.
+   - `unresolved` → not enough signal to tell.
+   Keep `top_candidate_id` for follow-ups. If the call times out, retry once, then skip the section and say author ranking wasn't available.
+4. **Size:** `analyze_corpus_metrics` with `category`.
+5. **Neighbouring fields (no call):** count the other categories listed on Step 1's papers.
 
-### Step 1: Find papers in the field
+## Tool Chain — topic path
 
-**If the input matches an arXiv category pattern** (e.g., `cs.LG`):
+1. **Most-cited papers:** `semantic_search_papers` with `query`, `sort_by: "citations"`, `limit: 100`, `include_abstract: false`, `max_authors: 3`. This takes the 100 papers closest in meaning and orders those by citations, so it's "the most-cited of the closest matches", not the field's all-time list. Phrase the query the way the field describes itself.
+2. **Volume over time:** `get_keyword_trends` with the short topic term (e.g. "base editing" — not the descriptive sentence from step 1), `granularity: "year"`, `format: "compact"`. It matches the words, not the exact phrase, so years before the topic existed can hold unrelated hits.
+3. No author ranking, corpus metrics or neighbouring fields on this path — they need a category. Say so in one line.
 
-Call `search_by_category` with:
-- `category` (string): the category code
-- `limit` (integer): 10
-- `sort_by` (string): "citations"
+## Reading the numbers
 
-**If the input is free text:**
+- **Trends** count papers by record-update date for most sources: revised old papers land in later years, and the earliest years look thinner than they were. Base the trajectory on complete years. Mark the current year as partial; if it already exceeds last year's full count, say it's likely inflated by record updates rather than calling it growth. An earlier year at least double its neighbours' average, with no known field event, is likely an ingestion artifact — say so in one line rather than calling it growth.
+- **Topic-path totals:** sum the keyword-trend counts from the year the topic took off (when counts start rising steadily), labelled "papers mentioning the term since <year>"; mention the earlier stray matches in one line.
+- **Duplicates:** the same work can appear as an arXiv and a PubMed record. Treat rows as one paper when the DOI matches, or the title matches (ignoring case, punctuation and hyphens) **and** the first author matches. Keep the higher citation count.
 
-Call `semantic_search_papers` with:
-- `query` (string): the user's input
-- `limit` (integer): 10
-- `sort_by` (string): "citations"
+## Displaying papers
 
-If no results are found, tell the user and suggest trying different terms or checking category codes with a broader search. Stop here.
-
-### Step 2: Get publication trends
-
-**If the input is a category code:**
-
-Call `get_publication_trends` with:
-- `category` (string): the category code
-- `granularity` (string): "year"
-- `format` (string): "compact"
-
-**If the input is free text:**
-
-Call `get_keyword_trends` with:
-- `query` (string): the user's input
-- `granularity` (string): "year"
-- `format` (string): "compact"
-
-### Step 3: Identify top authors
-
-Call `identify_prolific_authors` with:
-- `category` (string): the category code (if input was a category), otherwise omit
-- `limit` (integer): 10
-
-Note: if the input was free text and no category was identified, skip this step and note that top-author ranking requires a category code.
-
-This tool can time out for very large categories (e.g., cs.LG). If it times out, skip this section in the output and note that author ranking was unavailable due to the size of the category.
-
-### Step 4: Identify subdomains
-
-Call `identify_research_domains` with:
-- `limit` (integer): 10
-
-Note: this returns corpus-wide domain rankings. If the input was a category, the results contextualize where this category sits within the broader landscape.
-
-### Step 5: Get corpus metrics
-
-Call `analyze_corpus_metrics` with:
-- `category` (string): the category code (if input was a category), otherwise omit
+Link each title to its `url`; keep the ID in parentheses. Year: the year in `journal_ref` when present, else `first_submitted` (for PubMed rows, `first_submitted` is often a record-update date; with no `journal_ref`, leave the year off). Category: arXiv codes only — PubMed `categories` are free keywords. Authors: all if three or fewer, else first three + "et al."; a collaboration name ("The LIGO Scientific Collaboration") counts as an author.
 
 ## Output Format
 
 ### Field Summary
-
-A brief paragraph covering:
-- Total papers found (from Step 5 or Step 1 result count)
-- Date range of publications
-- Growth trajectory (from Step 2 — is volume increasing, stable, or declining?)
+Total papers (category: `analyze_corpus_metrics`; topic: trend sum), years covered, growth in one or two sentences.
 
 ### Publication Trends
+Year-by-year table, current year marked partial, artifacts flagged. For long series, group the sparse early years into one row.
 
-A year-by-year table from Step 2:
+### Most-Cited Papers
+Top 10 (after merging duplicates): title (linked, ID), authors, year, citations. Category path: if cross-listed papers dominate the top 10, list the top papers whose primary category *is* the input first, then a short "also highly cited, cross-listed from other fields" line. Topic path: label the list "most-cited among the 100 closest matches".
 
-| Year | Papers |
-|------|--------|
-| 2020 | 1,234  |
-| ...  | ...    |
+### Top Authors (category path only)
+Up to 10: name, paper count, with the identity note from Step 3 where one applies.
 
-### Top Authors
-
-A numbered list of the top 10 authors from Step 3 with their paper counts.
-
-### Subdomain Breakdown
-
-A table of the top research domains from Step 4, giving context for how this field relates to the broader corpus.
-
-### Notable Recent Papers
-
-List 5 papers from Step 1 (the most-cited papers found). For each:
-- Title (with paper ID)
-- Authors (first 3, then "et al." if more)
-- Year
-- Category
+### Neighbouring Fields (category path only)
+Most frequent co-listed categories with counts, labelled "co-listed on the field's 100 most-cited papers".
 
 ### Observations
-
-2-3 brief observations drawn from the data. Examples:
-- "Publication volume has doubled since 2021"
-- "The field is concentrated in 2-3 subdomain categories"
-- "Author X dominates with 3x more papers than the next most prolific"
+2–3 points drawn only from the data above.
 
 ### Suggested Follow-ups
-
-- Ask for a profile of `<author>` for any top author listed.
-- Ask for trends in `<category>` for deeper trend analysis.
-- Ask for papers similar to `<paper_id>` for any notable paper listed.
+- Ask for a profile of `<author>` — for a listed author (pass that row's `top_candidate_id` as the author_id)
+- Ask for trends for `<category or topic>` — finer trend analysis
+- Ask for papers similar to `<paper_id>` — around any listed paper

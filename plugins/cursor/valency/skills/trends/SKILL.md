@@ -5,95 +5,60 @@ description: "Use when the user asks how a research topic has changed over time,
 
 # Publication Trends
 
-Show how a topic or category has evolved over time.
+Show how a topic or category has grown over time.
+
+Use the Valency Bond MCP tools available in the current host. Tool names may be qualified by an MCP server prefix; call the matching exposed tool. If the required Valency Bond tools are unavailable, say so and stop. If a tool call fails with an error, retry it once before treating it as a real failure.
 
 ## Input
 
-The user provides one of:
-- An arXiv category code (e.g., `cs.LG`) — recognized by the short-prefix-dot-suffix pattern
-- A keyword or phrase (e.g., "transformer", "CRISPR")
-- Multiple categories or keywords separated by commas or "vs" (e.g., "cs.LG, cs.CL" or "transformers vs RNNs") — for comparison
+One or more arXiv category codes and/or keywords. Several inputs ("A vs B", comma-separated) → a comparison.
 
 ## Tool Chain
 
-Use the Valency Bond MCP tools available in the current host. Tool names may be
-qualified by an MCP server prefix; call the matching exposed tool. If the
-required Valency Bond tools are unavailable, say so and stop.
+### Step 1: Trend data
 
-### Step 1: Get trend data
+- **Category:** `get_publication_trends` with `category`, `granularity: "year"`, `format: "compact"`.
+- **Keyword:** `get_keyword_trends` with `query`, same `granularity`/`format`. It matches the words, not the exact phrase. If the term has a common variant or spelled-out form ("CAR-T" / "chimeric antigen receptor", "LLM" / "large language model"), run that too and report both — they can differ by 2× or more.
+- **Several inputs:** one call per input, combined into one table.
 
-**If the input is a single category code:**
+### Step 2: Current-year check
 
-Call `get_publication_trends` with:
-- `category` (string): the category code
-- `granularity` (string): "year"
-- `format` (string): "compact"
+The current year is partial and, for most sources, inflated by old records being re-stamped. To tell real growth from that, call the same trend tool with `granularity: "month"` and compare the current year's months with last year's:
+- months rising smoothly → real growth; say the current year is on track to exceed last year.
+- an abrupt step in a few months, well above the months around it → likely record updates; say the current-year count may be inflated and read the trajectory from complete years.
+Use judgment rather than a fixed ratio, and in a comparison read similar-looking curves the same way. Monthly results may list months out of order; sort them before comparing.
 
-**If the input is a single keyword/phrase:**
+### Step 3: Representative recent papers
 
-Call `get_keyword_trends` with:
-- `query` (string): the keyword
-- `granularity` (string): "year"
-- `format` (string): "compact"
+Cutoff = today minus 2 years. Recent work that's already being cited:
+- **Keyword:** `semantic_search_papers` with `query`, `start_date` (cutoff), `limit: 30`, `include_abstract: false`, `max_authors: 3`.
+- **Category:** `filter_by_date_range` with `category`, `start_date` (cutoff), `end_date` (today), `sort_by: "citations"`, `limit: 300`, `include_abstract: false`, `max_authors: 1`. Most rows will be famous old papers whose records were re-stamped — the filter below removes them, and what remains is the most-cited genuinely recent work.
 
-**If the input contains multiple categories** (comma-separated or "vs"):
+Both filter on record-update dates, so drop papers whose `first_submitted` (or `journal_ref`/DOI year, if earlier) is before the cutoff, plus any whose record otherwise shows older work (a past conference or edition named in the title or comments), and merge duplicates. If fewer than 3 genuinely recent papers remain for an input, show those and say the rest couldn't be dated reliably — don't pad the list. Take the 3–5 most-cited of what's left, then verify each before showing it: call `get_paper_by_id` (`include_abstract: false`) — search results omit `comments` and, for PubMed, `journal_ref` — and drop any whose `journal_ref`, DOI or `comments` show older work (e.g. "NeurIPS 2014"); move down the list to replace it. For a comparison, do this per input.
 
-Call `get_publication_trends` individually for each category with:
-- `category` (string): each category code
-- `granularity` (string): "year"
-- `format` (string): "compact"
+## Reading the numbers
 
-Note: `get_publication_trends_batch` exists but is unreliable and frequently times out. Use individual calls instead and combine the results into a comparison table.
+- **What's counted:** for most sources papers are counted by record-update date, so revised older papers land in later years and the earliest years look thinner than they were. Say "in this corpus" for any "first appeared" claim, and date it from when counts become sustained, not from the first non-zero year (loose word matching puts stray hits in early years).
+- **Current year:** partial — read it per Step 2.
+- **Spikes:** a single year at least double its neighbours' average, with no known field event, is likely an ingestion artifact — flag it in one line.
 
-**If the input contains multiple keywords** (comma-separated or "vs"):
+## Displaying papers
 
-Call `get_keyword_trends` once per keyword with:
-- `query` (string): each keyword
-- `granularity` (string): "year"
-- `format` (string): "compact"
-
-### Step 2: Get recent representative papers
-
-Call `search_by_abstract` with:
-- `query` (string): the keyword or category name (use the human-readable name for categories, e.g., "machine learning" for cs.LG)
-- `limit` (integer): 5
-- `sort_by` (string): "relevance"
+Link each title to its `url`; keep the ID in parentheses. Year: the year in `journal_ref` when present, else `first_submitted`; if `journal_ref` or the DOI shows an earlier year than the arXiv date (an old paper posted late), use the earlier one and treat it as old. Never show a year later than the current one (a journal volume can be dated ahead) — use `first_submitted` instead. Authors: all if three or fewer, else first three + "et al." Duplicates: same DOI, or same title (ignoring case, punctuation and hyphens) with the same first author — keep the arXiv record.
 
 ## Output Format
 
 ### Trend Data
+Year-by-year table (one column per input when comparing), current year marked partial. For long series, group the sparse early years into one row.
 
-**For single input:** a year-by-year table:
-
-| Year | Papers |
-|------|--------|
-| 2018 | 500    |
-| ...  | ...    |
-
-**For comparisons:** a side-by-side table:
-
-| Year | cs.LG  | cs.CL  |
-|------|--------|--------|
-| 2018 | 500    | 300    |
-| ...  | ...    | ...    |
-
-### Narrative Summary
-
-A 3-5 sentence narrative covering:
-- When the field or topic first appeared in the corpus
-- Key inflection points (years where volume jumped or dropped significantly)
-- Current trajectory (accelerating, plateauing, declining)
-- For comparisons: which topic is growing faster and when they diverged
+### Summary
+3–5 sentences: when it took off in this corpus, inflection points, trajectory over complete years (accelerating / plateauing / declining), and for comparisons, which grows faster and when they diverged. Include the caveats above only where they change the reading.
 
 ### Representative Recent Papers
-
-A numbered list of 3-5 papers from Step 2. For each:
-- Title (with paper ID)
-- Authors (first 3, then "et al.")
-- Year
+3–5 per input: title (linked, ID), authors, year.
 
 ### Suggested Follow-ups
-
-- Ask for a landscape of `<category>` for a broader overview of the field.
-- Ask for a profile of `<author>` for authors driving the trend.
-- Ask for trends in `<other_keyword>` to compare with related topics.
+Only lines you can fill with a real value:
+- Ask for a landscape of `<category>` — when the input was an arXiv category
+- Ask for trends for `<related term>` — a named related term worth comparing
+- Ask for papers similar to `<paper_id>` — around one of the listed papers

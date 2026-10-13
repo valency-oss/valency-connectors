@@ -7,81 +7,48 @@ description: "Use when the user wants to find papers similar to a specific paper
 
 Find papers semantically similar to a given paper.
 
+Use the Valency Bond MCP tools available in the current host. Tool names may be qualified by an MCP server prefix; call the matching exposed tool. If the required Valency Bond tools are unavailable, say so and stop. If a tool call fails with an error, retry it once before treating it as a real failure.
+
 ## Input
 
-The user provides either:
-- A paper identifier — one of:
-  - arXiv ID (e.g., `2301.07041` or `2301.07041v3`)
-  - DOI (e.g., `10.1101/2024.01.15.575423` or any `10.xxxx/...` pattern)
-  - PubMed ID / PMID (digits only, e.g., `26360422`)
-- A paper title (contains spaces, reads as natural language)
-
-**Identifier detection rules:**
-- If the input is digits only → treat as PMID
-- If the input matches `10.xxxx/...` → treat as DOI (covers bioRxiv, medRxiv, and other DOI-minted sources)
-- If the input matches a numeric pattern with dots like `NNNN.NNNNN` (optionally with `vN` suffix) → treat as arXiv ID
-- Otherwise → treat as a title and resolve via search
-
-Do not assume all bioRxiv records use the `10.1101/...` prefix. Newer records may use other DOI prefixes.
+- An arXiv ID (`2301.07041`, `2301.07041v3`, `astro-ph/9805201`), a bare PubMed ID (`26017442`), a `PMC` ID, or an OSF short ID — resolve directly.
+- A DOI (`10.xxxx/...`) — not resolvable by ID (see Step 1).
+- A title or title fragment — resolve via search.
 
 ## Tool Chain
 
-Use the Valency Bond MCP tools available in the current host. Tool names may be
-qualified by an MCP server prefix; call the matching exposed tool. If the
-required Valency Bond tools are unavailable, say so and stop.
+### Step 1: Resolve the paper
 
-### Step 1: Resolve paper ID (if needed)
+**ID:** call `get_paper_by_id` with `paper_id` as given. If `found: false`, say the ID wasn't recognized and ask for the title. Stop.
 
-**If the input is a paper ID** (arXiv ID, DOI, or PMID):
+**DOI:** `get_paper_by_id` doesn't accept DOIs. Exception: OSF DOIs (`10.31223/` EarthArXiv, `10.31234/` PsyArXiv, `10.31235/` SocArXiv) — strip the prefix and any `osf.io/`; the rest is the corpus ID. Otherwise, if you know the paper's title and an author with confidence, call `search_by_title` with both `query` and `author` (a generic title like "Deep learning" is unfindable without the author filter) and accept the hit whose `doi` equals the DOI given. If you don't know the paper, ask the user for its title or arXiv/PubMed ID.
 
-Call `get_paper_by_id` with:
-- `paper_id` (string): the provided ID
-
-If no paper is found, tell the user the ID was not recognized and suggest searching by title instead. Stop here.
-
-**If the input looks like a title** (contains spaces):
-
-Call `search_by_title` with:
-- `query` (string): the provided title
-- `limit` (integer): 5
-
-Present the top matches and ask the user to confirm which paper they mean, unless only one result is returned or the top result is a near-exact title match. Use the confirmed paper's ID for the next step.
-
-If no results are found, suggest the user check the title or try keywords from it. Stop here.
+**Title:** call `search_by_title` with `query`, `limit: 5`. A result with `_source: "semantic"` is a fallback guess, not a title match; a real keyword hit has no `_source` field. Ignore `relevance_score`, `match_quality` and "No strong matches found" — they appear even on exact hits.
+- Take the paper without asking when the first keyword hit's title matches the query, or starts with it, and no other keyword hit is an equally good match.
+- Otherwise list the candidates (title, first author, year) and ask which one. If nothing matches at all, say so and ask for more of the title or an ID.
 
 ### Step 2: Find similar papers
 
-Call `find_similar_papers` with:
-- `paper_id` (string): the resolved paper ID
-- `limit` (integer): 10
+Call `find_similar_papers` with `paper_id` (resolved), `limit: 12`, `max_authors: 4`. If it errors or returns nothing, say this paper has no embedding yet and offer `semantic_search_papers` on its title instead. Stop.
 
-If the paper has no embedding and returns an error, tell the user that semantic similarity is not available for this paper and suggest trying `semantic_search_papers` with keywords from its abstract instead. Stop here.
+Merge duplicates (see Displaying papers), drop the source paper and any other version of it (its arXiv/PubMed twin — mention the twin under Source Paper), and keep the top 10.
 
-### Step 3: Enrich results (if needed)
+## Displaying papers
 
-The results from Step 2 already include metadata (title, authors, abstract, categories). If any result is missing abstract or author data, call `get_paper_by_id` for those papers.
+- Link each title to its `url`; keep the paper ID in parentheses.
+- **Year:** the year in `journal_ref` when present, else `first_submitted`; if `journal_ref` or the DOI shows an earlier year than the arXiv date, use the earlier one. For PubMed rows `first_submitted` is often a record-update date — with no `journal_ref` (similar-paper results don't carry it), leave the year off rather than show a wrong one.
+- **Category:** show arXiv codes (`cs.CL`) only. PubMed `categories` are free keywords — omit them.
+- **Authors:** all of them if three or fewer, else the first three + "et al." Show PubMed's "Last, First" as "First Last".
+- **Duplicates:** the same work can appear as an arXiv and a PubMed record. Treat rows as the same paper when the DOI matches, or the title matches ignoring case, punctuation and hyphens and the first author matches. Keep the arXiv record.
 
 ## Output Format
 
 ### Source Paper
-
-Display the seed paper's details:
-- **Title**: full title
-- **Authors**: first 5, then "et al." if more
-- **Year**: publication year
-- **Source**: which server (arXiv, bioRxiv, etc.)
-- **Abstract**: first 2-3 sentences
+Title (linked), authors, year, first 2–3 sentences of the abstract.
 
 ### Similar Papers
-
-A numbered list ranked by similarity. For each paper:
-- **Title** (with paper ID)
-- **Authors**: first 3, then "et al." if more
-- **Year**
-- **Category**
-- **Abstract summary**: one sentence capturing the paper's contribution
+Numbered, in similarity order. Per paper: title (linked, ID), authors, year, category, citations (`citation_count`, if not null), similarity (`similarity_score`, two decimals), and one sentence on what it does, from its abstract.
 
 ### Suggested Follow-ups
-
-- Ask for a profile of `<author>` for any author that appears in multiple similar papers.
-- Ask for papers similar to `<paper_id>` to continue exploring from any listed paper.
+- Ask for papers similar to `<paper_id>` — continue from any listed paper
+- Ask for a profile of `<author>` — only if one author appears on several of the listed papers (count them after merging duplicates); name them

@@ -19,24 +19,21 @@ const expectedSkills = [
 ];
 
 // The union of every MCP tool the seven vendored skills reference — the
-// complete surface the registered endpoint must expose. More than double the
-// 8-tool /mcp/authoring allowlist, which is why the extension points at the
+// complete surface the registered endpoint must expose. It goes well beyond
+// the 8-tool /mcp/authoring allowlist, which is why the extension points at the
 // full https://mcp.valency.io/ surface.
 const pinnedTools = [
   "analyze_corpus_metrics",
-  "batch_author_categories",
   "compare_authors",
+  "filter_by_date_range",
   "find_coauthors",
+  "find_papers_by_researcher",
   "find_similar_papers",
   "get_author_profile",
   "get_keyword_trends",
   "get_paper_by_id",
   "get_publication_trends",
-  "get_publication_trends_batch",
   "identify_prolific_authors",
-  "identify_research_domains",
-  "search_by_abstract",
-  "search_by_author",
   "search_by_category",
   "search_by_title",
   "semantic_search_papers",

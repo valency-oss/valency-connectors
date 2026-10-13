@@ -4,6 +4,18 @@ All notable changes to the Valency VS Code extension are documented in this file
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.10] - 2026-10-13
+
+### Added
+
+- The seven research skills are back, rewritten for the current Valency MCP tools: researcher profile, collaboration network, fresh collaborators, reading list, similar papers, field landscape and publication trends. The "Run your first skill" walkthrough step returns with them.
+
+## [0.1.9] - 2026-09-29
+
+### Removed
+
+- The seven bundled research skills, and the "Run your first skill" walkthrough step, while the skills are revised. The extension now registers only the Valency MCP server; your agent still calls its tools directly.
+
 ## [0.1.8] - 2026-09-02
 
 ### Fixed

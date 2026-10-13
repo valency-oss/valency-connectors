@@ -2,7 +2,7 @@
   "name": "valency",
   "displayName": "Valency",
   "description": "Search, profile, and analyze millions of research papers with semantic embeddings.",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "author": {
     "name": "Valency Systems Inc",
     "email": "support@valency.io",
