@@ -56,11 +56,13 @@ These stack by priority — `orcid` > `author_id` > `doi` > `paper_id` > `author
 
 `source` restricts the search itself, not just which candidates get shown — a wrong source guess can produce a false `no_match` for someone genuinely in the corpus. If a `source`-narrowed call comes back `no_match` or with a suspiciously small corpus count, retry once without `source` before concluding the name isn't there. It also narrows `corpus.*` figures only, never `career.*`.
 
-Branch on the response's `status`. There are five possible values, not three — two look similar but need different handling:
+Branch on the response's `status`. There are six possible values, not three — several look similar but need different handling:
 
 **`not_found`** — Only occurs when you supplied an `orcid`/`author_id`/`doi`/`paper_id` and it didn't resolve (stale or mistyped). Tell the user that identifier didn't match anything, and fall back to resolving by name.
 
 **`no_match`** — A plain name search found nothing, and the corpus couldn't generate near-miss suggestions either. Tell the user the name wasn't found; suggest a partial name, an ORCID, or a known paper. Exception: with `author` + `paper_id`/`doi`, `no_match` plus a non-empty `candidates[]` means the paper resolved but the name isn't on its byline — the candidates are that byline. Say so, and ask whether the paper or the name is off (show the byline names if a variant spelling might be the person).
+
+**`name_only`** — The name appears on papers in the corpus, but no single researcher could be identified behind it. Say so; if `candidates[]` is non-empty, show it as in the `ambiguous` branch below; and ask for an ORCID, a known paper or an institution.
 
 **`did_you_mean`** — Name search found nothing, but `suggestions[]` gives near-miss surnames with similarity scores and paper counts. Show the top few and offer to retry with a corrected name — more helpful than a bare "not found," use it whenever available.
 
@@ -103,6 +105,8 @@ Call `find_coauthors` with `author_id` (resolved ID) and `limit: 10`. Passing `a
 ### Retry-once, on any error, or on an unavailable "did you mean"
 
 `get_author_profile`, `find_coauthors`, `find_papers_by_researcher`, and comparison calls can fail on first attempt for large or high-match requests, then succeed on retry — sometimes as `REQUEST_TIMEOUT`, sometimes as a plain connector error with no timeout involved. Retry once on any error from these calls, not just the `REQUEST_TIMEOUT` code specifically, before treating it as a real failure.
+
+A successful response can also be partial: `degraded: true` with `next_action: "retry_unchanged"` means a block was skipped (a profile without `corpus`, or empty papers or coauthors), not that it's empty. Retry that call once unchanged; if it's still degraded, say that part is unavailable right now — never report it as zero papers or no collaborators.
 
 Separately, a `no_match`/`did_you_mean` response can note that near-miss suggestions "were unavailable." Retry once — sometimes that resolves it, sometimes it doesn't (a genuine one-character typo stayed unavailable twice in testing). If still unavailable after one retry, stop: tell the user the name wasn't found and ask for a partial name, ORCID, or known paper — that failure is upstream, not something more retries fix.
 

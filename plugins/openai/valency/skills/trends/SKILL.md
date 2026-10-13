@@ -13,6 +13,8 @@ Use the Valency Bond MCP tools available in the current host. Tool names may be 
 
 One or more arXiv category codes and/or keywords. Several inputs ("A vs B", comma-separated) → a comparison.
 
+A category call that returns an empty series with an `UNKNOWN_CATEGORY` warning means the code isn't recognised: show the suggested codes and ask which one was meant, never report a field with no activity. A `CATEGORY_TOO_BROAD` error lists the subcategories to use instead: show them and ask.
+
 ## Tool Chain
 
 ### Step 1: Trend data
@@ -38,6 +40,7 @@ Both filter on record-update dates, so drop papers whose `first_submitted` (or `
 
 ## Reading the numbers
 
+- **Missing years:** years with no papers are left out of a trend series, not returned as 0. Fill them with 0 between the first and last year shown before building the table, comparing inputs or checking for spikes.
 - **What's counted:** for most sources papers are counted by record-update date, so revised older papers land in later years and the earliest years look thinner than they were. Say "in this corpus" for any "first appeared" claim, and date it from when counts become sustained, not from the first non-zero year (loose word matching puts stray hits in early years).
 - **Current year:** partial — read it per Step 2.
 - **Spikes:** a single year at least double its neighbours' average, with no known field event, is likely an ingestion artifact — flag it in one line.

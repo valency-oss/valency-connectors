@@ -18,16 +18,18 @@ An author name, or an ORCID / author_id / known paper if the name alone is ambig
 ### Step 1: Resolve the researcher
 
 Call `get_author_profile` with `author` (plus any hint). Branch on `status`:
-- `not_found` / `no_match` → say so, ask for an ORCID or a known paper. Stop.
+- `not_found` / `no_match` / `name_only` → say so, ask for an ORCID or a known paper. Stop.
 - `did_you_mean` → show the suggestions, offer to retry. Stop.
 - `ambiguous` → pick a candidate only if its `corpus_papers` is several times the next *genuinely different* candidate (a small same-field entry with the same name is likely a fragment of the same person), and say it's a judgment call. Otherwise list the candidates (name, ORCID, papers, top fields, latest title) and ask. Once picked, re-call with that `author_id`.
 - `resolved` → keep `person.author_id`, `person.display_name`, `corpus.top_categories`.
 
+If a response carries `degraded: true` (`next_action: "retry_unchanged"`), part of it was skipped, not empty: retry that call once unchanged, and if it is still degraded, say that part is unavailable rather than reporting zero.
+
 ### Step 2: Direct collaborators
 
-Call `find_coauthors` with `author_id`, `limit: 20`. Rows are `{coauthor, coauthor_id, shared_papers}`. `count` is rows returned, not a network total.
+Call `find_coauthors` with `author_id`, `limit: 20`. Rows are `{coauthor, coauthor_id, shared_papers}`. `count` is rows returned, not a network total. If no rows come back, give the Network Summary, say no collaborators were found, and skip Steps 3–5.
 
-The same person can appear twice (two records, e.g. "Robert M. Califf" and "Robert Califf"). Merge rows whose names match (surname plus given name, or first initial when one side has only initials) and that share the same field. Keep the larger shared-paper count (the two can overlap, so don't add them) and note the merge. Then take the top 5 (ties: keep the tool's order).
+The same person can appear twice (two records, e.g. "Robert M. Califf" and "Robert Califf"). Merge rows whose names match (surname plus given name, or first initial when one side has only initials; ignore case, accents, apostrophes and every hyphen variant, e.g. "Hans‐Walter" with a Unicode hyphen vs "Hans-Walter") and that share the same field. Keep the larger shared-paper count (the two can overlap, so don't add them) and note the merge. Then take the top 5 (ties: keep the tool's order).
 
 Note the warning's count of excluded >50-author papers. If it's more than about a third of `corpus.corpus_papers`, the researcher's profile is dominated by large-collaboration papers — Step 5's focus, output and trajectory comparisons would mostly measure that, so skip Step 4–5 and the Divergence section, and say why in one line.
 

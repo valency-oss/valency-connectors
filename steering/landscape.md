@@ -14,6 +14,8 @@ Use the Valency Bond MCP tools available in the current host. Tool names may be 
 - **arXiv category code** (`cs.LG`, `q-bio.NC`, `astro-ph.HE`) → category path.
 - **Anything else** (free text, a PubMed topic, a bioRxiv label) → topic path. Only arXiv codes get the category path; other sources' labels go through free text.
 
+A category call that returns an empty series with an `UNKNOWN_CATEGORY` warning means the code isn't recognised: show the suggested codes and ask which one was meant, never report a field with no activity. A `CATEGORY_TOO_BROAD` error lists the subcategories to use instead: show them and ask.
+
 ## Tool Chain — category path
 
 1. **Most-cited papers:** `search_by_category` with `category`, `sort_by: "citations"`, `limit: 100`, `include_abstract: false`, `max_authors: 3`. The sort covers the whole category. Results include papers cross-listed into it; a paper's first-listed category is its primary one.
@@ -23,6 +25,7 @@ Use the Valency Bond MCP tools available in the current host. Tool names may be 
    - other `ambiguous` → "may combine a few people with this name".
    - `likely_aggregation` / `severe_aggregation` → several people share this name; don't present the count as one person's.
    - `unresolved` → not enough signal to tell.
+   Drop rows that are clearly not a person (a country, institution or collaboration name).
    Keep `top_candidate_id` for follow-ups. If the call times out, retry once, then skip the section and say author ranking wasn't available.
 4. **Size:** `analyze_corpus_metrics` with `category`.
 5. **Neighbouring fields (no call):** count the other categories listed on Step 1's papers.
@@ -35,6 +38,7 @@ Use the Valency Bond MCP tools available in the current host. Tool names may be 
 
 ## Reading the numbers
 
+- **Missing years:** years with no papers are left out of a trend series, not returned as 0. Fill them with 0 between the first and last year shown before building the table or comparing years.
 - **Trends** count papers by record-update date for most sources: revised old papers land in later years, and the earliest years look thinner than they were. Base the trajectory on complete years. Mark the current year as partial; if it already exceeds last year's full count, say it's likely inflated by record updates rather than calling it growth. An earlier year at least double its neighbours' average, with no known field event, is likely an ingestion artifact — say so in one line rather than calling it growth.
 - **Topic-path totals:** sum the keyword-trend counts from the year the topic took off (when counts start rising steadily), labelled "papers mentioning the term since <year>"; mention the earlier stray matches in one line.
 - **Duplicates:** the same work can appear as an arXiv and a PubMed record. Treat rows as one paper when the DOI matches, or the title matches (ignoring case, punctuation and hyphens) **and** the first author matches. Keep the higher citation count.

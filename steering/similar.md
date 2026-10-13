@@ -12,7 +12,7 @@ Use the Valency Bond MCP tools available in the current host. Tool names may be 
 ## Input
 
 - An arXiv ID (`2301.07041`, `2301.07041v3`, `astro-ph/9805201`), a bare PubMed ID (`26017442`), a `PMC` ID, or an OSF short ID — resolve directly.
-- A DOI (`10.xxxx/...`) — not resolvable by ID (see Step 1).
+- A DOI (`10.xxxx/...`) — usually not an ID; see Step 1.
 - A title or title fragment — resolve via search.
 
 ## Tool Chain
@@ -21,7 +21,7 @@ Use the Valency Bond MCP tools available in the current host. Tool names may be 
 
 **ID:** call `get_paper_by_id` with `paper_id` as given. If `found: false`, say the ID wasn't recognized and ask for the title. Stop.
 
-**DOI:** `get_paper_by_id` doesn't accept DOIs. Exception: OSF DOIs (`10.31223/` EarthArXiv, `10.31234/` PsyArXiv, `10.31235/` SocArXiv) — strip the prefix and any `osf.io/`; the rest is the corpus ID. Otherwise, if you know the paper's title and an author with confidence, call `search_by_title` with both `query` and `author` (a generic title like "Deep learning" is unfindable without the author filter) and accept the hit whose `doi` equals the DOI given. If you don't know the paper, ask the user for its title or arXiv/PubMed ID.
+**DOI:** `get_paper_by_id` doesn't accept most DOIs. Exceptions: bioRxiv/medRxiv DOIs (`10.1101/…`) are corpus IDs, so pass them as given; OSF DOIs (`10.31223/` EarthArXiv, `10.31234/` PsyArXiv, `10.31235/` SocArXiv) — strip the prefix and any `osf.io/`; the rest is the corpus ID. Otherwise, if you know the paper's title and an author with confidence, call `search_by_title` with both `query` and `author` (a generic title like "Deep learning" is unfindable without the author filter) and accept the hit whose `doi` equals the DOI given. If you don't know the paper, ask the user for its title or arXiv/PubMed ID.
 
 **Title:** call `search_by_title` with `query`, `limit: 5`. A result with `_source: "semantic"` is a fallback guess, not a title match; a real keyword hit has no `_source` field. Ignore `relevance_score`, `match_quality` and "No strong matches found" — they appear even on exact hits.
 - Take the paper without asking when the first keyword hit's title matches the query, or starts with it, and no other keyword hit is an equally good match.

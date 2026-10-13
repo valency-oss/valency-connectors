@@ -18,10 +18,12 @@ An author name, or an ORCID / author_id / known paper if the name alone is ambig
 ### Step 1: Resolve the author
 
 Call `get_author_profile` with `author` (plus any hint given). Branch on `status`:
-- `not_found` / `no_match` → say so, ask for an ORCID or a known paper. Stop.
+- `not_found` / `no_match` / `name_only` → say so, ask for an ORCID or a known paper. Stop.
 - `did_you_mean` → show the suggestions, offer to retry.
 - `ambiguous` → pick a candidate only if its `corpus_papers` is several times the next *genuinely different* candidate (a small same-field entry with the same name is likely a fragment of the same person), and say it's a judgment call. Otherwise list the candidates and ask. Once picked, re-call with that `author_id`.
 - `resolved` → keep `person.author_id`, `person.display_name`, `corpus.corpus_papers`, `corpus.top_categories`. If `warnings[]` says the record's affiliations span several countries and may combine people, mention it in one line — and the seed rule in Step 4 keeps a namesake's paper from becoming a thread.
+
+If a response carries `degraded: true` (`next_action: "retry_unchanged"`), part of it was skipped, not empty: retry that call once unchanged, and if it is still degraded, say that part is unavailable rather than reporting zero.
 
 Use `person.author_id` for every later call.
 
@@ -44,7 +46,7 @@ For each seed, call `find_similar_papers` with `paper_id`, `limit: 12`, `max_aut
 ### Step 6: Clean up
 
 1. Merge duplicates (see Displaying papers). If a paper surfaces under several seeds, keep it once with all its seeds.
-2. Drop the researcher's own papers: any result whose `id`/`base_id` appeared in Steps 2–3, and any whose authors include the researcher. Match names on surname plus given name; when either side gives only initials, surname plus first initial. Display names vary across records ("D. Huppenkothen", "Huppenkothen, Daniela").
+2. Drop the researcher's own papers: any result whose `id`/`base_id` appeared in Steps 2–3, and any whose authors include the researcher. Match names on surname plus given name; when either side gives only initials, surname plus first initial; ignore case, accents, apostrophes and every hyphen variant. If a result's byline is still truncated (`authors_truncated: true`), the researcher may be in the hidden part, so drop it. Display names vary across records ("D. Huppenkothen", "Huppenkothen, Daniela").
 3. Each seed's survivors form one thread.
 
 ## Displaying papers

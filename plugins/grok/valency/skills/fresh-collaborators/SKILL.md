@@ -20,14 +20,16 @@ An author name (or ORCID / author_id / known paper if the name is ambiguous). Op
 ### Step 1: Resolve the researcher
 
 Call `get_author_profile` with `author` (plus any hint). Branch on `status`:
-- `not_found` / `no_match` → say so, ask for an ORCID or a known paper. Stop.
+- `not_found` / `no_match` / `name_only` → say so, ask for an ORCID or a known paper. Stop.
 - `did_you_mean` → show the suggestions, offer to retry.
 - `ambiguous` → pick a candidate only if its `corpus_papers` (or `works_count` when that's null) is several times the next *genuinely different* candidate (a small same-field entry with the same name is likely a fragment of the same person), and say it's a judgment call. Otherwise list the candidates and ask. Once picked, re-call with that `author_id`.
 - `resolved` → keep `person.author_id`, `person.display_name`, `corpus.corpus_papers`, `corpus.top_categories`.
 
+If a response carries `degraded: true` (`next_action: "retry_unchanged"`), part of it was skipped, not empty: retry that call once unchanged, and if it is still degraded, say that part is unavailable rather than reporting zero.
+
 ### Step 2: Their recent work
 
-Call `find_papers_by_researcher` with `author_id`, `sort_by: "recency"`, `limit: 40`. Recency follows the record-update date, so many re-stamped old papers come first: use papers from the last ~2 years (by the year rules below) for themes, and **all 40** for the exclusion set.
+Call `find_papers_by_researcher` with `author_id`, `sort_by: "recency"`, `limit: 40`. Recency follows the record-update date, so many re-stamped old papers come first: use papers from the last ~2 years (by the year rules below) for themes, and **all 40** for the exclusion set. If fewer than 2 papers fall in the last ~2 years, say there is too little recent work to build themes from and stop.
 
 ### Step 3: Exclusion set
 
@@ -35,7 +37,7 @@ Call `find_coauthors` with `author_id`, `limit: 100`. Exclude everyone listed th
 
 Step 2's bylines stop at 20 names. For each Step 2 paper with `authors_truncated: true` and `total_authors` ≤ 50, call `get_paper_by_id` with `include_abstract: false`, `max_authors: 50` to get the full list. Papers with more than 50 authors are collaboration rosters; sharing one doesn't make someone a collaborator — say so in the summary.
 
-**Name matching** (papers carry no author IDs): compare surname plus given name; if either side gives only initials, compare surname plus first initial. Show PubMed's "Last, First" as "First Last" before comparing; ignore case, accents and hyphens. Don't reduce full names to initials — on common surnames ("J. Wang") that excludes strangers.
+**Name matching** (papers carry no author IDs): compare surname plus given name; if either side gives only initials, compare surname plus first initial. Show PubMed's "Last, First" as "First Last" before comparing; ignore case, accents, apostrophes and every hyphen variant (records mix ASCII and Unicode hyphens). Don't reduce full names to initials — on common surnames ("J. Wang") that excludes strangers.
 
 ### Step 4: Themes
 
