@@ -26,7 +26,7 @@ A category call that returns an empty series with an `UNKNOWN_CATEGORY` warning 
 ### Step 2: Current-year check
 
 The current year is partial and, for most sources, inflated by old records being re-stamped. To tell real growth from that, call the same trend tool with `granularity: "month"` and compare the current year's months with last year's:
-- months rising smoothly → real growth; say the current year is on track to exceed last year.
+- completed months ahead of the same months last year, with no abrupt step → likely real growth; say the current year is on track to exceed last year, as a projection rather than a fact.
 - an abrupt step in a few months, well above the months around it → likely record updates; say the current-year count may be inflated and read the trajectory from complete years.
 Use judgment rather than a fixed ratio, and in a comparison read similar-looking curves the same way. Monthly results may list months out of order; sort them before comparing.
 
