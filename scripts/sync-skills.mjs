@@ -34,11 +34,12 @@ export const canonicalSkill = (name) =>
   readFileSync(join(root, "skills", name, "SKILL.md"), "utf8");
 
 export const vscodeSkill = (name, contents) => {
-  const renamed = contents.replace(/^name: .+$/m, `name: valency-${name}`);
-  if (renamed === contents) {
+  const frontmatter = contents.match(/^---\n[\s\S]*?\n---\n/);
+  if (!frontmatter || !/^name: .+$/m.test(frontmatter[0])) {
     throw new Error(`skills/${name}/SKILL.md has no name: line in its frontmatter`);
   }
-  return renamed;
+  const renamed = frontmatter[0].replace(/^name: .+$/m, `name: valency-${name}`);
+  return renamed + contents.slice(frontmatter[0].length);
 };
 
 // Committed copies, as [path relative to the repo root, contents].

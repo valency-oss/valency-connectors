@@ -162,7 +162,10 @@ test("skills only call tools from the pinned Valency Bond surface", () => {
     .join("\n");
 
   const calledTools = new Set(
-    [...combined.matchAll(/[Cc]all `([a-z_]+)`/g)].map((match) => match[1]),
+    [
+      ...combined.matchAll(/[Cc]all `([a-z_]+)`/g),
+      ...combined.matchAll(/`([a-z]+(?:_[a-z]+)+)` with `/g),
+    ].map((match) => match[1]),
   );
   assert.ok(calledTools.size > 0, "skills must call at least one tool");
   for (const tool of calledTools) {
