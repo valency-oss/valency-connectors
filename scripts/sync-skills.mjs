@@ -121,12 +121,19 @@ const main = (args) => {
     return 0;
   }
 
+  let status = 0;
   for (const path of strayCopies()) {
+    // OpenAI's hand-maintained metadata would be lost; leave it for a person to move.
+    if (path.startsWith("plugins/openai/") && existsSync(join(root, path, "agents"))) {
+      console.error(`Keeping ${path}: move its agents/ and assets/ to the renamed skill, then delete it.`);
+      status = 1;
+      continue;
+    }
     console.log(`Removing ${path}`);
     rmSync(join(root, path), { recursive: true, force: true });
   }
   for (const [path, contents] of committedCopies()) write(path, contents);
-  return 0;
+  return status;
 };
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {

@@ -22,7 +22,7 @@ An author name (or ORCID / author_id / known paper if the name is ambiguous). Op
 Call `get_author_profile` with `author` (plus any hint). Branch on `status`:
 - `not_found` / `no_match` / `name_only` → say so, ask for an ORCID or a known paper. Stop.
 - `did_you_mean` → show the suggestions, offer to retry. Stop.
-- `ambiguous` → pick a candidate only if its `corpus_papers` (or `works_count` when that's null) is several times the next *genuinely different* candidate (a small same-field entry with the same name is likely a fragment of the same person), and say it's a judgment call. Otherwise list the candidates and ask. Once picked, re-call with that `author_id`.
+- `ambiguous` → pick a candidate only if its `corpus_papers` is several times the next *genuinely different* candidate's (compare `works_count` for both instead when either `corpus_papers` is null — never one against the other) (a small same-field entry with the same name is likely a fragment of the same person), and say it's a judgment call. Otherwise list the candidates and ask. Once picked, re-call with that `author_id`.
 - `resolved` → keep `person.author_id`, `person.display_name`, `corpus.corpus_papers`, `corpus.top_categories`.
 
 If a response carries `degraded: true` (`next_action: "retry_unchanged"`), part of it was skipped, not empty: retry that call once unchanged, and if it is still degraded, say that part is unavailable rather than reporting zero.
@@ -45,7 +45,7 @@ From Step 2's papers, write 2–4 themes, each a 5–12 word phrase usable as a 
 
 ### Step 5: Search each theme
 
-For each theme, call `semantic_search_papers` with `query`, `start_date` (the cutoff), `limit: 25`, `include_abstract: false`, `max_authors: 100`. The date filter uses record-update dates, so also drop papers dated before the cutoff: compare `first_submitted` as a full date when it's a real submission date (arXiv and the other preprint servers), otherwise the year by the rules below, keeping a paper from the cutoff's own year; and drop any whose `journal_ref` or DOI shows a year before the cutoff's. Drop papers with `total_authors` > 50 too.
+For each theme, call `semantic_search_papers` with `query`, `start_date` (the cutoff), `limit: 25`, `include_abstract: false`, `max_authors: 100`. The date filter uses record-update dates, so in Step 6, after merging duplicates (an arXiv/PubMed pair keeps its earliest date), also drop papers dated before the cutoff: compare `first_submitted` as a full date when it's a real submission date (arXiv and the other preprint servers), otherwise the year by the rules below, keeping a paper from the cutoff's own year; and drop any whose `journal_ref` or DOI shows a year before the cutoff's. Drop papers with `total_authors` > 50 too.
 
 ### Step 6: Filter and rank
 
