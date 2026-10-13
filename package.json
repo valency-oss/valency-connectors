@@ -5,7 +5,7 @@
   "description": "Provider plugin distributions for the Valency Bond MCP server.",
   "license": "MIT",
   "scripts": {
-    "pretest": "node scripts/sync-skills.mjs --check && node scripts/sync-skills.mjs --vscode",
+    "pretest": "node scripts/sync-skills.mjs --check",
     "test": "node --test",
     "sync:skills": "node scripts/sync-skills.mjs",
     "validate:claude": "claude plugin validate . --strict && claude plugin validate plugins/claude/valency --strict",

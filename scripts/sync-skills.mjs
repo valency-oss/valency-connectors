@@ -55,15 +55,20 @@ export const committedCopies = () =>
   });
 
 // Folders or files in a copy location that no canonical skill produces.
+// OpenAI's skill folders also hold its own agents/ and assets/; every other
+// provider's hold SKILL.md alone.
 const strayCopies = () => {
   const names = new Set(skillNames());
   const stray = providers.flatMap((provider) => {
     const dir = `plugins/${provider}/valency/skills`;
-    return existsSync(join(root, dir))
-      ? readdirSync(join(root, dir))
-          .filter((entry) => !names.has(entry))
-          .map((entry) => `${dir}/${entry}`)
-      : [];
+    if (!existsSync(join(root, dir))) return [];
+    return readdirSync(join(root, dir)).flatMap((entry) => {
+      if (!names.has(entry)) return [`${dir}/${entry}`];
+      if (provider === "openai") return [];
+      return readdirSync(join(root, dir, entry))
+        .filter((file) => file !== "SKILL.md")
+        .map((file) => `${dir}/${entry}/${file}`);
+    });
   });
   if (existsSync(join(root, "steering"))) {
     stray.push(
@@ -80,7 +85,7 @@ const write = (path, contents) => {
   writeFileSync(join(root, path), contents);
 };
 
-const writeVscodeCopies = () => {
+export const writeVscodeCopies = () => {
   const dir = join(root, "vscode", "skills");
   rmSync(dir, { recursive: true, force: true });
   for (const name of skillNames()) {

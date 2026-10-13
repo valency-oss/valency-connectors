@@ -47,7 +47,7 @@ Both filter on record-update dates, so drop papers whose `first_submitted` (or `
 
 ## Displaying papers
 
-Link each title to its `url`; keep the ID in parentheses. Year: the year in `journal_ref` when present, else `first_submitted`; if `journal_ref` or the DOI shows an earlier year than the arXiv date (an old paper posted late), use the earlier one and treat it as old. Never show a year later than the current one (a journal volume can be dated ahead) — use `first_submitted` instead. Authors: all if three or fewer, else first three + "et al." Duplicates: same DOI, or same title (ignoring case, punctuation and hyphens) with the same first author — keep the arXiv record.
+Link each title to its `url`; keep the ID in parentheses. Year: the year in `journal_ref` when present, else `first_submitted` (for PubMed, `first_submitted` is often a record-update date: a PubMed paper with no `journal_ref` even after `get_paper_by_id` can't be dated, so leave it out of Representative Recent Papers); if `journal_ref` or the DOI shows an earlier year than the arXiv date (an old paper posted late), use the earlier one and treat it as old. Never show a year later than the current one (a journal volume can be dated ahead) — use `first_submitted` instead. Authors: all if three or fewer, else first three + "et al." Duplicates: same DOI, or same title (ignoring case, punctuation and hyphens) with the same first author — keep the arXiv record.
 
 ## Output Format
 

@@ -1,10 +1,15 @@
 import assert from "node:assert/strict";
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { test } from "node:test";
+import { writeVscodeCopies } from "../scripts/sync-skills.mjs";
 
 const readJson = (path) => JSON.parse(readFileSync(path, "utf8"));
 
 const extensionRoot = "vscode";
+
+// The VS Code skill copies are gitignored build output; generate them so this
+// file also runs on its own (`node --test test/vscode.test.js`).
+writeVscodeCopies();
 const manifest = readJson(`${extensionRoot}/package.json`);
 const extensionSource = readFileSync(`${extensionRoot}/src/extension.ts`, "utf8");
 
@@ -157,7 +162,7 @@ test("skills only call tools from the pinned Valency Bond surface", () => {
     .join("\n");
 
   const calledTools = new Set(
-    [...combined.matchAll(/Call `([a-z_]+)`/g)].map((match) => match[1]),
+    [...combined.matchAll(/[Cc]all `([a-z_]+)`/g)].map((match) => match[1]),
   );
   assert.ok(calledTools.size > 0, "skills must call at least one tool");
   for (const tool of calledTools) {
