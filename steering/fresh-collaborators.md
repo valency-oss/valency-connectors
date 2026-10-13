@@ -22,7 +22,7 @@ An author name (or ORCID / author_id / known paper if the name is ambiguous). Op
 Call `get_author_profile` with `author` (plus any hint). Branch on `status`:
 - `not_found` / `no_match` / `name_only` → say so, ask for an ORCID or a known paper. Stop.
 - `did_you_mean` → show the suggestions, offer to retry. Stop.
-- `ambiguous` → pick a candidate only if its `corpus_papers` is several times the next *genuinely different* candidate's (compare `works_count` for both instead when either `corpus_papers` is null — never one against the other) (a small same-field entry with the same name is likely a fragment of the same person), and say it's a judgment call. Otherwise list the candidates and ask. Once picked, re-call with that `author_id`.
+- `ambiguous` → if the user gave a hint (a paper, field, institution or collaborator), pick the candidate it matches (`recent_title`, `top_categories`) and say why. Otherwise pick a candidate only if its `corpus_papers` is several times the next *genuinely different* candidate's (compare `works_count` for both instead when either `corpus_papers` is null — never one against the other) (a small same-field entry with the same name is likely a fragment of the same person), and say it's a judgment call. Otherwise list the candidates and ask. Once picked, re-call with that `author_id`.
 - `resolved` → keep `person.author_id`, `person.display_name`, `corpus.corpus_papers`, `corpus.top_categories`.
 
 If a response carries `degraded: true` (`next_action: "retry_unchanged"`), part of it was skipped, not empty: retry that call once unchanged, and if it is still degraded, say that part is unavailable rather than reporting zero.
@@ -59,7 +59,7 @@ For each theme, call `semantic_search_papers` with `query`, `start_date` (the cu
 ## Displaying papers
 
 - Link each title to its `url`; keep the paper ID in parentheses.
-- **Year:** the year in `journal_ref` when present, else `first_submitted`; if `journal_ref` or the DOI shows an earlier year than the arXiv date (an old paper posted late), use the earlier one. PubMed rows from `semantic_search_papers` carry no `journal_ref`, and their `first_submitted` is often a record-update date: for every PubMed paper left after step 2's author filter, call `get_paper_by_id` (`include_abstract: false`) and use its `journal_ref` year; drop it if that's before the cutoff, or if it still has no `journal_ref` (it can't be dated).
+- **Year:** the year in `journal_ref` when present, else `first_submitted`; if `journal_ref` or the DOI shows an earlier year than the arXiv date (an old paper posted late), use the earlier one. PubMed rows from `semantic_search_papers` carry no `journal_ref`, and their `first_submitted` is often a record-update date: for every PubMed paper left after Step 6's author filter (item 2), call `get_paper_by_id` (`include_abstract: false`) and use its `journal_ref` year; drop it if that's before the cutoff, or if it still has no `journal_ref` (it can't be dated).
 - **Duplicates:** same DOI, or same title (ignoring case, punctuation and hyphens) with the same first author.
 
 ## Output Format

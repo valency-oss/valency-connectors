@@ -20,7 +20,7 @@ An author name, or an ORCID / author_id / known paper if the name alone is ambig
 Call `get_author_profile` with `author` (plus any hint). Branch on `status`:
 - `not_found` / `no_match` / `name_only` → say so, ask for an ORCID or a known paper. Stop.
 - `did_you_mean` → show the suggestions, offer to retry. Stop.
-- `ambiguous` → pick a candidate only if its `corpus_papers` is several times the next *genuinely different* candidate's (compare `works_count` for both instead when either `corpus_papers` is null — never one against the other) (a small same-field entry with the same name is likely a fragment of the same person), and say it's a judgment call. Otherwise list the candidates (name, ORCID, papers, top fields, latest title) and ask. Once picked, re-call with that `author_id`.
+- `ambiguous` → if the user gave a hint (a paper, field, institution or collaborator), pick the candidate it matches (`recent_title`, `top_categories`) and say why. Otherwise pick a candidate only if its `corpus_papers` is several times the next *genuinely different* candidate's (compare `works_count` for both instead when either `corpus_papers` is null — never one against the other) (a small same-field entry with the same name is likely a fragment of the same person), and say it's a judgment call. Otherwise list the candidates (name, ORCID, papers, top fields, latest title) and ask. Once picked, re-call with that `author_id`.
 - `resolved` → keep `person.author_id`, `person.display_name`, `corpus.corpus_papers`, `corpus.top_categories`.
 
 If a response carries `degraded: true` (`next_action: "retry_unchanged"`), part of it was skipped, not empty: retry that call once unchanged, and if it is still degraded, say that part is unavailable rather than reporting zero.
