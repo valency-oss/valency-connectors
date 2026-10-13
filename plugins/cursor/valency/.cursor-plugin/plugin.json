@@ -17,6 +17,7 @@
     "literature-review",
     "semantic-search"
   ],
+  "skills": "./skills/",
   "rules": "./rules/",
   "mcpServers": "./mcp.json"
 }

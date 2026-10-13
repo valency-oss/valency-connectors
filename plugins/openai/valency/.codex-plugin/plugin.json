@@ -17,6 +17,7 @@
     "authors",
     "science"
   ],
+  "skills": "./skills/",
   "mcpServers": "./.mcp.json",
   "interface": {
     "displayName": "Valency",
