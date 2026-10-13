@@ -16,7 +16,7 @@ This extension connects VS Code's agent to the hosted [Valency](https://valency.
 | `valency-similar` | "Find papers similar to arXiv 1706.03762" |
 | `valency-trends` | "Is diffusion model research still growing?" |
 | `valency-network` | "Who does Yann LeCun collaborate with?" |
-| `valency-reading-list` | "What should a student of geometric deep learning be reading?" |
+| `valency-reading-list` | "Build a reading list around Sara Walker's work" |
 | `valency-fresh-collaborators` | "Who should this researcher be talking to that they aren't already?" |
 
 ## Getting started

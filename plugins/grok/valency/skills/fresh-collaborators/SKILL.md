@@ -65,7 +65,7 @@ For each theme, call `semantic_search_papers` with `query`, `start_date` (the cu
 ## Output Format
 
 ### Summary
-Researcher (name, papers in corpus, main fields), the window and cutoff date, the themes searched. One line: "Excluded: their top 100 coauthors and everyone on their last 40 papers (except >50-author collaboration rosters)."
+Researcher (name, papers in corpus, main fields), the window and cutoff date, the themes searched. One line: "Excluded: their top 100 coauthors and everyone on the 40 papers fetched in Step 2 (except >50-author collaboration rosters)."
 
 ### Fresh Faces
 Up to 10:

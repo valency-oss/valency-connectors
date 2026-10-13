@@ -29,7 +29,7 @@ Use the Valency Bond MCP tools available in the current host. Tool names may be 
 
 ### Step 2: Find similar papers
 
-Call `find_similar_papers` with `paper_id` (resolved), `limit: 12`, `max_authors: 4`. If it errors or returns nothing, say this paper has no embedding yet and offer `semantic_search_papers` on its title instead. Stop.
+Call `find_similar_papers` with `paper_id` (resolved), `limit: 12`, `max_authors: 4`. If it returns nothing or says the paper has no embedding, say so and offer `semantic_search_papers` on its title instead. If it still errors after the retry, say similarity search is unavailable right now rather than blaming the paper. Stop.
 
 Merge duplicates (see Displaying papers), drop the source paper and any other version of it (its arXiv/PubMed twin — mention the twin under Source Paper), and keep the top 10.
 
