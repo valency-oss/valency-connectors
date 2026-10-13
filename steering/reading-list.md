@@ -33,7 +33,7 @@ Call `find_papers_by_researcher` with `author_id`, `sort_by: "citations"`, `limi
 
 ### Step 3: Current direction
 
-Call `find_papers_by_researcher` with `author_id`, `sort_by: "recency"`, `limit: 40`. Recency follows the record-update date, so many re-stamped old papers come first: keep only papers from the last two years (by the year rules in Displaying papers), up to 5.
+Call `find_papers_by_researcher` with `author_id`, `sort_by: "recency"`, `limit: 40`. Keep only papers from the last two years (by the year rules in Displaying papers), up to 5.
 
 ### Step 4: Pick 3–5 seeds
 
@@ -52,7 +52,7 @@ For each seed, call `find_similar_papers` with `paper_id`, `limit: 12`, `max_aut
 ## Displaying papers
 
 - Link each title to its `url`; keep the paper ID in parentheses.
-- **Year:** the year in `journal_ref` when present, else `first_submitted`. If `journal_ref` or the DOI shows an earlier publication year than the arXiv date (an old paper posted late), use the earlier year. For PubMed rows `first_submitted` is often a record-update date — with no `journal_ref` (similar-paper results don't carry it), leave the year off rather than show a wrong one.
+- **Year:** the year in `journal_ref` when present, else the year of `dates.first_available` (its `value`; for a range, show `start`–`end` and use the `start` year wherever a single year is needed), else `first_submitted` for a preprint; if the DOI shows an earlier year (an old paper posted late), use that. With none of these, leave the year off.
 - **Category:** show arXiv codes only; PubMed `categories` are free keywords — omit them.
 - **Authors:** all if three or fewer, else first three + "et al." Show PubMed's "Last, First" as "First Last".
 - **Duplicates:** same DOI, or same title (ignoring case, punctuation and hyphens) with the same first author. Keep the arXiv record.

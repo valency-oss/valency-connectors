@@ -39,13 +39,13 @@ A category call that returns an empty series with an `UNKNOWN_CATEGORY` warning 
 ## Reading the numbers
 
 - **Missing years:** years with no papers are left out of a trend series, not returned as 0. Fill them with 0 between the first and last year shown before building the table or comparing years.
-- **Trends** count papers by record-update date for most sources: revised old papers land in later years, and the earliest years look thinner than they were. Base the trajectory on complete years. Mark the current year as partial; if it already exceeds last year's full count, say it may be inflated by record updates or may be real growth — a monthly trend check can tell them apart — rather than asserting either. An earlier year at least double its neighbours' average, with no known field event, is likely an ingestion artifact — say so in one line rather than calling it growth.
+- **Trends** count papers by the date they first went public. Papers dated more coarsely than the bucket are totalled in `excluded.coarser_than_bucket` rather than counted — mention it when it's a sizeable share. Base the trajectory on complete years and mark the current year as partial. An earlier year at least double its neighbours' average, with no known field event, is likely an ingestion artifact — say so in one line rather than calling it growth.
 - **Topic-path totals:** sum the keyword-trend counts from the year the topic took off (when counts start rising steadily), labelled "papers mentioning the term since <year>"; mention the earlier stray matches in one line.
 - **Duplicates:** the same work can appear as an arXiv and a PubMed record. Treat rows as one paper when the DOI matches, or the title matches (ignoring case, punctuation and hyphens) **and** the first author matches. Keep the higher citation count.
 
 ## Displaying papers
 
-Link each title to its `url`; keep the ID in parentheses. Year: the year in `journal_ref` when present, else `first_submitted` (for PubMed rows, `first_submitted` is often a record-update date; with no `journal_ref`, leave the year off). Category: arXiv codes only — PubMed `categories` are free keywords. Authors: all if three or fewer, else first three + "et al."; a collaboration name ("The LIGO Scientific Collaboration") counts as an author.
+Link each title to its `url`; keep the ID in parentheses. Year: the year in `journal_ref` when present, else the year of `dates.first_available` (its `value`; for a range, show `start`–`end` and use the `start` year wherever a single year is needed), else `first_submitted` for a preprint; with none of these, leave the year off. Category: arXiv codes only — PubMed `categories` are free keywords. Authors: all if three or fewer, else first three + "et al."; a collaboration name ("The LIGO Scientific Collaboration") counts as an author.
 
 ## Output Format
 

@@ -29,7 +29,7 @@ If a response carries `degraded: true` (`next_action: "retry_unchanged"`), part 
 
 ### Step 2: Their recent work
 
-Call `find_papers_by_researcher` with `author_id`, `sort_by: "recency"`, `limit: 40`. Recency follows the record-update date, so many re-stamped old papers come first: use papers from the last ~2 years (by the year rules below) for themes, and **all 40** for the exclusion set. If fewer than 2 papers fall in the last ~2 years, say there is too little recent work to build themes from and stop.
+Call `find_papers_by_researcher` with `author_id`, `sort_by: "recency"`, `limit: 40`. Use papers from the last ~2 years (by the year rules below) for themes, and **all 40** for the exclusion set. If fewer than 2 papers fall in the last ~2 years, say there is too little recent work to build themes from and stop.
 
 ### Step 3: Exclusion set
 
@@ -45,12 +45,12 @@ From Step 2's papers, write 2–4 themes, each a 5–12 word phrase usable as a 
 
 ### Step 5: Search each theme
 
-For each theme, call `semantic_search_papers` with `query`, `start_date` (the cutoff), `limit: 25`, `include_abstract: false`, `max_authors: 100`. The date filter uses record-update dates, so in Step 6, after merging duplicates (an arXiv/PubMed pair keeps its earliest date), also drop papers dated before the cutoff: compare `first_submitted` as a full date when it's a real submission date (arXiv and the other preprint servers), otherwise the year by the rules below, keeping a paper from the cutoff's own year; and drop any whose `journal_ref` or DOI shows a year before the cutoff's. Drop papers with `total_authors` > 50 too.
+For each theme, call `semantic_search_papers` with `query`, `start_date` (the cutoff), `limit: 25`, `include_abstract: false`, `max_authors: 100`. The date filter uses the date a record first went public, so an old paper posted late can pass: in Step 6, after merging duplicates, drop any paper whose `journal_ref` or DOI (on either record of a merged pair) shows a year before the cutoff's. Drop papers with `total_authors` > 50 too.
 
 ### Step 6: Filter and rank
 
 1. Merge duplicate papers (see Displaying papers) **before** filtering, so an arXiv/PubMed pair is judged together.
-2. Drop any paper with an excluded author, and any that fails the date checks in Displaying papers (including the PubMed lookup) — before ranking, so old papers don't count toward anyone.
+2. Drop any paper with an excluded author, and any that fails Step 5's date check — before ranking, so old papers don't count toward anyone.
 3. The candidate for each surviving paper is its first author; if the byline is alphabetical (common in maths), use the last author instead.
 4. Merge candidates who are the same person (name rules above).
 5. Rank: people surfaced by more papers or more themes first; then interleave themes so no single theme fills the list.
@@ -59,7 +59,7 @@ For each theme, call `semantic_search_papers` with `query`, `start_date` (the cu
 ## Displaying papers
 
 - Link each title to its `url`; keep the paper ID in parentheses.
-- **Year:** the year in `journal_ref` when present, else `first_submitted`; if `journal_ref` or the DOI shows an earlier year than the arXiv date (an old paper posted late), use the earlier one. PubMed rows from `semantic_search_papers` carry no `journal_ref`, and their `first_submitted` is often a record-update date: for every PubMed record left after Step 6's author filter (item 2), including the PubMed half of a merged pair, call `get_paper_by_id` (`include_abstract: false`) and use its `journal_ref` year; drop it if that's before the cutoff, or if it still has no `journal_ref` (it can't be dated).
+- **Year:** the year in `journal_ref` when present, else the year of `dates.first_available` (its `value`; for a range, show `start`–`end` and use the `start` year wherever a single year is needed), else `first_submitted` for a preprint; if the DOI shows an earlier year (an old paper posted late), use that. With none of these, leave the year off.
 - **Duplicates:** same DOI, or same title (ignoring case, punctuation and hyphens) with the same first author.
 
 ## Output Format

@@ -36,7 +36,7 @@ Merge duplicates (see Displaying papers), drop the source paper and any other ve
 ## Displaying papers
 
 - Link each title to its `url`; keep the paper ID in parentheses.
-- **Year:** the year in `journal_ref` when present, else `first_submitted`; if `journal_ref` or the DOI shows an earlier year than the arXiv date, use the earlier one. For PubMed rows `first_submitted` is often a record-update date — with no `journal_ref` (similar-paper results don't carry it), leave the year off rather than show a wrong one.
+- **Year:** the year in `journal_ref` when present, else the year of `dates.first_available` (its `value`; for a range, show `start`–`end` and use the `start` year wherever a single year is needed), else `first_submitted` for a preprint; if the DOI shows an earlier year (an old paper posted late), use that. With none of these, leave the year off.
 - **Category:** show arXiv codes (`cs.CL`) only. PubMed `categories` are free keywords — omit them.
 - **Authors:** all of them if three or fewer, else the first three + "et al." Show PubMed's "Last, First" as "First Last".
 - **Duplicates:** the same work can appear as an arXiv and a PubMed record. Treat rows as the same paper when the DOI matches, or the title matches ignoring case, punctuation and hyphens and the first author matches. Keep the arXiv record.
