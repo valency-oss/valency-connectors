@@ -15,6 +15,7 @@ import {
   readFileSync,
   readdirSync,
   rmSync,
+  statSync,
   writeFileSync,
 } from "node:fs";
 import { dirname, join } from "node:path";
@@ -124,7 +125,11 @@ const main = (args) => {
   let status = 0;
   for (const path of strayCopies()) {
     // OpenAI's hand-maintained metadata would be lost; leave it for a person to move.
-    if (path.startsWith("plugins/openai/") && existsSync(join(root, path, "agents"))) {
+    const handMade =
+      path.startsWith("plugins/openai/") &&
+      statSync(join(root, path)).isDirectory() &&
+      readdirSync(join(root, path)).some((file) => file !== "SKILL.md" && !file.startsWith("."));
+    if (handMade) {
       console.error(`Keeping ${path}: move its agents/ and assets/ to the renamed skill, then delete it.`);
       status = 1;
       continue;
