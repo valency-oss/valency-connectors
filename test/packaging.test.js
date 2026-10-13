@@ -3,6 +3,11 @@ import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { test } from "node:test";
 
 const readJson = (path) => JSON.parse(readFileSync(path, "utf8"));
+const skillDirectories = (root) =>
+  readdirSync(root, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => entry.name)
+    .sort();
 
 const claudeMarketplace = readJson(".claude-plugin/marketplace.json");
 const claudePlugin = readJson("plugins/claude/valency/.claude-plugin/plugin.json");
@@ -14,7 +19,7 @@ const rootPlugin = readJson("plugin.json");
 const expectedRootPlugin = {
   $schema: "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   name: "valency",
-  version: "0.1.0",
+  version: "0.2.0",
   description:
     "Search, profile, and analyze research papers through the Valency Bond MCP server.",
   author: {
@@ -33,6 +38,39 @@ const expectedRootPlugin = {
   ],
 };
 const kiroPowerRoot = ".";
+const kiroWorkflows = [
+  "profile",
+  "landscape",
+  "similar",
+  "trends",
+  "network",
+  "reading-list",
+  "fresh-collaborators",
+];
+
+test("Agent Skills CLI groups every canonical skill under one select-all row", () => {
+  assert.deepEqual(readJson(".claude-plugin/plugin.json"), {
+    name: "valency-skills",
+    version: "0.2.0",
+    description:
+      "Portable research-corpus workflows for agents using the Valency Bond MCP server.",
+    author: {
+      name: "Valency Systems Inc",
+    },
+    homepage: "https://valency.io",
+    repository: "https://github.com/valency-oss/valency-connectors",
+    license: "MIT",
+    skills: [
+      "./skills/fresh-collaborators",
+      "./skills/landscape",
+      "./skills/network",
+      "./skills/profile",
+      "./skills/reading-list",
+      "./skills/similar",
+      "./skills/trends",
+    ],
+  });
+});
 
 test("repository root is an installable Antigravity plugin", () => {
   assert.deepEqual(rootPlugin, expectedRootPlugin);
@@ -51,12 +89,22 @@ test("repository root is an installable Antigravity plugin", () => {
   );
 });
 
-test("Antigravity adds host-specific guidance", () => {
+test("Antigravity reuses the root skills and adds host-specific guidance", () => {
+  assert.deepEqual(skillDirectories("skills"), [
+    "fresh-collaborators",
+    "landscape",
+    "network",
+    "profile",
+    "reading-list",
+    "similar",
+    "trends",
+  ]);
   assert.equal(existsSync("rules/valency.md"), true);
 
   const rule = readFileSync("rules/valency.md", "utf8");
   assert.match(rule, /Valency Bond/);
   assert.match(rule, /interactive `\/mcp` manager/);
+  assert.match(rule, /skill-derived slash commands/);
   assert.doesNotMatch(rule, /Gemini|33418|\/mcp auth valency|\/valency:/i);
 });
 
@@ -73,7 +121,7 @@ test("Grok marketplace routes to its dedicated provider package", () => {
         source: "./plugins/grok/valency",
         description:
           "Search, profile, and analyze research papers through Valency Bond.",
-        version: "0.1.0",
+        version: "0.2.0",
         author: {
           name: "Valency Systems Inc",
         },
@@ -91,7 +139,7 @@ test("native Grok package is credential-free and contains only expected componen
     name: "valency",
     description:
       "Search, profile, and analyze research papers through the Valency Bond MCP server.",
-    version: "0.1.0",
+    version: "0.2.0",
     author: {
       name: "Valency Systems Inc",
       email: "support@valency.io",
@@ -128,12 +176,8 @@ test("native Grok package is credential-free and contains only expected componen
     ".grok-plugin",
     ".mcp.json",
     "LICENSE",
+    "skills",
   ]);
-  assert.equal(
-    readFileSync(`${packageRoot}/LICENSE`, "utf8"),
-    readFileSync("LICENSE", "utf8"),
-    "Grok package license must match the repository MIT license",
-  );
   assert.deepEqual(readdirSync(`${packageRoot}/.grok-plugin`).sort(), [
     "plugin.json",
   ]);
@@ -168,6 +212,7 @@ test("repository root is a native Valency Power with host-managed OAuth", () => 
   assert.match(power, /Valency Bond MCP server/);
   assert.match(power, /MCP server named `valency`/);
   assert.match(power, /dynamic client registration \(DCR\)/);
+  assert.match(power, /Kiro's `readSteering` action/);
   assert.match(power, /Power license: \[MIT\]/);
   assert.match(power, /Valency Bond MCP server license: Proprietary/);
   assert.match(power, /https:\/\/www\.valency\.io\/privacy/);
@@ -188,6 +233,32 @@ test("repository root is a native Valency Power with host-managed OAuth", () => 
   );
 });
 
+test("Kiro routes all seven workflows to byte-identical canonical guidance", () => {
+  const power = readFileSync(`${kiroPowerRoot}/POWER.md`, "utf8");
+  const mappings = [...power.matchAll(
+    /^- `([^`]+)` — .+ → `steering\/([^`]+)\.md`$/gm,
+  )].map((match) => [match[1], match[2]]);
+
+  assert.deepEqual(
+    mappings,
+    kiroWorkflows.map((workflow) => [workflow, workflow]),
+  );
+  assert.deepEqual(
+    readdirSync(`${kiroPowerRoot}/steering`)
+      .filter((name) => name.endsWith(".md"))
+      .sort(),
+    kiroWorkflows.map((workflow) => `${workflow}.md`).sort(),
+  );
+
+  for (const workflow of kiroWorkflows) {
+    assert.equal(
+      readFileSync(`${kiroPowerRoot}/steering/${workflow}.md`, "utf8"),
+      readFileSync(`skills/${workflow}/SKILL.md`, "utf8"),
+      `Kiro ${workflow} guidance must match the canonical skill`,
+    );
+  }
+});
+
 test("Copilot marketplace routes to its independent provider package", () => {
   assert.deepEqual(readJson(".github/plugin/marketplace.json"), {
     name: "valency-copilot-plugin",
@@ -197,7 +268,7 @@ test("Copilot marketplace routes to its independent provider package", () => {
     metadata: {
       description:
         "The Valency research plugin marketplace for GitHub Copilot CLI, powered by Valency Bond.",
-      version: "0.1.0",
+      version: "0.2.0",
     },
     plugins: [
       {
@@ -205,7 +276,7 @@ test("Copilot marketplace routes to its independent provider package", () => {
         source: "./plugins/copilot/valency",
         description:
           "Search, profile, and analyze research papers through Valency Bond.",
-        version: "0.1.0",
+        version: "0.2.0",
       },
     ],
   });
@@ -214,7 +285,7 @@ test("Copilot marketplace routes to its independent provider package", () => {
     name: "valency",
     description:
       "Search, profile, and analyze research papers through the Valency Bond MCP server.",
-    version: "0.1.0",
+    version: "0.2.0",
     author: {
       name: "Valency Systems Inc",
       email: "support@valency.io",
@@ -229,6 +300,7 @@ test("Copilot marketplace routes to its independent provider package", () => {
       "literature-review",
       "semantic-search",
     ],
+    skills: "skills/",
     mcpServers: ".mcp.json",
   });
 });
@@ -276,7 +348,7 @@ test("Cursor marketplace routes to its full-surface provider package", () => {
     displayName: "Valency",
     description:
       "Search, profile, and analyze research papers through the Valency Bond MCP server.",
-    version: "0.1.0",
+    version: "0.2.0",
     author: {
       name: "Valency Systems Inc",
       email: "support@valency.io",
@@ -291,6 +363,7 @@ test("Cursor marketplace routes to its full-surface provider package", () => {
       "literature-review",
       "semantic-search",
     ],
+    skills: "./skills/",
     rules: "./rules/",
     mcpServers: "./mcp.json",
   });
@@ -325,6 +398,102 @@ test("Cursor package exposes only the complete Valency Bond MCP surface", () => 
   assert.equal(existsSync("plugins/cursor/valency/agents"), false);
 });
 
+test("all providers ship byte-identical unprefixed skills", () => {
+  assert.deepEqual(skillDirectories("plugins/grok/valency/skills"), [
+    "fresh-collaborators",
+    "landscape",
+    "network",
+    "profile",
+    "reading-list",
+    "similar",
+    "trends",
+  ]);
+  assert.equal(
+    readFileSync("plugins/grok/valency/LICENSE", "utf8"),
+    readFileSync("LICENSE", "utf8"),
+    "Grok package license must match the repository MIT license",
+  );
+
+  for (const skill of [
+    "fresh-collaborators",
+    "landscape",
+    "network",
+    "profile",
+    "reading-list",
+    "similar",
+    "trends",
+  ]) {
+    const canonical = readFileSync(`skills/${skill}/SKILL.md`, "utf8");
+    assert.equal(
+      readFileSync(
+        `plugins/claude/valency/skills/${skill}/SKILL.md`,
+        "utf8",
+      ),
+      canonical,
+      `Claude ${skill} must match the shared skill`,
+    );
+    assert.equal(
+      readFileSync(
+        `plugins/openai/valency/skills/${skill}/SKILL.md`,
+        "utf8",
+      ),
+      canonical,
+      `OpenAI ${skill} must match the shared skill`,
+    );
+    assert.equal(
+      readFileSync(
+        `plugins/copilot/valency/skills/${skill}/SKILL.md`,
+        "utf8",
+      ),
+      canonical,
+      `Copilot ${skill} must match the shared skill`,
+    );
+    assert.equal(
+      readFileSync(
+        `plugins/cursor/valency/skills/${skill}/SKILL.md`,
+        "utf8",
+      ),
+      canonical,
+      `Cursor ${skill} must match the shared skill`,
+    );
+    assert.equal(
+      readFileSync(
+        `plugins/grok/valency/skills/${skill}/SKILL.md`,
+        "utf8",
+      ),
+      canonical,
+      `Grok ${skill} must match the shared skill`,
+    );
+  }
+});
+
+test("shared skills contain only provider-neutral invocation guidance", () => {
+  for (const skill of [
+    "fresh-collaborators",
+    "landscape",
+    "network",
+    "profile",
+    "reading-list",
+    "similar",
+    "trends",
+  ]) {
+    const contents = readFileSync(`skills/${skill}/SKILL.md`, "utf8");
+    assert.match(contents, new RegExp(`^name: ${skill}$`, "m"));
+    assert.match(
+      contents,
+      /Use the Valency Bond MCP tools available in the current host\./,
+    );
+    assert.match(
+      contents,
+      /If the\s+required Valency Bond tools are unavailable, say so and stop\./,
+    );
+    assert.doesNotMatch(
+      contents,
+      /mcp__|companion Valency connector|install the connector|\/valency:/,
+    );
+  }
+});
+
 test("root marketplaces route to independent provider packages", () => {
   const claudeEntry = claudeMarketplace.plugins.find(({ name }) => name === "valency");
   const openaiEntry = openaiMarketplace.plugins.find(({ name }) => name === "valency");
@@ -344,9 +513,9 @@ test("root marketplaces route to independent provider packages", () => {
   assert.equal(openaiPlugin.name, "valency");
   assert.equal(openaiPlugin.interface.displayName, "Valency");
 
-  assert.equal(claudePlugin.version, "0.3.0");
+  assert.equal(claudePlugin.version, "0.4.0");
   assert.equal(claudeEntry.version, claudePlugin.version);
-  assert.equal(openaiPlugin.version, "1.0.1");
+  assert.equal(openaiPlugin.version, "1.1.0");
 });
 
 test("both packages bundle the production Valency Bond MCP endpoint", () => {
@@ -380,6 +549,43 @@ test("the OpenAI package has no registered-app dependency", () => {
 });
 
 test("each provider package contains its complete runtime payload", () => {
+  assert.deepEqual(skillDirectories("plugins/claude/valency/skills"), [
+    "fresh-collaborators",
+    "landscape",
+    "network",
+    "profile",
+    "reading-list",
+    "similar",
+    "trends",
+  ]);
+  assert.deepEqual(skillDirectories("plugins/openai/valency/skills"), [
+    "fresh-collaborators",
+    "landscape",
+    "network",
+    "profile",
+    "reading-list",
+    "similar",
+    "trends",
+  ]);
+  assert.deepEqual(skillDirectories("plugins/copilot/valency/skills"), [
+    "fresh-collaborators",
+    "landscape",
+    "network",
+    "profile",
+    "reading-list",
+    "similar",
+    "trends",
+  ]);
+  assert.deepEqual(skillDirectories("plugins/cursor/valency/skills"), [
+    "fresh-collaborators",
+    "landscape",
+    "network",
+    "profile",
+    "reading-list",
+    "similar",
+    "trends",
+  ]);
+
   for (const path of [
     "plugins/claude/valency/LICENSE",
     "plugins/openai/valency/LICENSE",
@@ -395,6 +601,29 @@ test("each provider package contains its complete runtime payload", () => {
 
   assert.equal(existsSync("plugins/claude/valency/hooks"), false);
   assert.equal(existsSync("plugins/claude/valency/CLAUDE.md"), false);
+});
+
+test("renamed OpenAI skills preserve their provider-specific metadata", () => {
+  for (const skill of [
+    "fresh-collaborators",
+    "landscape",
+    "network",
+    "profile",
+    "reading-list",
+    "similar",
+    "trends",
+  ]) {
+    assert.equal(
+      existsSync(`plugins/openai/valency/skills/${skill}/agents/openai.yaml`),
+      true,
+    );
+    assert.equal(
+      existsSync(
+        `plugins/openai/valency/skills/${skill}/assets/favicon_solid_cyan_valency.svg`,
+      ),
+      true,
+    );
+  }
 });
 
 test("repository metadata and installation docs point at the monorepo", () => {
@@ -429,6 +658,7 @@ test("repository metadata and installation docs point at the monorepo", () => {
     "Antigravity CLI",
     "Grok Build",
     "Kiro",
+    "Skills-only installation",
   ]) {
     assert.match(readme, new RegExp(`^### ${surface}$`, "m"));
   }
@@ -447,6 +677,12 @@ test("repository metadata and installation docs point at the monorepo", () => {
     /codex plugin marketplace add valency-oss\/valency-connectors &&\n  codex plugin add valency@valency &&\n  codex mcp login valency/,
   );
   assert.doesNotMatch(readme, /mcp\/authoring|valency-authoring/);
+  assert.match(
+    readme,
+    /npx skills@latest add valency-oss\/valency-connectors(?=\s|`|$)/,
+  );
+  assert.match(readme, /Toggle \*\*Valency Skills\*\* to select or clear all seven/);
+  assert.match(readme, /does not configure or authenticate the MCP server/);
   assert.match(readme, /\/mcp auth valency/);
   assert.match(readme, /ChatGPT web/);
   assert.match(readme, /Valency Bond MCP server/);
@@ -484,6 +720,8 @@ test("Kiro documentation uses the supported root GitHub lifecycle", () => {
   assert.match(development, /Kiro Power/);
   assert.match(development, /`POWER\.md` frontmatter/);
   assert.match(development, /endpoint in `mcp\.json`/);
+  assert.match(development, /seven\s+workflows to `steering\/\*\.md`/);
+  assert.match(development, /byte-for-byte skill\s+synchronization/);
   assert.match(
     development,
     /do not\s+prove\s+that Kiro can\s+install the Power,\s+complete\s+OAuth, or invoke a remote tool/,
@@ -545,16 +783,28 @@ test("repository layout guide explains every intentional root entry", () => {
   assert.match(layout, /^# Repository root layout$/m);
   assert.match(layout, /multiple providers require root-level\s+entry points/);
   assert.match(layout, /Do not consolidate similarly named files/);
+  assert.match(
+    layout,
+    /Agent Skills CLI reuses Claude's plugin-manifest convention/,
+  );
+  assert.match(layout, /That group works when the selected destination is Codex/);
+  assert.match(
+    layout,
+    /the root grouping manifest does not replace, rename, or enter the normal Claude\s+marketplace package/,
+  );
 
   for (const entry of [
     ".agents/",
     ".claude-plugin/marketplace.json",
+    ".claude-plugin/plugin.json",
     ".cursor-plugin/",
     ".github/",
     "docs/",
     "plugins/",
     "rules/",
     "scripts/",
+    "skills/",
+    "steering/",
     "test/",
     "LICENSE",
     "POWER.md",

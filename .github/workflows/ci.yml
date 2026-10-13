@@ -35,3 +35,10 @@ jobs:
           npx vsce package
           --baseContentUrl https://github.com/valency-oss/valency-connectors/blob/main/vscode/
           --baseImagesUrl https://github.com/valency-oss/valency-connectors/raw/main/vscode/
+
+      - name: Check the packaged skills
+        working-directory: vscode
+        run: >
+          diff
+          <(unzip -Z1 valency-*.vsix | grep '^extension/skills/' | sed 's|^extension/|./|' | sort)
+          <(node -p "require('./package.json').contributes.chatSkills.map((s) => s.path).sort().join('\\n')")

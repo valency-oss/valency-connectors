@@ -12,3 +12,6 @@ vscode/*.vsix
 # Secrets and local environment
 .env
 *.pem
+
+# VS Code skill copies, generated from skills/ by scripts/sync-skills.mjs
+vscode/skills/
