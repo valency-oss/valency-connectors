@@ -38,4 +38,7 @@ jobs:
 
       - name: Check the packaged skills
         working-directory: vscode
-        run: test "$(unzip -Z1 valency-*.vsix | grep -cE '^extension/skills/valency-[a-z-]+/SKILL\.md$')" -eq "$(ls ../skills | wc -l)"
+        run: >
+          diff
+          <(unzip -Z1 valency-*.vsix | grep '^extension/skills/' | sed 's|^extension/|./|' | sort)
+          <(node -p "require('./package.json').contributes.chatSkills.map((s) => s.path).sort().join('\\n')")

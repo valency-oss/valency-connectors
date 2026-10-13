@@ -134,7 +134,7 @@ test("every vendored skill's frontmatter name equals its directory", () => {
       `${extensionRoot}/skills/${skill}/SKILL.md`,
       "utf8",
     );
-    const frontmatter = contents.match(/^---\n([\s\S]*?)\n---/);
+    const frontmatter = contents.match(/^---\r?\n([\s\S]*?)\r?\n---/);
     assert.ok(frontmatter, `${skill}/SKILL.md must start with YAML frontmatter`);
     assert.match(
       frontmatter[1],

@@ -45,7 +45,7 @@ From Step 2's papers, write 2–4 themes, each a 5–12 word phrase usable as a 
 
 ### Step 5: Search each theme
 
-For each theme, call `semantic_search_papers` with `query`, `start_date` (the cutoff), `limit: 25`, `include_abstract: false`, `max_authors: 100`. The date filter uses record-update dates, so also drop papers older than the cutoff by the year rules below, and papers with `total_authors` > 50.
+For each theme, call `semantic_search_papers` with `query`, `start_date` (the cutoff), `limit: 25`, `include_abstract: false`, `max_authors: 100`. The date filter uses record-update dates, so also drop papers dated before the cutoff: compare `first_submitted` as a full date when it's a real submission date (arXiv and the other preprint servers), otherwise the year by the rules below, keeping a paper from the cutoff's own year; and drop any whose `journal_ref` or DOI shows a year before the cutoff's. Drop papers with `total_authors` > 50 too.
 
 ### Step 6: Filter and rank
 
@@ -54,7 +54,7 @@ For each theme, call `semantic_search_papers` with `query`, `start_date` (the cu
 3. The candidate for each surviving paper is its first author; if the byline is alphabetical (common in maths), use the last author instead.
 4. Merge candidates who are the same person (name rules above).
 5. Rank: people surfaced by more papers or more themes first; then interleave themes so no single theme fills the list.
-6. Tag each `[early-career]`, `[established]` or `[unclear]` from what the results show (how many surfacing papers they lead, author position). Don't add facts about people that the tool results don't show.
+6. Note each person's role on the surfacing papers (first or last author, how many papers). The results don't show career stage, so don't label anyone early-career or established, and don't add facts about people that the tool results don't show.
 
 ## Displaying papers
 
@@ -70,8 +70,9 @@ Researcher (name, papers in corpus, main fields), the window and cutoff date, th
 ### Fresh Faces
 Up to 10:
 
-#### N. Name `[tag]`
+#### N. Name
 - **Surfaced by:** theme(s)
+- **Role:** e.g. first author of 2 surfacing papers
 - **Paper(s):** title (linked, ID), year
 - **Why relevant:** one sentence tying their paper to the researcher's work
 
