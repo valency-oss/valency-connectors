@@ -21,7 +21,7 @@ An author name (or ORCID / author_id / known paper if the name is ambiguous). Op
 
 Call `get_author_profile` with `author` (plus any hint). Branch on `status`:
 - `not_found` / `no_match` / `name_only` → say so, ask for an ORCID or a known paper. Stop.
-- `did_you_mean` → show the suggestions, offer to retry.
+- `did_you_mean` → show the suggestions, offer to retry. Stop.
 - `ambiguous` → pick a candidate only if its `corpus_papers` (or `works_count` when that's null) is several times the next *genuinely different* candidate (a small same-field entry with the same name is likely a fragment of the same person), and say it's a judgment call. Otherwise list the candidates and ask. Once picked, re-call with that `author_id`.
 - `resolved` → keep `person.author_id`, `person.display_name`, `corpus.corpus_papers`, `corpus.top_categories`.
 
@@ -77,7 +77,7 @@ Up to 10:
 - **Why relevant:** one sentence tying their paper to the researcher's work
 
 ### Theme Coverage
-Per theme: papers found, papers left after filtering. A theme with few survivors is mostly inside the existing network — say that.
+Per theme: papers found, papers removed because an existing coauthor is on them, papers removed for other reasons (date, roster, duplicate), and papers left. Only when coauthor removals account for most of the losses, say the theme is mostly inside the existing network.
 
 ### Suggested Follow-ups
 - Ask for a profile of `<name>` — a closer look at any candidate

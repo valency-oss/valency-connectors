@@ -63,20 +63,24 @@ const strayCopies = () => {
   const stray = providers.flatMap((provider) => {
     const dir = `plugins/${provider}/valency/skills`;
     if (!existsSync(join(root, dir))) return [];
-    return readdirSync(join(root, dir)).flatMap((entry) => {
-      if (entry.startsWith(".")) return [];
-      if (!names.has(entry)) return [`${dir}/${entry}`];
+    return readdirSync(join(root, dir), { withFileTypes: true }).flatMap((entry) => {
+      if (entry.name.startsWith(".")) return [];
+      if (!names.has(entry.name) || !entry.isDirectory()) return [`${dir}/${entry.name}`];
       if (provider === "openai") return [];
-      return readdirSync(join(root, dir, entry))
+      return readdirSync(join(root, dir, entry.name))
         .filter((file) => file !== "SKILL.md" && !file.startsWith("."))
-        .map((file) => `${dir}/${entry}/${file}`);
+        .map((file) => `${dir}/${entry.name}/${file}`);
     });
   });
   if (existsSync(join(root, "steering"))) {
     stray.push(
-      ...readdirSync(join(root, "steering"))
-        .filter((entry) => !entry.startsWith(".") && !names.has(entry.replace(/\.md$/, "")))
-        .map((entry) => `steering/${entry}`),
+      ...readdirSync(join(root, "steering"), { withFileTypes: true })
+        .filter(
+          (entry) =>
+            !entry.name.startsWith(".") &&
+            !(entry.isFile() && entry.name.endsWith(".md") && names.has(entry.name.slice(0, -3))),
+        )
+        .map((entry) => `steering/${entry.name}`),
     );
   }
   return stray;
