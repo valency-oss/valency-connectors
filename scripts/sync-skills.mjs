@@ -34,7 +34,7 @@ export const canonicalSkill = (name) =>
   readFileSync(join(root, "skills", name, "SKILL.md"), "utf8");
 
 export const vscodeSkill = (name, contents) => {
-  const frontmatter = contents.match(/^---\n[\s\S]*?\n---\n/);
+  const frontmatter = contents.match(/^---\r?\n[\s\S]*?\r?\n---\r?\n/);
   if (!frontmatter || !/^name: .+$/m.test(frontmatter[0])) {
     throw new Error(`skills/${name}/SKILL.md has no name: line in its frontmatter`);
   }

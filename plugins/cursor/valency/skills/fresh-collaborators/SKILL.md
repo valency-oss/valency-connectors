@@ -50,7 +50,7 @@ For each theme, call `semantic_search_papers` with `query`, `start_date` (the cu
 ### Step 6: Filter and rank
 
 1. Merge duplicate papers (see Displaying papers) **before** filtering, so an arXiv/PubMed pair is judged together.
-2. Drop any paper with an excluded author.
+2. Drop any paper with an excluded author, and any that fails the date checks in Displaying papers (including the PubMed lookup) — before ranking, so old papers don't count toward anyone.
 3. The candidate for each surviving paper is its first author; if the byline is alphabetical (common in maths), use the last author instead.
 4. Merge candidates who are the same person (name rules above).
 5. Rank: people surfaced by more papers or more themes first; then interleave themes so no single theme fills the list.
@@ -59,7 +59,7 @@ For each theme, call `semantic_search_papers` with `query`, `start_date` (the cu
 ## Displaying papers
 
 - Link each title to its `url`; keep the paper ID in parentheses.
-- **Year:** the year in `journal_ref` when present, else `first_submitted`; if `journal_ref` or the DOI shows an earlier year than the arXiv date (an old paper posted late), use the earlier one. PubMed rows from `semantic_search_papers` carry no `journal_ref`, and their `first_submitted` is often a record-update date: for any PubMed paper you're about to show, call `get_paper_by_id` (`include_abstract: false`) and use its `journal_ref` year; drop it if that's before the cutoff, or if it still has no `journal_ref` (it can't be dated).
+- **Year:** the year in `journal_ref` when present, else `first_submitted`; if `journal_ref` or the DOI shows an earlier year than the arXiv date (an old paper posted late), use the earlier one. PubMed rows from `semantic_search_papers` carry no `journal_ref`, and their `first_submitted` is often a record-update date: for every PubMed paper left after step 2's author filter, call `get_paper_by_id` (`include_abstract: false`) and use its `journal_ref` year; drop it if that's before the cutoff, or if it still has no `journal_ref` (it can't be dated).
 - **Duplicates:** same DOI, or same title (ignoring case, punctuation and hyphens) with the same first author.
 
 ## Output Format

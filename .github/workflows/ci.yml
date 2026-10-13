@@ -35,3 +35,7 @@ jobs:
           npx vsce package
           --baseContentUrl https://github.com/valency-oss/valency-connectors/blob/main/vscode/
           --baseImagesUrl https://github.com/valency-oss/valency-connectors/raw/main/vscode/
+
+      - name: Check the packaged skills
+        working-directory: vscode
+        run: test "$(unzip -Z1 valency-*.vsix | grep -cE '^extension/skills/valency-[a-z-]+/SKILL\.md$')" -eq "$(ls ../skills | wc -l)"
