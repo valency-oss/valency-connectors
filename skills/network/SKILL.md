@@ -35,7 +35,17 @@ Note the warning's count of excluded >50-author papers. If it's more than about 
 
 ### Step 3: Second-degree connections
 
-For each of the top 5, call `find_coauthors` with `author_id` = their `coauthor_id`, `limit: 10`. Drop from these lists: the researcher (they appear under a different ID form — `A5…` here vs `A_…` from Step 1 — so match by name), anyone in Step 2's full list (all rows, not just the top 5), and duplicates of the same person. Count, for each remaining person, how many of the top 5 lead to them; merge the two records of any person merged in Step 2 before counting.
+For each of the top 5, call `find_coauthors` with `author_id` = their `coauthor_id`, `limit: 10`. Drop from these lists:
+- the researcher (they appear under a different ID form — `A5…` here vs `A_…` from Step 1 — so match by name);
+- anyone in Step 2's full list (all rows, not just the top 5);
+- duplicates of the same person;
+- **only if Step 2's `find_coauthors` call returned 100 rows** (before any merging) (its list stopped at the cap and misses people who share only a paper or two): anyone on the researcher's own bylines, checked as follows.
+  1. Call `find_papers_by_researcher` with the researcher's own `author_id` from Step 1, `sort_by: "recency"`, `limit: 100`, `enrich_citations: false`. Use only its papers with at most 50 authors: a paper without `total_authors` shows its whole byline; leave out those with `total_authors` > 50 (rosters, as in Step 2).
+  2. Bylines stop at 20 names: for the 15 most recent of those papers with `authors_truncated: true`, call `get_paper_by_id` with its `id` as `paper_id`, its `source`, `include_abstract: false`, `enrich_citations: false`, `max_authors: 50`.
+  3. Drop a person only on a clear byline match: names normalised as in Step 2, same surname, and the full given name or at least two matching initials, with nothing conflicting ("John A. Smith" is not "John B. Smith"). A first initial alone is not enough; when unsure, keep the person.
+  4. If more truncated papers remain than you fetched, or `find_papers_by_researcher` says papers were omitted, add one line under Second-Degree Connections saying some names there may be occasional direct coauthors.
+
+Then count, for each remaining person, how many of the top 5 lead to them; merge the two records of any person merged in Step 2 before counting.
 
 ### Step 4: Compare
 
@@ -55,7 +65,7 @@ One sentence per collaborator, e.g. *"More concentrated on astro-ph.GA (57% vs 4
 ## Output Format
 
 ### Network Summary
-Name, main fields, how many collaborators are shown. If Step 2 said >50-author papers were excluded, say so in one line (large collaborations are left out of these counts). Note any merged duplicate records.
+Name, main fields (show synonym keywords once, e.g. "T2D" / "Diabetes Mellitus, Type 2"), how many collaborators are shown. If Step 2 said >50-author papers were excluded, say so in one line (large collaborations are left out of these counts). Note any merged duplicate records.
 
 ### Direct Collaborators
 Top 10 from Step 2: name, shared papers.
