@@ -53,7 +53,7 @@ For each theme, call `semantic_search_papers` with `query`, `limit: 100`, `inclu
 2. Drop any paper with an excluded author, and any that fails the date checks in Displaying papers (including the PubMed lookup) — before ranking, so old papers don't count toward anyone.
 3. The candidate for each surviving paper is its first author; if the byline is alphabetical (common in maths), use the last author instead.
 4. Merge candidates who are the same person (name rules above).
-5. Rank: people surfaced by more papers or more themes first; then interleave themes so no single theme fills the list.
+5. Rank: people surfaced by more papers or more themes first; among equals, authors of original studies before authors of reviews, editorials or commentaries (judge from the title); then interleave themes so no single theme fills the list.
 6. Note each person's role on the surfacing papers (first or last author, how many papers). The results don't show career stage, so don't label anyone early-career or established, and don't add facts about people that the tool results don't show.
 
 ## Displaying papers

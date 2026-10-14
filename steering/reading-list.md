@@ -21,7 +21,7 @@ Call `get_author_profile` with `author` (plus any hint given). Branch on `status
 - `not_found` / `no_match` / `name_only` → say so, ask for an ORCID or a known paper. Stop.
 - `did_you_mean` → show the suggestions, offer to retry. Stop.
 - `ambiguous` → if the user gave a hint (a paper, field, institution or collaborator), pick the candidate it matches (`recent_title`, `top_categories`) and say why. Otherwise pick a candidate only if its `corpus_papers` is several times the next *genuinely different* candidate's (compare `works_count` for both instead when either `corpus_papers` is null — never one against the other) (a small same-field entry with the same name is likely a fragment of the same person), and say it's a judgment call. Otherwise list the candidates and ask. Once picked, re-call with that `author_id`.
-- `resolved` → keep `person.author_id`, `person.display_name`, `corpus.corpus_papers`, `corpus.top_categories`. If `warnings[]` says the record's affiliations span several countries and may combine people, mention it in one line — and the seed rule in Step 4 keeps a namesake's paper from becoming a thread.
+- `resolved` → keep `person.author_id`, `person.display_name`, `corpus.corpus_papers`, `corpus.top_categories`, `career.affiliations`. If `warnings[]` says the record's affiliations span several countries and may combine people, mention it in one line — and the seed rule in Step 4 keeps a namesake's paper from becoming a thread.
 
 If a response carries `degraded: true` (`next_action: "retry_unchanged"`), part of it was skipped, not empty: retry that call once unchanged, and if it is still degraded, say that part is unavailable rather than reporting zero.
 
@@ -60,7 +60,7 @@ For each seed, call `find_similar_papers` with `paper_id`, `limit: 12`, `max_aut
 ## Output Format
 
 ### Researcher Summary
-Name, papers in the corpus (`corpus.corpus_papers`), main fields (top 3 of `corpus.top_categories`). One line on how the seeds were chosen.
+Name, papers in the corpus (`corpus.corpus_papers`), main fields (top 3 of `corpus.top_categories`, showing synonym keywords such as "T2D" / "Diabetes Mellitus, Type 2" once). If you mention an institution, use the top entry of `career.affiliations` by `work_count`, not `current_institution`, which is often stale. One line on how the seeds were chosen.
 
 ### Reading List by Thread
 #### Thread N: <short description of the topic>

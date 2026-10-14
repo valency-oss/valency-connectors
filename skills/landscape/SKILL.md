@@ -33,8 +33,8 @@ A category call that returns an empty series with an `UNKNOWN_CATEGORY` warning 
 ## Tool Chain — topic path
 
 1. **Most-cited papers:** `semantic_search_papers` with `query`, `sort_by: "citations"`, `limit: 100`, `include_abstract: false`, `max_authors: 3`. This takes the 100 papers closest in meaning and orders those by citations, so it's "the most-cited of the closest matches", not the field's all-time list. Phrase the query the way the field describes itself.
-2. **Volume over time:** `get_keyword_trends` with the short topic term (e.g. "base editing" — not the descriptive sentence from step 1), `granularity: "year"`, `format: "compact"`. It matches the words, not the exact phrase, so years before the topic existed can hold unrelated hits.
-3. No author ranking, corpus metrics or neighbouring fields on this path — they need a category. Say so in one line.
+2. **Volume over time:** `get_keyword_trends` with `granularity: "year"`, `format: "compact"` and the short topic term (e.g. "base editing" — not the descriptive sentence from step 1). Keep any scope the request narrows to ("antibiotic resistance" plus the organism it names, not "antibiotic resistance" alone) so the volume matches the papers listed. When that scope has a common abbreviation, run both spellings ("COPD" and "chronic obstructive pulmonary disease"): use the spelled-out series for the table and totals unless the field mostly writes the abbreviation ("CRISPR", "HIV"), and give the other's total in one line. It matches the words, not the exact phrase, so years before the topic existed can hold unrelated hits.
+3. No author ranking, corpus metrics or neighbouring fields on this path — they need a category. Leave those sections out without comment.
 
 ## Reading the numbers
 
@@ -56,7 +56,7 @@ Total papers (category: `analyze_corpus_metrics`; topic: trend sum), years cover
 Year-by-year table, current year marked partial, spikes marked. For long series, group the sparse early years into one row.
 
 ### Most-Cited Papers
-Top 10 (after merging duplicates): title (linked, ID), authors, year, citations. Category path: if cross-listed papers dominate the top 10, list the top papers whose primary category *is* the input first, then a short "also highly cited, cross-listed from other fields" line. Topic path: label the list "most-cited among the 100 closest matches".
+Top 10 (after merging duplicates): title (linked, ID), authors, year, citations. Category path: if cross-listed papers dominate the top 10, list the top papers whose primary category *is* the input first, then a short "also highly cited, cross-listed from other fields" line. Topic path: label the list "most-cited among the 100 closest matches", and, when the request narrows the topic to a specific disease, organism or setting ("… in children", "… in tuberculosis"), leave out papers whose title is clearly about a different one (keep general or method papers), moving down the list to fill 10 (show fewer if fewer remain) and saying in one line how many were left out.
 
 ### Top Authors (category path only)
 Up to 10: name, paper count, with the identity note from Step 3 where one applies.
@@ -68,6 +68,6 @@ Most frequent co-listed categories with counts, labelled "co-listed on the field
 2–3 points drawn only from the data above.
 
 ### Suggested Follow-ups
-- Ask for a profile of `<author>` — for a listed author (pass that row's `top_candidate_id` as the author_id)
+- Ask for a profile of `<author>` — category path only, for a listed Top Authors row (pass that row's `top_candidate_id` as the author_id)
 - Ask for trends for `<category or topic>` — finer trend analysis
 - Ask for papers similar to `<paper_id>` — around any listed paper
