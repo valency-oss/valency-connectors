@@ -45,7 +45,7 @@ From Step 2's papers, write 2–4 themes, each a 5–12 word phrase usable as a 
 
 ### Step 5: Search each theme
 
-For each theme, call `semantic_search_papers` with `query`, `limit: 100`, `include_abstract: false`, `max_authors: 100`. Don't pass `start_date`: a date-filtered semantic search is slow on PubMed today, and Step 6's cutoff filter does the dating. In Step 6, after merging duplicates (an arXiv/PubMed pair keeps its earliest date), drop papers dated before the cutoff: compare `dates.first_available` as a full date when its `precision` is `day`, otherwise the year by the rules below, keeping a paper from the cutoff's own year; and drop any whose `journal_ref` or DOI shows a year before the cutoff's. Drop papers with `total_authors` > 50 too.
+For each theme, call `semantic_search_papers` with `query`, `limit: 100`, `include_abstract: false`, `max_authors: 100`. Don't pass `start_date`; Step 6's cutoff filter does the dating. In Step 6, after merging duplicates (an arXiv/PubMed pair keeps its earliest date), drop papers dated before the cutoff: compare `dates.first_available` as a full date when its `precision` is `day`, otherwise the year by the rules below, keeping a paper from the cutoff's own year; and drop any whose `journal_ref` or DOI shows a year before the cutoff's. Drop papers with `total_authors` > 50 too.
 
 ### Step 6: Filter and rank
 
