@@ -59,7 +59,7 @@ For each theme, call `semantic_search_papers` with `query`, `limit: 100`, `inclu
 ## Displaying papers
 
 - Link each title to its `url`; keep the paper ID in parentheses.
-- **Year:** the year in `journal_ref` when present, else the year of `dates.first_available.value` (any `precision`: day, month or year; `first_submitted`, still on arXiv and other preprint rows, is a deprecated alias of it); if `journal_ref` or the DOI shows an earlier year than the arXiv date (an old paper posted late), use the earlier one. PubMed rows from `semantic_search_papers` carry no `journal_ref`: for every PubMed record left after Step 6's author filter (item 2), including the PubMed half of a merged pair, call `get_paper_by_id` (`include_abstract: false`) and use its `journal_ref` year when present; drop it if its year is before the cutoff, or if it has neither `journal_ref` nor `dates.first_available` (it can't be dated).
+- **Year:** the year in `journal_ref` when present, else the year of `dates.first_available.value` (any `precision`: day, month or year; where a row also carries `first_submitted`, it is the same value); if `journal_ref` or the DOI shows an earlier year than the arXiv date (an old paper posted late), use the earlier one. PubMed rows from `semantic_search_papers` carry no `journal_ref`: for every PubMed record left after Step 6's author filter (item 2), including the PubMed half of a merged pair, call `get_paper_by_id` (`include_abstract: false`) and use its `journal_ref` year when present; drop it if its year is before the cutoff, or if it has neither `journal_ref` nor `dates.first_available` (it can't be dated).
 - **Duplicates:** same DOI, or same title (ignoring case, punctuation and hyphens) with the same first author.
 
 ## Output Format

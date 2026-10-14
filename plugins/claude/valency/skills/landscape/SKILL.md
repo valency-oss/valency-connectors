@@ -45,7 +45,7 @@ A category call that returns an empty series with an `UNKNOWN_CATEGORY` warning 
 
 ## Displaying papers
 
-Link each title to its `url`; keep the ID in parentheses. Year: the year in `journal_ref` when present, else the year of `dates.first_available.value` (any `precision`: day, month or year; `first_submitted`, still on arXiv and other preprint rows, is a deprecated alias of it); if neither exists, leave the year off. Category: arXiv codes only — PubMed `categories` are free keywords. Authors: all if three or fewer, else first three + "et al."; a collaboration name ("The LIGO Scientific Collaboration") counts as an author.
+Link each title to its `url`; keep the ID in parentheses. Year: the year in `journal_ref` when present, else the year of `dates.first_available.value` (any `precision`: day, month or year; where a row also carries `first_submitted`, it is the same value); if neither exists, leave the year off. Category: arXiv codes only — PubMed `categories` are free keywords. Authors: all if three or fewer, else first three + "et al."; a collaboration name ("The LIGO Scientific Collaboration") counts as an author.
 
 ## Output Format
 

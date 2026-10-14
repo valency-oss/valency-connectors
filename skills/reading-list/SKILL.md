@@ -52,7 +52,7 @@ For each seed, call `find_similar_papers` with `paper_id`, `limit: 12`, `max_aut
 ## Displaying papers
 
 - Link each title to its `url`; keep the paper ID in parentheses.
-- **Year:** The year in `journal_ref` when present, else the year of `dates.first_available.value` (any `precision`: day, month or year; `first_submitted`, still on arXiv and other preprint rows, is a deprecated alias of it). If `journal_ref` or the DOI shows an earlier publication year than the arXiv date (an old paper posted late), use the earlier year. If neither exists, leave the year off rather than show a wrong one.
+- **Year:** The year in `journal_ref` when present, else the year of `dates.first_available.value` (any `precision`: day, month or year; where a row also carries `first_submitted`, it is the same value). If `journal_ref` or the DOI shows an earlier publication year than the arXiv date (an old paper posted late), use the earlier year. If neither exists, leave the year off rather than show a wrong one.
 - **Category:** show arXiv codes only; PubMed `categories` are free keywords — omit them.
 - **Authors:** all if three or fewer, else first three + "et al." Show PubMed's "Last, First" as "First Last".
 - **Duplicates:** same DOI, or same title (ignoring case, punctuation and hyphens) with the same first author. Keep the arXiv record.
