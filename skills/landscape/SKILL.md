@@ -39,13 +39,13 @@ A category call that returns an empty series with an `UNKNOWN_CATEGORY` warning 
 ## Reading the numbers
 
 - **Missing years:** years with no papers are left out of a trend series, not returned as 0. Fill them with 0 between the first and last year shown before building the table or comparing years.
-- **Trends** count papers by `dates.first_available`, when each first became publicly available. Base the trajectory on complete years. Mark the current year as partial; if it already exceeds last year's full count, say it may be an ingestion artifact or may be real growth — a monthly trend check can tell them apart — rather than asserting either. An earlier year at least double its neighbours' average, with no known field event, is likely an ingestion artifact — say so in one line rather than calling it growth.
+- **Trends** count papers by `dates.first_available`, when each first became publicly available. Base the trajectory on complete years. Mark the current year as partial; if it already exceeds last year's full count, say so as a partial-year count rather than a trend. An earlier year at least double its neighbours' average, with no known field event: describe it in one line as a spike, without suggesting a cause, rather than calling it growth.
 - **Topic-path totals:** sum the keyword-trend counts from the year the topic took off (when counts start rising steadily), labelled "papers mentioning the term since <year>"; mention the earlier stray matches in one line.
 - **Duplicates:** the same work can appear as an arXiv and a PubMed record. Treat rows as one paper when the DOI matches, or the title matches (ignoring case, punctuation and hyphens) **and** the first author matches. Keep the higher citation count.
 
 ## Displaying papers
 
-Link each title to its `url`; keep the ID in parentheses. Year: the year in `journal_ref` when present, else the year of `dates.first_available.value` (any `precision`: day, month or year; where a row also carries `first_submitted`, it is the same value); if neither exists, leave the year off. Category: arXiv codes only — PubMed `categories` are free keywords. Authors: all if three or fewer, else first three + "et al."; a collaboration name ("The LIGO Scientific Collaboration") counts as an author.
+Link each title to its `url`; keep the ID in parentheses. Year: the year in `journal_ref` when present, else the year of `dates.first_available`: of its `value` at `day`, `month` or `year` precision, or at `range` precision (`start` and `end`, no `value`) the year `start` and `end` share, none if they differ (where a row also carries `first_submitted`, it is the same value); if neither gives a year, leave the year off. Category: arXiv codes only — PubMed `categories` are free keywords. Authors: all if three or fewer, else first three + "et al."; a collaboration name ("The LIGO Scientific Collaboration") counts as an author.
 
 ## Output Format
 
@@ -53,7 +53,7 @@ Link each title to its `url`; keep the ID in parentheses. Year: the year in `jou
 Total papers (category: `analyze_corpus_metrics`; topic: trend sum), years covered, growth in one or two sentences.
 
 ### Publication Trends
-Year-by-year table, current year marked partial, artifacts flagged. For long series, group the sparse early years into one row.
+Year-by-year table, current year marked partial, spikes marked. For long series, group the sparse early years into one row.
 
 ### Most-Cited Papers
 Top 10 (after merging duplicates): title (linked, ID), authors, year, citations. Category path: if cross-listed papers dominate the top 10, list the top papers whose primary category *is* the input first, then a short "also highly cited, cross-listed from other fields" line. Topic path: label the list "most-cited among the 100 closest matches".
