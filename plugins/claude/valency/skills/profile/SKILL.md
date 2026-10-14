@@ -126,7 +126,7 @@ Exception: the ambiguous-candidates table (item 3 above). Those candidates only 
 - **Institution**: top entry from `career.affiliations` by `work_count`. Don't present `current_institution` as where they are now — it is often stale.
 - **Total papers**: `corpus.corpus_papers` (mention `career.career_works` if notably larger)
 - **Career impact**: `career.h_index` and `career.career_citations`. If `h_index` is null, show citations only — don't remark on the missing h-index.
-- **Active years**: from the earlier of `corpus.first_paper` and the oldest paper year in Step 2, to `corpus.last_paper` (`first_paper` follows record dates and can start years too late).
+- **Active years**: from the earlier of `corpus.first_paper` and the oldest paper year in Step 2, to `corpus.last_paper`.
 - **Primary domains**: top 3 from `corpus.top_categories`
 - If identity was ambiguous and you picked a candidate yourself, say so here in one line.
 - If `corpus.papers_per_year` has one sharp, plausibly-caused spike (a project launch, a mega-collaboration paper), a one-line text mention belongs here; a fuller visual treatment belongs after Top Papers instead.
@@ -135,7 +135,7 @@ Exception: the ambiguous-candidates table (item 3 above). Those candidates only 
 Table of top 5 from `corpus.top_categories`.
 
 ### Top Papers
-Numbered list of up to 10 papers from Step 2: title linked per above (plus ID in parentheses), year, categories, citation count. **Year:** the year in `journal_ref` when present, else `first_submitted` — for PubMed rows `first_submitted` is often a record-update date, so with no `journal_ref` leave the year off. **Categories:** arXiv codes only; PubMed `categories` are free keywords — omit them. If most of the top 10 have `total_authors` > 50, add one line: the list reflects large-collaboration membership more than their own lead work.
+Numbered list of up to 10 papers from Step 2: title linked per above (plus ID in parentheses), year, categories, citation count. **Year:** the year in `journal_ref` when present, else the year of `dates.first_available`: of its `value` at `day`, `month` or `year` precision, or at `range` precision (`start` and `end`, no `value`) the year `start` and `end` share, none if they differ (where a row also carries `first_submitted`, it is the same value); if neither gives a year, leave the year off. **Categories:** arXiv codes only; PubMed `categories` are free keywords — omit them. If most of the top 10 have `total_authors` > 50, add one line: the list reflects large-collaboration membership more than their own lead work.
 
 The ranking is reliable; an individual paper's own count may not be. If `h_index` is present, check the list against it and `career.career_citations`; if the numbers look small for that h-index (a known failure mode: citations split across duplicate upstream records, with the corpus linked to the lower-cited one), say so rather than presenting the ranking as the definitive greatest hits — the person-level aggregate is the more trustworthy signal.
 

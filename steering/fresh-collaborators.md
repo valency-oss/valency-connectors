@@ -29,7 +29,7 @@ If a response carries `degraded: true` (`next_action: "retry_unchanged"`), part 
 
 ### Step 2: Their recent work
 
-Call `find_papers_by_researcher` with `author_id`, `sort_by: "recency"`, `limit: 40`. Recency follows the record-update date, so many re-stamped old papers come first: use papers from the last ~2 years (by the year rules below) for themes, and **all 40** for the exclusion set. If fewer than 2 papers fall in the last ~2 years, say there is too little recent work to build themes from and stop.
+Call `find_papers_by_researcher` with `author_id`, `sort_by: "recency"`, `limit: 40`. Recency follows `dates.first_available`, but an old paper posted late can still come first: use papers from the last ~2 years (by the year rules below) for themes, and **all 40** for the exclusion set. If fewer than 2 papers fall in the last ~2 years, say there is too little recent work to build themes from and stop.
 
 ### Step 3: Exclusion set
 
@@ -45,7 +45,7 @@ From Step 2's papers, write 2–4 themes, each a 5–12 word phrase usable as a 
 
 ### Step 5: Search each theme
 
-For each theme, call `semantic_search_papers` with `query`, `start_date` (the cutoff), `limit: 25`, `include_abstract: false`, `max_authors: 100`. The date filter uses record-update dates, so in Step 6, after merging duplicates (an arXiv/PubMed pair keeps its earliest date), also drop papers dated before the cutoff: compare `first_submitted` as a full date when it's a real submission date (arXiv and the other preprint servers), otherwise the year by the rules below, keeping a paper from the cutoff's own year; and drop any whose `journal_ref` or DOI shows a year before the cutoff's. Drop papers with `total_authors` > 50 too.
+For each theme, call `semantic_search_papers` with `query`, `limit: 100`, `include_abstract: false`, `max_authors: 100`. Don't pass `start_date`; Step 6's cutoff filter does the dating. In Step 6, after merging duplicates (an arXiv/PubMed pair keeps its earliest date), apply the cutoff by `dates.first_available`'s interval, not the display year: the `value` day at `day` precision, the whole month or year of `value` at `month` or `year` precision, `start` to `end` at `range` precision. Keep a paper only if the interval's first possible day is on or after the cutoff (a day equal to the cutoff passes; a month or year that starts before the cutoff fails) and, if an end date applies, its last possible day is on or before it; drop papers with no `dates.first_available`. Also drop any whose `journal_ref` or DOI shows a year before the cutoff's. Drop papers with `total_authors` > 50 too.
 
 ### Step 6: Filter and rank
 
@@ -59,7 +59,7 @@ For each theme, call `semantic_search_papers` with `query`, `start_date` (the cu
 ## Displaying papers
 
 - Link each title to its `url`; keep the paper ID in parentheses.
-- **Year:** the year in `journal_ref` when present, else `first_submitted`; if `journal_ref` or the DOI shows an earlier year than the arXiv date (an old paper posted late), use the earlier one. PubMed rows from `semantic_search_papers` carry no `journal_ref`, and their `first_submitted` is often a record-update date: for every PubMed record left after Step 6's author filter (item 2), including the PubMed half of a merged pair, call `get_paper_by_id` (`include_abstract: false`) and use its `journal_ref` year; drop it if that's before the cutoff, or if it still has no `journal_ref` (it can't be dated).
+- **Year:** the year in `journal_ref` when present, else the year of `dates.first_available`: of its `value` at `day`, `month` or `year` precision, or at `range` precision (`start` and `end`, no `value`) the year `start` and `end` share, none if they differ (where a row also carries `first_submitted`, it is the same value); if `journal_ref` or the DOI shows an earlier year than the arXiv date (an old paper posted late), use the earlier one. PubMed rows from `semantic_search_papers` carry no `journal_ref`: for every PubMed record left after Step 6's author filter (item 2), including the PubMed half of a merged pair, call `get_paper_by_id` (`include_abstract: false`) and use its `journal_ref` year when present; drop it if its year is before the cutoff. If neither gives a year, leave the year off but keep the paper.
 - **Duplicates:** same DOI, or same title (ignoring case, punctuation and hyphens) with the same first author.
 
 ## Output Format
