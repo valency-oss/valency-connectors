@@ -29,11 +29,11 @@ Use `person.author_id` for every later call.
 
 ### Step 2: Career anchors
 
-Call `find_papers_by_researcher` with `author_id`, `sort_by: "citations"`, `limit: 15`. The sort covers their whole corpus. Skip papers with `total_authors` > 50 (a collaboration roster says little about the person's own interests); the top 5 of what's left are the anchors.
+Call `get_author_papers` with `author_id`, `sort_by: "citations"`, `limit: 15`. The sort covers their whole corpus. Skip papers with `total_authors` > 50 (a collaboration roster says little about the person's own interests); the top 5 of what's left are the anchors.
 
 ### Step 3: Current direction
 
-Call `find_papers_by_researcher` with `author_id`, `sort_by: "recency"`, `limit: 40`. Recency follows `dates.first_available`, but an old paper posted late can still come first: keep only papers from the last two years (by the year rules in Displaying papers), up to 5.
+Call `get_author_papers` with `author_id`, `sort_by: "recency"`, `limit: 40`. Recency follows `dates.first_available`, but an old paper posted late can still come first: keep only papers from the last two years (by the year rules in Displaying papers), up to 5.
 
 ### Step 4: Pick 3–5 seeds
 
