@@ -19,7 +19,7 @@ const rootPlugin = readJson("plugin.json");
 const expectedRootPlugin = {
   $schema: "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   name: "valency",
-  version: "0.2.0",
+  version: "0.2.1",
   description:
     "Search, profile, and analyze research papers through the Valency Bond MCP server.",
   author: {
@@ -51,7 +51,7 @@ const kiroWorkflows = [
 test("Agent Skills CLI groups every canonical skill under one select-all row", () => {
   assert.deepEqual(readJson(".claude-plugin/plugin.json"), {
     name: "valency-skills",
-    version: "0.2.0",
+    version: "0.2.1",
     description:
       "Portable research-corpus workflows for agents using the Valency Bond MCP server.",
     author: {
@@ -121,7 +121,7 @@ test("Grok marketplace routes to its dedicated provider package", () => {
         source: "./plugins/grok/valency",
         description:
           "Search, profile, and analyze research papers through Valency Bond.",
-        version: "0.2.0",
+        version: "0.2.1",
         author: {
           name: "Valency Systems Inc",
         },
@@ -139,7 +139,7 @@ test("native Grok package is credential-free and contains only expected componen
     name: "valency",
     description:
       "Search, profile, and analyze research papers through the Valency Bond MCP server.",
-    version: "0.2.0",
+    version: "0.2.1",
     author: {
       name: "Valency Systems Inc",
       email: "support@valency.io",
@@ -268,7 +268,7 @@ test("Copilot marketplace routes to its independent provider package", () => {
     metadata: {
       description:
         "The Valency research plugin marketplace for GitHub Copilot CLI, powered by Valency Bond.",
-      version: "0.2.0",
+      version: "0.2.1",
     },
     plugins: [
       {
@@ -276,7 +276,7 @@ test("Copilot marketplace routes to its independent provider package", () => {
         source: "./plugins/copilot/valency",
         description:
           "Search, profile, and analyze research papers through Valency Bond.",
-        version: "0.2.0",
+        version: "0.2.1",
       },
     ],
   });
@@ -285,7 +285,7 @@ test("Copilot marketplace routes to its independent provider package", () => {
     name: "valency",
     description:
       "Search, profile, and analyze research papers through the Valency Bond MCP server.",
-    version: "0.2.0",
+    version: "0.2.1",
     author: {
       name: "Valency Systems Inc",
       email: "support@valency.io",
@@ -348,7 +348,7 @@ test("Cursor marketplace routes to its full-surface provider package", () => {
     displayName: "Valency",
     description:
       "Search, profile, and analyze research papers through the Valency Bond MCP server.",
-    version: "0.2.0",
+    version: "0.2.1",
     author: {
       name: "Valency Systems Inc",
       email: "support@valency.io",
@@ -513,9 +513,9 @@ test("root marketplaces route to independent provider packages", () => {
   assert.equal(openaiPlugin.name, "valency");
   assert.equal(openaiPlugin.interface.displayName, "Valency");
 
-  assert.equal(claudePlugin.version, "0.4.0");
+  assert.equal(claudePlugin.version, "0.4.1");
   assert.equal(claudeEntry.version, claudePlugin.version);
-  assert.equal(openaiPlugin.version, "1.1.0");
+  assert.equal(openaiPlugin.version, "1.1.1");
 });
 
 test("both packages bundle the production Valency Bond MCP endpoint", () => {

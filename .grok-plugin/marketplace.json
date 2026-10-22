@@ -9,7 +9,7 @@
       "name": "valency",
       "source": "./plugins/grok/valency",
       "description": "Search, profile, and analyze research papers through Valency Bond.",
-      "version": "0.2.0",
+      "version": "0.2.1",
       "author": {
         "name": "Valency Systems Inc"
       }
