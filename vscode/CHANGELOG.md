@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 ### Changed
 
 - The seven research skills are rewritten for the current Valency MCP tools: researcher profile, collaboration network, fresh collaborators, reading list, similar papers, field landscape and publication trends. They resolve researchers by identity rather than by name string, ask when a name is ambiguous, and handle more edge cases in the data.
+- The skills call the canonical author tools of Valency MCP 0.5.0: `get_author_papers` and `get_author_coauthors` (formerly `find_papers_by_researcher` and `find_coauthors`).
 
 ## [0.1.8] - 2026-09-02
 

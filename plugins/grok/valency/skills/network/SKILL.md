@@ -27,7 +27,7 @@ If a response carries `degraded: true` (`next_action: "retry_unchanged"`), part 
 
 ### Step 2: Direct collaborators
 
-Call `find_coauthors` with `author_id`, `limit: 100`. Every row counts as a direct collaborator in Step 3; the output shows the top 10. Rows are `{coauthor, coauthor_id, shared_papers}`. `count` is rows returned, not a network total. If no rows come back, give the Network Summary, say no collaborators were found, and skip Steps 3–5.
+Call `get_author_coauthors` with `author_id`, `limit: 100`. Every row counts as a direct collaborator in Step 3; the output shows the top 10. Rows are `{coauthor, coauthor_id, shared_papers}`. `count` is rows returned, not a network total. If no rows come back, give the Network Summary, say no collaborators were found, and skip Steps 3–5.
 
 The same person can appear twice (two records, e.g. "Robert M. Califf" and "Robert Califf"). Merge rows whose names match (surname plus given name, or first initial when one side has only initials; ignore case, accents, apostrophes and every hyphen variant, e.g. "Hans‐Walter" with a Unicode hyphen vs "Hans-Walter"). Merge only when the names clearly match, since the rows carry no field to confirm it; when unsure, keep them separate. Keep the larger shared-paper count (the two can overlap, so don't add them) and note the merge. Then take the top 5 (ties: keep the tool's order).
 
@@ -35,15 +35,15 @@ Note the warning's count of excluded >50-author papers. If it's more than about 
 
 ### Step 3: Second-degree connections
 
-For each of the top 5, call `find_coauthors` with `author_id` = their `coauthor_id`, `limit: 10`. Drop from these lists:
+For each of the top 5, call `get_author_coauthors` with `author_id` = their `coauthor_id`, `limit: 10`. Drop from these lists:
 - the researcher (they appear under a different ID form — `A5…` here vs `A_…` from Step 1 — so match by name);
 - anyone in Step 2's full list (all rows, not just the top 5);
 - duplicates of the same person;
-- **only if Step 2's `find_coauthors` call returned 100 rows** (before any merging) (its list stopped at the cap and misses people who share only a paper or two): anyone on the researcher's own bylines, checked as follows.
-  1. Call `find_papers_by_researcher` with the researcher's own `author_id` from Step 1, `sort_by: "recency"`, `limit: 100`, `enrich_citations: false`. Use only its papers with at most 50 authors: a paper without `total_authors` shows its whole byline; leave out those with `total_authors` > 50 (rosters, as in Step 2).
+- **only if Step 2's `get_author_coauthors` call returned 100 rows** (before any merging) (its list stopped at the cap and misses people who share only a paper or two): anyone on the researcher's own bylines, checked as follows.
+  1. Call `get_author_papers` with the researcher's own `author_id` from Step 1, `sort_by: "recency"`, `limit: 100`, `enrich_citations: false`. Use only its papers with at most 50 authors: a paper without `total_authors` shows its whole byline; leave out those with `total_authors` > 50 (rosters, as in Step 2).
   2. Bylines stop at 20 names: for the 15 most recent of those papers with `authors_truncated: true`, call `get_paper_by_id` with its `id` as `paper_id`, its `source`, `include_abstract: false`, `enrich_citations: false`, `max_authors: 50`.
   3. Drop a person only on a clear byline match: names normalised as in Step 2, same surname, and the full given name or at least two matching initials, with nothing conflicting ("John A. Smith" is not "John B. Smith"). A first initial alone is not enough; when unsure, keep the person.
-  4. If more truncated papers remain than you fetched, or `find_papers_by_researcher` says papers were omitted, add one line under Second-Degree Connections saying some names there may be occasional direct coauthors.
+  4. If more truncated papers remain than you fetched, or `get_author_papers` says papers were omitted, add one line under Second-Degree Connections saying some names there may be occasional direct coauthors.
 
 Then count, for each remaining person, how many of the top 5 lead to them; merge the two records of any person merged in Step 2 before counting.
 

@@ -5,14 +5,14 @@
   },
   "metadata": {
     "description": "The Valency research plugin marketplace for GitHub Copilot CLI, powered by Valency Bond.",
-    "version": "0.2.0"
+    "version": "0.2.1"
   },
   "plugins": [
     {
       "name": "valency",
       "source": "./plugins/copilot/valency",
       "description": "Search, profile, and analyze research papers through Valency Bond.",
-      "version": "0.2.0"
+      "version": "0.2.1"
     }
   ]
 }

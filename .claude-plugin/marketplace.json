@@ -6,14 +6,14 @@
     "url": "https://valency.io"
   },
   "description": "The Valency research plugin for Claude Code, powered by Valency Bond",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "plugins": [
     {
       "name": "valency",
       "displayName": "Valency",
       "description": "Search, profile, and analyze millions of research papers with semantic embeddings.",
       "source": "./plugins/claude/valency",
-      "version": "0.4.0",
+      "version": "0.4.1",
       "author": {
         "name": "Valency Systems Inc",
         "email": "support@valency.io",

@@ -29,11 +29,11 @@ If a response carries `degraded: true` (`next_action: "retry_unchanged"`), part 
 
 ### Step 2: Their recent work
 
-Call `find_papers_by_researcher` with `author_id`, `sort_by: "recency"`, `limit: 40`. Recency follows `dates.first_available`, but an old paper posted late can still come first: use papers from the last ~2 years (by the year rules below) for themes, and **all 40** for the exclusion set. If fewer than 2 papers fall in the last ~2 years, say there is too little recent work to build themes from and stop.
+Call `get_author_papers` with `author_id`, `sort_by: "recency"`, `limit: 40`. Recency follows `dates.first_available`, but an old paper posted late can still come first: use papers from the last ~2 years (by the year rules below) for themes, and **all 40** for the exclusion set. If fewer than 2 papers fall in the last ~2 years, say there is too little recent work to build themes from and stop.
 
 ### Step 3: Exclusion set
 
-Call `find_coauthors` with `author_id`, `limit: 100`. Exclude everyone listed there, **plus every author on Step 2's papers with at most 50 authors** (the coauthor list cuts off one-off coauthors, who still aren't "fresh"), plus the researcher.
+Call `get_author_coauthors` with `author_id`, `limit: 100`. Exclude everyone listed there, **plus every author on Step 2's papers with at most 50 authors** (the coauthor list cuts off one-off coauthors, who still aren't "fresh"), plus the researcher.
 
 Step 2's bylines stop at 20 names. For each Step 2 paper with `authors_truncated: true` and `total_authors` ≤ 50, call `get_paper_by_id` with `include_abstract: false`, `max_authors: 50` to get the full list. Papers with more than 50 authors are collaboration rosters; sharing one doesn't make someone a collaborator — say so in the summary.
 

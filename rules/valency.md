@@ -27,8 +27,9 @@ not tell the user to install a separate connector plugin.
 
 - For conceptual queries, prefer `semantic_search_papers` or
   `search_by_abstract`; use `search_by_title` for title matching.
-- For precise author work, resolve the author identity before making later
-  publication, category, or collaboration calls, and reuse the resolved name.
+- For precise author work, resolve the researcher with `get_author_profile`
+  first, then pass its `author_id` to `get_author_papers` and
+  `get_author_coauthors` instead of repeating the name.
 - For a known paper, use `find_similar_papers` for semantic neighbors and
   `get_citing_papers` for citation relationships.
 - Reuse stable Valency paper identifiers across calls instead of repeating
