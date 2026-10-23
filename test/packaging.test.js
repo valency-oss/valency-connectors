@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { test } from "node:test";
+import { fileURLToPath } from "node:url";
+
+import { ValencyPlugin } from "../plugins/opencode/valency/index.js";
 
 const readJson = (path) => JSON.parse(readFileSync(path, "utf8"));
 const skillDirectories = (root) =>
@@ -16,6 +19,7 @@ const cursorPlugin = readJson("plugins/cursor/valency/.cursor-plugin/plugin.json
 const openaiMarketplace = readJson(".agents/plugins/marketplace.json");
 const openaiPlugin = readJson("plugins/openai/valency/.codex-plugin/plugin.json");
 const rootPlugin = readJson("plugin.json");
+const opencodePackage = readJson("plugins/opencode/valency/package.json");
 const expectedRootPlugin = {
   $schema: "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   name: "valency",
@@ -398,6 +402,138 @@ test("Cursor package exposes only the complete Valency Bond MCP surface", () => 
   assert.equal(existsSync("plugins/cursor/valency/agents"), false);
 });
 
+test("OpenCode package exposes one public server plugin", () => {
+  assert.deepEqual(opencodePackage, {
+    name: "@valency/opencode",
+    version: "0.1.0",
+    description:
+      "Connect OpenCode to Valency for research discovery and analysis.",
+    type: "module",
+    main: "./index.js",
+    exports: {
+      ".": "./index.js",
+      "./server": "./index.js",
+    },
+    files: ["index.js", "skills", "README.md", "LICENSE"],
+    engines: {
+      opencode: ">=1.18.23",
+    },
+    publishConfig: {
+      access: "public",
+    },
+    author: {
+      name: "Valency Systems Inc",
+      email: "support@valency.io",
+      url: "https://valency.io/",
+    },
+    homepage: "https://valency.io/",
+    repository: {
+      type: "git",
+      url: "git+https://github.com/valency-oss/valency-connectors.git",
+      directory: "plugins/opencode/valency",
+    },
+    license: "MIT",
+    keywords: [
+      "opencode",
+      "mcp",
+      "research",
+      "academic",
+      "papers",
+      "literature-review",
+    ],
+  });
+  assert.deepEqual(
+    readdirSync("plugins/opencode/valency").sort(),
+    ["LICENSE", "README.md", "index.js", "package.json", "skills"],
+  );
+  assert.equal(
+    readJson("package.json").scripts["sync:opencode"],
+    "node scripts/sync-opencode-skills.mjs",
+  );
+  assert.equal(
+    readFileSync("plugins/opencode/valency/LICENSE", "utf8"),
+    readFileSync("LICENSE", "utf8"),
+  );
+});
+
+test("OpenCode plugin adds Valency without replacing user configuration", async () => {
+  const hooks = await ValencyPlugin();
+  const skillsPath = fileURLToPath(
+    new URL("../plugins/opencode/valency/skills/", import.meta.url),
+  );
+  const empty = {};
+
+  await hooks.config(empty);
+  assert.deepEqual(empty, {
+    mcp: {
+      valency: {
+        type: "remote",
+        url: "https://mcp.valency.io/",
+      },
+    },
+    skills: {
+      paths: [skillsPath],
+    },
+  });
+
+  const existingValency = {
+    type: "remote",
+    url: "https://example.com/custom-mcp",
+    enabled: false,
+  };
+  const configured = {
+    mcp: {
+      other: {
+        type: "remote",
+        url: "https://example.com/other-mcp",
+      },
+      valency: existingValency,
+    },
+    skills: {
+      paths: ["/existing/skills"],
+    },
+  };
+
+  await hooks.config(configured);
+  await hooks.config(configured);
+
+  assert.equal(configured.mcp.valency, existingValency);
+  assert.deepEqual(configured.mcp.other, {
+    type: "remote",
+    url: "https://example.com/other-mcp",
+  });
+  assert.deepEqual(configured.skills.paths, ["/existing/skills", skillsPath]);
+});
+
+test("OpenCode package projects every canonical skill with a namespaced name", () => {
+  const packageRoot = "plugins/opencode/valency";
+  const projectedNames = kiroWorkflows.map((skill) => `valency-${skill}`).sort();
+
+  assert.deepEqual(skillDirectories(`${packageRoot}/skills`), projectedNames);
+
+  for (const skill of kiroWorkflows) {
+    const canonical = readFileSync(`skills/${skill}/SKILL.md`, "utf8");
+    const projectedName = `valency-${skill}`;
+    const expected = canonical.replace(
+      new RegExp(`^name: ${skill}$`, "m"),
+      `name: ${projectedName}`,
+    );
+    const actual = readFileSync(
+      `${packageRoot}/skills/${projectedName}/SKILL.md`,
+      "utf8",
+    );
+
+    assert.equal(actual, expected, `${projectedName} must match its source`);
+    assert.match(actual, new RegExp(`^name: ${projectedName}$`, "m"));
+  }
+
+  const executable = readFileSync(`${packageRoot}/index.js`, "utf8");
+  assert.doesNotMatch(
+    executable,
+    /clientId|clientSecret|bearer|authorization|child_process|Bun\.\$/i,
+  );
+});
+
 test("all providers ship byte-identical unprefixed skills", () => {
   assert.deepEqual(skillDirectories("plugins/grok/valency/skills"), [
     "fresh-collaborators",
@@ -653,6 +789,7 @@ test("repository metadata and installation docs point at the monorepo", () => {
     "VS Code",
     "Claude Code",
     "Codex",
+    "OpenCode",
     "ChatGPT",
     "GitHub Copilot CLI",
     "Antigravity CLI",
@@ -700,6 +837,36 @@ test("repository metadata and installation docs point at the monorepo", () => {
   assert.match(uninstall, /^# Uninstall Valency Bond$/m);
 });
 
+test("OpenCode documentation uses the public npm plugin lifecycle", () => {
+  const readme = readFileSync("README.md", "utf8");
+  const development = readFileSync("docs/development.md", "utf8");
+  const uninstall = readFileSync("docs/uninstall.md", "utf8");
+  const opencodeSection = readme.match(
+    /^### OpenCode$([\s\S]*?)(?=^### |^## )/m,
+  )?.[1];
+
+  assert.ok(opencodeSection, "README must contain an OpenCode install section");
+  assert.match(opencodeSection, /OpenCode 1\.18\.23 or newer/);
+  assert.match(
+    opencodeSection,
+    /opencode plugin --global @valency\/opencode &&\n  opencode mcp auth valency/,
+  );
+  assert.match(opencodeSection, /seven `valency-\*` skills/);
+  assert.match(opencodeSection, /preserving an existing `mcp\.valency`/);
+  assert.doesNotMatch(
+    opencodeSection,
+    /clientId|clientSecret|bearer|authorization header|local server/i,
+  );
+
+  assert.match(development, /^## OpenCode npm package$/m);
+  assert.match(development, /npm run sync:opencode/);
+  assert.match(development, /npm pack --dry-run \.\/plugins\/opencode\/valency/);
+  assert.match(development, /opencode mcp auth valency/);
+  assert.match(uninstall, /^## OpenCode$/m);
+  assert.match(uninstall, /opencode mcp logout valency/);
+  assert.match(uninstall, /remove `@valency\/opencode` from the `plugin` array/);
+});
+
 test("Kiro documentation uses the supported root GitHub lifecycle", () => {
   const readme = readFileSync("README.md", "utf8");
   const development = readFileSync("docs/development.md", "utf8");
@@ -742,6 +909,7 @@ test("uninstall instructions live in the linked guide", () => {
     "VS Code",
     "Claude Code",
     "Codex",
+    "OpenCode",
     "ChatGPT",
     "Cursor",
     "GitHub Copilot CLI",
@@ -757,6 +925,7 @@ test("uninstall instructions live in the linked guide", () => {
     "code --uninstall-extension valencyio.valency",
     "claude plugin uninstall valency@valency-claude-plugin --scope user",
     "codex plugin remove valency@valency",
+    "opencode mcp logout valency",
     "copilot plugin uninstall valency",
     "agy plugin uninstall valency",
     "grok plugin uninstall valency",
@@ -792,6 +961,7 @@ test("repository layout guide explains every intentional root entry", () => {
     layout,
     /the root grouping manifest does not replace, rename, or enter the normal Claude\s+marketplace package/,
   );
+  assert.match(layout, /`plugins\/opencode\/valency` \| OpenCode/);
 
   for (const entry of [
     ".agents/",
